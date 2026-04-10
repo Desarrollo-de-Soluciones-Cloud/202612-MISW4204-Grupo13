@@ -7,7 +7,9 @@ services:
     env_file:
       - .env
     depends_on:
-      - seneprojects_db
+      seneprojects_db:
+        condition: service_healthy
+    restart: on-failure
 
   seneprojects_nginx:
     build: ./nginx
@@ -29,6 +31,11 @@ services:
       - "5432:5432"
     volumes:
       - seneprojects_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   seneprojects_data:
