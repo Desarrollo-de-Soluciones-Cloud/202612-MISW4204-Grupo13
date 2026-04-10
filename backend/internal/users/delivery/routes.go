@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(r *gin.Engine) {
+func SetupRoutes(r gin.IRouter) {
     repo := infrastructure.NewUserRepository()
     repo.AutoMigrate()
     createUser := application.NewCreateUser(repo)

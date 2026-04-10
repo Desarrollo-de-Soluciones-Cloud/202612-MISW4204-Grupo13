@@ -16,7 +16,15 @@ func main() {
     }
     r := gin.Default()
     r.SetTrustedProxies([]string{"127.0.0.1", "172.18.0.0/16"})
-    delivery.SetupRoutes(r)
+    api := r.Group("/api")
+    api.GET("", func(c *gin.Context) {
+        c.JSON(200, gin.H{
+            "status":  "ok",
+            "project": "Seneprojects",
+            "message": "Welcome to Seneprojects API",
+        })
+    })
+    delivery.SetupRoutes(api)
     log.Printf("Server starting on port %s", cfg.Port)
     if err := r.Run(":" + cfg.Port); err != nil {
         log.Fatalf("Failed to start server: %v", err)
