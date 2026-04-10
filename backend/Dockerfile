@@ -1,37 +1,32 @@
 # ============================================
-# ESTAPA 1: Builder
+# STAGE 1: Builder
 # ============================================
 FROM golang:1.22-alpine AS builder
-# Instalar dependencias para compilación
+# Install dependencies for build
 RUN apk add --no-cache gcc musl-dev
 WORKDIR /app
-# Copiar go.mod y go.sum PRIMERO (beneficia caché de Docker)
+# Copy go.mod and go.sum first (leverages Docker cache)
 COPY go.mod go.sum ./
-# Descargar dependencias
+# Download dependencies
 RUN go mod download
-# Copiar código fuente
+# Copy source code
 COPY . .
-# Compilar binario (CGO_ENABLED=0 para imagen final más pequeña)
+# Compile binary (CGO_ENABLED=0 for smaller final image)
 RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/api
 # ============================================
-# ESTAPA 2: Producción
+# STAGE 2: Production
 # ============================================
 FROM alpine:3.19
 WORKDIR /root/
-# Instalar certificado CA para HTTPS
+# Install CA certificates for HTTPS
 RUN apk --no-cache add ca-certificates
-# Copiar binario compilado del builder
+# Copy compiled binary from builder
 COPY --from=builder /app/server .
-# Variables de entorno para configuración
+# Environment variables for configuration
 ENV PORT=8080
-ENV DB_HOST=localhost
-ENV DB_PORT=5432
-ENV DB_USER=postgres
-ENV DB_PASSWORD=postgres
-ENV DB_NAME=postgres
-# Exponer puerto
+# Expose port
 EXPOSE 8080
-# Usuario no root por seguridad
+# Non-root user for security
 RUN adduser -D -g '' appuser
 USER appuser
 CMD ["./server"]
