@@ -29,6 +29,15 @@ func (m *MockListUsersRepository) FindAll() ([]domain.User, error) {
     return m.users, nil
 }
 
+func (m *MockListUsersRepository) FindByID(id uint) (*domain.User, error) {
+    for i := range m.users {
+        if m.users[i].ID == id {
+            return &m.users[i], nil
+        }
+    }
+    return nil, domain.ErrUserNotFound
+}
+
 func TestListUsersEmpty(t *testing.T) {
     mockRepo := &MockListUsersRepository{users: []domain.User{}}
     listUsers := application.NewListUsers(mockRepo)

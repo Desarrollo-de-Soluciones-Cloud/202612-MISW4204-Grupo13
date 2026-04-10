@@ -2,7 +2,6 @@ package application
 
 import (
 	"backend/internal/users/domain"
-	"backend/internal/users/infrastructure"
 )
 
 type ListUsersOutput struct {
@@ -19,7 +18,7 @@ type ListUsers struct {
     repository domain.UserRepository
 }
 
-func NewListUsers(repo *infrastructure.UserRepository) *ListUsers {
+func NewListUsers(repo domain.UserRepository) *ListUsers {
     return &ListUsers{repository: repo}
 }
 

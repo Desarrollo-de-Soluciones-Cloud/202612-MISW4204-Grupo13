@@ -42,6 +42,15 @@ func (m *MockUserRepository) FindAll() ([]domain.User, error) {
     return users, nil
 }
 
+func (m *MockUserRepository) FindByID(id uint) (*domain.User, error) {
+    for _, u := range m.users {
+        if u.ID == id {
+            return u, nil
+        }
+    }
+    return nil, domain.ErrUserNotFound
+}
+
 func TestCreateUserSuccess(t *testing.T) {
     mockRepo := NewMockUserRepository()
     createUser := application.NewCreateUser(mockRepo)
