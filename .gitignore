@@ -1,1 +1,28 @@
+# Environment files
 .env
+
+# Go build
+bin/
+pkg/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Logs
+*.log
+
+# Editor configs
+.vscode/
+*.code-workspace
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Docker
+tmp/
