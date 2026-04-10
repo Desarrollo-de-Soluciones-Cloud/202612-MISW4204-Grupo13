@@ -15,6 +15,7 @@ func main() {
         log.Fatalf("Failed to connect to database: %v", err)
     }
     r := gin.Default()
+    r.SetTrustedProxies([]string{"127.0.0.1", "172.18.0.0/16"})
     delivery.SetupRoutes(r)
     log.Printf("Server starting on port %s", cfg.Port)
     if err := r.Run(":" + cfg.Port); err != nil {
