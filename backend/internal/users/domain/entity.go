@@ -32,15 +32,10 @@ func NewUser(name, email, password string, role UserRole) (*User, error) {
 		return nil, err
 	}
 
-	passwordHash, err := HashPassword(password)
-	if err != nil {
-		return nil, err
-	}
-
 	return &User{
 		Name:       normalizedName,
 		Email:      normalizedEmail,
-		Password:   passwordHash,
+		Password:   password,
 		GlobalRole: role,
 	}, nil
 }

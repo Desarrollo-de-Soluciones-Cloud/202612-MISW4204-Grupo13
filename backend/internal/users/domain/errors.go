@@ -16,5 +16,4 @@ var (
 	ErrUserPasswordTooLong   = errors.New("user password must have at most 72 characters")
 	ErrUserRoleRequired      = errors.New("user global role is required")
 	ErrUserRoleInvalid       = errors.New("user global role is invalid")
-	ErrPasswordHashingFailed = errors.New("failed to hash user password")
 )

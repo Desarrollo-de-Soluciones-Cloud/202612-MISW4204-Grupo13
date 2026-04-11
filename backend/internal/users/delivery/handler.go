@@ -1,6 +1,8 @@
 package delivery
 
 import (
+	sharedErrors "backend/internal/shared/errors"
+	sharedHelpers "backend/internal/shared/helpers"
 	"backend/internal/users/application"
 	"backend/internal/users/domain"
 	"errors"
@@ -39,7 +41,7 @@ func NewUserHandler(
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, mapBindingError(err))
 		return
 	}
 	input := application.CreateUserInput{
@@ -52,11 +54,11 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrUserEmailAlreadyInUse):
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
 		case isUserValidationError(err):
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
 		}
 		return
 	}
@@ -77,7 +79,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 
 	output, err := h.listUsers.Execute()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
 		return
 	}
 	users := make([]UserResponse, len(output.Users))
@@ -99,9 +101,9 @@ func (h *UserHandler) ListUsersByRole(c *gin.Context, rawRole string) {
 	if err != nil {
 		switch {
 		case isUserValidationError(err):
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
 		}
 		return
 	}
@@ -120,9 +122,9 @@ func (h *UserHandler) ListUsersByRole(c *gin.Context, rawRole string) {
 }
 
 func (h *UserHandler) GetUserByID(c *gin.Context) {
-	id, err := parseUserIDParam(c.Param("id"))
+	id, err := sharedHelpers.ParseResourceID(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		return
 	}
 
@@ -130,9 +132,9 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrUserNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
 		}
 		return
 	}
@@ -146,15 +148,15 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 }
 
 func (h *UserHandler) UpdateUser(c *gin.Context) {
-	id, err := parseUserIDParam(c.Param("id"))
+	id, err := sharedHelpers.ParseResourceID(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		return
 	}
 
 	var req UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, mapBindingError(err))
 		return
 	}
 
@@ -167,13 +169,13 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrUserNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
 		case errors.Is(err, domain.ErrUserEmailAlreadyInUse):
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
 		case isUserValidationError(err):
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
 		}
 		return
 	}
@@ -187,15 +189,15 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 }
 
 func (h *UserHandler) ChangeUserRole(c *gin.Context) {
-	id, err := parseUserIDParam(c.Param("id"))
+	id, err := sharedHelpers.ParseResourceID(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		return
 	}
 
 	var req ChangeUserRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, mapBindingError(err))
 		return
 	}
 
@@ -206,11 +208,11 @@ func (h *UserHandler) ChangeUserRole(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrUserNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
 		case isUserValidationError(err):
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
 		}
 		return
 	}

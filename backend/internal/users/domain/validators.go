@@ -3,8 +3,6 @@ package domain
 import (
 	"regexp"
 	"strings"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -12,7 +10,6 @@ const (
 	maxUserNameLength  = 100
 	minPasswordLength  = 8
 	maxPasswordLength  = 72
-	passwordHashCost   = bcrypt.DefaultCost
 )
 
 var emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
@@ -71,13 +68,4 @@ func ValidateUserRole(role UserRole) error {
 	default:
 		return nil
 	}
-}
-
-func HashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), passwordHashCost)
-	if err != nil {
-		return "", ErrPasswordHashingFailed
-	}
-
-	return string(hash), nil
 }

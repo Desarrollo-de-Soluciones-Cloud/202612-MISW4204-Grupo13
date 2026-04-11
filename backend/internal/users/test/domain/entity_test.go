@@ -5,8 +5,6 @@ import (
 	"errors"
 	"strings"
 	"testing"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 func TestNewUserSuccess(t *testing.T) {
@@ -24,11 +22,8 @@ func TestNewUserSuccess(t *testing.T) {
 	if user.GlobalRole != domainpkg.RoleProfessor {
 		t.Fatalf("expected role %q, got %q", domainpkg.RoleProfessor, user.GlobalRole)
 	}
-	if user.Password == "password123" {
-		t.Fatal("expected password to be hashed")
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte("password123")); err != nil {
-		t.Fatalf("expected password hash to match original password: %v", err)
+	if user.Password != "password123" {
+		t.Fatalf("expected password to remain unchanged in domain constructor, got %q", user.Password)
 	}
 }
 

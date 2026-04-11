@@ -1,6 +1,7 @@
 package application
 
 import (
+	sharedHelpers "backend/internal/shared/helpers"
 	"backend/internal/users/domain"
 	"errors"
 )
@@ -47,6 +48,12 @@ func (uc *CreateUser) Execute(input CreateUserInput) (*CreateUserOutput, error) 
 	if err != nil {
 		return nil, err
 	}
+
+	passwordHash, err := sharedHelpers.HashPassword(input.Password)
+	if err != nil {
+		return nil, err
+	}
+	user.Password = passwordHash
 
 	if err := uc.repository.Create(user); err != nil {
 		return nil, err
