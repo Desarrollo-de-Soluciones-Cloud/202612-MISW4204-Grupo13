@@ -29,7 +29,7 @@ func (r *UserRepository) FindByID(id uint) (*domain.User, error) {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrUserNotFound
 		}
-		return &user, nil
+		return nil, result.Error
 	}
 	return &user, nil
 }
@@ -50,6 +50,16 @@ func (r *UserRepository) FindAll() ([]domain.User, error) {
 	var users []domain.User
 	result := database.DB.Find(&users)
 	return users, result.Error
+}
+
+func (r *UserRepository) FindAllByRole(role domain.UserRole) ([]domain.User, error) {
+	var users []domain.User
+	result := database.DB.Where("global_role = ?", role).Find(&users)
+	return users, result.Error
+}
+
+func (r *UserRepository) Update(user *domain.User) error {
+	return database.DB.Save(user).Error
 }
 
 func (r *UserRepository) AutoMigrate() error {

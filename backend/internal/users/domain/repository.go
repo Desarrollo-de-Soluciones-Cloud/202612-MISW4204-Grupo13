@@ -5,4 +5,6 @@ type UserRepository interface {
 	FindByID(id uint) (*User, error)
 	FindByEmail(email string) (*User, error)
 	FindAll() ([]User, error)
+	FindAllByRole(role UserRole) ([]User, error)
+	Update(user *User) error
 }
