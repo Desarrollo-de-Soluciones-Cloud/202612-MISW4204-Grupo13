@@ -41,7 +41,7 @@ func NewUserHandler(
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		sharedHelpers.RespondWithError(c, http.StatusBadRequest, mapBindingError(err))
+		sharedHelpers.RespondWithErrors(c, http.StatusBadRequest, mapBindingErrors(err))
 		return
 	}
 	input := application.CreateUserInput{
@@ -156,7 +156,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	var req UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		sharedHelpers.RespondWithError(c, http.StatusBadRequest, mapBindingError(err))
+		sharedHelpers.RespondWithErrors(c, http.StatusBadRequest, mapBindingErrors(err))
 		return
 	}
 
@@ -197,7 +197,7 @@ func (h *UserHandler) ChangeUserRole(c *gin.Context) {
 
 	var req ChangeUserRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		sharedHelpers.RespondWithError(c, http.StatusBadRequest, mapBindingError(err))
+		sharedHelpers.RespondWithErrors(c, http.StatusBadRequest, mapBindingErrors(err))
 		return
 	}
 
