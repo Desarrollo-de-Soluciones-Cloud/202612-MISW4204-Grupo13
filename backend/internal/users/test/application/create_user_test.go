@@ -64,13 +64,16 @@ func (m *MockUserRepository) FindByID(id uint) (*domain.User, error) {
 }
 
 func (m *MockUserRepository) Update(user *domain.User) error {
-	existing, ok := m.byID[user.ID]
-	if !ok {
+	if _, ok := m.byID[user.ID]; !ok {
 		return domain.ErrUserNotFound
 	}
-	if existing.Email != user.Email {
-		delete(m.users, existing.Email)
+
+	for email, existingUser := range m.users {
+		if existingUser.ID == user.ID && email != user.Email {
+			delete(m.users, email)
+		}
 	}
+
 	m.byID[user.ID] = user
 	m.users[user.Email] = user
 	return nil
