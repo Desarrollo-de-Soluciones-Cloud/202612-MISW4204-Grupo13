@@ -5,7 +5,6 @@ import (
 	"backend/internal/shared/database"
 	"backend/internal/users/delivery"
 	"log"
-    
 	"github.com/gin-gonic/gin"
 )
 
