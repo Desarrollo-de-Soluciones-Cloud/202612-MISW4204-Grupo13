@@ -50,6 +50,28 @@ func (m *MockAssignmentRepository) FindAllByUserID(userID uint) ([]domain.Assign
 	return result, nil
 }
 
+func (m *MockAssignmentRepository) SumWeeklyHoursByUserAndRole(userID uint, role domain.AssignmentRole) (int, error) {
+	total := 0
+	for _, assignment := range m.byID {
+		if assignment.UserID == userID && assignment.Role == role {
+			total += assignment.WeeklyHours
+		}
+	}
+
+	return total, nil
+}
+
+func (m *MockAssignmentRepository) CountAssignmentsByUserAndRole(userID uint, role domain.AssignmentRole) (int, error) {
+	total := 0
+	for _, assignment := range m.byID {
+		if assignment.UserID == userID && assignment.Role == role {
+			total++
+		}
+	}
+
+	return total, nil
+}
+
 func (m *MockAssignmentRepository) Update(assignment *domain.Assignment) error {
 	if _, ok := m.byID[assignment.ID]; !ok {
 		return domain.ErrAssignmentNotFound
