@@ -1,9 +1,10 @@
 package main
 
 import (
+	authDelivery "backend/internal/auth/delivery"
 	"backend/internal/shared/config"
 	"backend/internal/shared/database"
-	"backend/internal/users/delivery"
+	usersDelivery "backend/internal/users/delivery"
 	"log"
 	"github.com/gin-gonic/gin"
 )
@@ -23,7 +24,8 @@ func main() {
             "message": "Welcome to Seneprojects API",
         })
     })
-    delivery.SetupRoutes(api)
+    authHandler := authDelivery.SetupRoutes(api, cfg)
+    usersDelivery.SetupRoutes(api, authHandler)
     log.Printf("Server starting on port %s", cfg.Port)
     if err := r.Run(":" + cfg.Port); err != nil {
         log.Fatalf("Failed to start server: %v", err)
