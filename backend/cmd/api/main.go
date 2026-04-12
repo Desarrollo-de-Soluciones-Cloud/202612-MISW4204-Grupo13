@@ -1,10 +1,12 @@
 package main
 
 import (
+	periodDelivery "backend/internal/periods/delivery"
 	"backend/internal/shared/config"
 	"backend/internal/shared/database"
 	"backend/internal/users/delivery"
 	"log"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,6 +26,7 @@ func main() {
         })
     })
     delivery.SetupRoutes(api)
+    periodDelivery.SetupRoutes(api)
     log.Printf("Server starting on port %s", cfg.Port)
     if err := r.Run(":" + cfg.Port); err != nil {
         log.Fatalf("Failed to start server: %v", err)
