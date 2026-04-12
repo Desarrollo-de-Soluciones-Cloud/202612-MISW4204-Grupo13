@@ -2,6 +2,7 @@ package delivery
 
 import (
 	authDelivery "backend/internal/auth/delivery"
+	authDomain "backend/internal/auth/domain"
 	sharedErrors "backend/internal/shared/errors"
 	sharedHelpers "backend/internal/shared/helpers"
 	"backend/internal/users/application"
@@ -74,14 +75,14 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 func (h *UserHandler) ListUsers(c *gin.Context) {
 	currentUser, ok := authDelivery.GetCurrentUser(c)
 	if !ok {
-		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, sharedErrors.ErrUnauthorized)
+		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
 		return
 	}
 
 	roleFilter := c.Query("role")
 	if roleFilter != "" {
 		if currentUser.GlobalRole == domain.RoleProfessor && !isProfessorAllowedRoleFilter(domain.UserRole(roleFilter)) {
-			sharedHelpers.RespondWithError(c, http.StatusForbidden, sharedErrors.ErrForbidden)
+			sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
 			return
 		}
 
@@ -90,7 +91,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	}
 
 	if currentUser.GlobalRole == domain.RoleProfessor {
-		sharedHelpers.RespondWithError(c, http.StatusForbidden, sharedErrors.ErrForbidden)
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
 		return
 	}
 
