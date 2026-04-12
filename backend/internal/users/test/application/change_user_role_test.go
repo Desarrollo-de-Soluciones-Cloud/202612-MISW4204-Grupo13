@@ -16,7 +16,7 @@ func TestChangeUserRoleSuccess(t *testing.T) {
 		Name:       "John Doe",
 		Email:      "john@example.com",
 		Password:   "password123",
-		GlobalRole: domain.RoleStaff,
+		GlobalRole: domain.RoleMonitor,
 	})
 	if err != nil {
 		t.Fatalf("expected create user to succeed, got %v", err)

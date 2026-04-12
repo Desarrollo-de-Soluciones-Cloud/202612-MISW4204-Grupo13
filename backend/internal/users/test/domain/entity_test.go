@@ -35,7 +35,7 @@ func TestNewUserRejectsInvalidRole(t *testing.T) {
 }
 
 func TestUpdateProfileNormalizesValues(t *testing.T) {
-	user, err := domainpkg.NewUser("John Doe", "john@example.com", "password123", domainpkg.RoleStaff)
+	user, err := domainpkg.NewUser("John Doe", "john@example.com", "password123", domainpkg.RoleMonitor)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
