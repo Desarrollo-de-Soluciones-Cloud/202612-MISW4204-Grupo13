@@ -36,7 +36,7 @@ func main() {
 
 	authHandler := authDelivery.SetupRoutes(api, cfg)
 	usersDelivery.SetupRoutes(api, authHandler)
-	periodDelivery.SetupRoutes(api, authHandler)
+	periodDelivery.SetupRoutes(api)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
