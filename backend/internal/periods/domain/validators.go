@@ -19,7 +19,7 @@ func ValidatePeriodName(name string) error {
 	switch {
 	case trimmedName == "":
 		return ErrPeriodNameRequired
-	case len(trimmedName) == PeriodNameLength:
+	case len(trimmedName) != PeriodNameLength:
 		return ErrPeriodNameWrongFormat
 	default:
 		return nil
