@@ -30,6 +30,44 @@ func (uc *UpdateAssignment) Execute(input UpdateAssignmentInput) (*UpdateAssignm
 		return nil, err
 	}
 
+	assistantHours, err := uc.repository.SumWeeklyHoursByUserAndRole(assignment.UserID, domain.RoleAssistant)
+	if err != nil {
+		return nil, err
+	}
+
+	monitorHours, err := uc.repository.SumWeeklyHoursByUserAndRole(assignment.UserID, domain.RoleMonitor)
+	if err != nil {
+		return nil, err
+	}
+
+	monitorCount, err := uc.repository.CountAssignmentsByUserAndRole(assignment.UserID, domain.RoleMonitor)
+	if err != nil {
+		return nil, err
+	}
+
+	currentWorkload := domain.UserAssignmentWorkload{
+		AssistantWeeklyHours: assistantHours,
+		MonitorWeeklyHours:   monitorHours,
+		MonitorAssignments:   monitorCount,
+	}
+
+	if assignment.Role == domain.RoleAssistant {
+		currentWorkload.AssistantWeeklyHours -= assignment.WeeklyHours
+	}
+	if assignment.Role == domain.RoleMonitor {
+		currentWorkload.MonitorWeeklyHours -= assignment.WeeklyHours
+		currentWorkload.MonitorAssignments--
+	}
+
+	nextWorkload, err := domain.BuildWorkloadWithAssignment(currentWorkload, input.Role, input.WeeklyHours)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := domain.ValidateRF05Workload(nextWorkload); err != nil {
+		return nil, err
+	}
+
 	if err := assignment.UpdateAdmin(input.Role, input.WeeklyHours); err != nil {
 		return nil, err
 	}
