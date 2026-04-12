@@ -157,3 +157,191 @@ func TestCreateAssignmentRepositoryError(t *testing.T) {
 		t.Fatalf("expected repository error, got %v", err)
 	}
 }
+
+func TestCreateAssignmentBlocksWhenAssistantHoursExceed22(t *testing.T) {
+	mockRepo := NewMockAssignmentRepository()
+	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
+
+	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      10,
+		WorkspaceID: 1,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 20,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating baseline assistant assignment, got %v", err)
+	}
+
+	_, err = createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      10,
+		WorkspaceID: 2,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 3,
+	})
+	if !errors.Is(err, domain.ErrAssignmentAssistantHoursLimitExceeded) {
+		t.Fatalf("expected ErrAssignmentAssistantHoursLimitExceeded, got %v", err)
+	}
+}
+
+func TestCreateAssignmentBlocksWhenMonitorAssignmentsExceed3(t *testing.T) {
+	mockRepo := NewMockAssignmentRepository()
+	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
+
+	for i := 1; i <= 3; i++ {
+		_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+			UserID:      20,
+			WorkspaceID: uint(i),
+			Role:        domain.RoleMonitor,
+			WeeklyHours: 2,
+		})
+		if err != nil {
+			t.Fatalf("expected no error creating monitor assignment %d, got %v", i, err)
+		}
+	}
+
+	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      20,
+		WorkspaceID: 4,
+		Role:        domain.RoleMonitor,
+		WeeklyHours: 1,
+	})
+	if !errors.Is(err, domain.ErrAssignmentMonitorCountLimitExceeded) {
+		t.Fatalf("expected ErrAssignmentMonitorCountLimitExceeded, got %v", err)
+	}
+}
+
+func TestCreateAssignmentBlocksWhenMonitorHoursExceed12(t *testing.T) {
+	mockRepo := NewMockAssignmentRepository()
+	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
+
+	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      30,
+		WorkspaceID: 1,
+		Role:        domain.RoleMonitor,
+		WeeklyHours: 10,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating baseline monitor assignment, got %v", err)
+	}
+
+	_, err = createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      30,
+		WorkspaceID: 2,
+		Role:        domain.RoleMonitor,
+		WeeklyHours: 3,
+	})
+	if !errors.Is(err, domain.ErrAssignmentMonitorHoursLimitExceeded) {
+		t.Fatalf("expected ErrAssignmentMonitorHoursLimitExceeded, got %v", err)
+	}
+}
+
+func TestCreateAssignmentBlocksWhenMonitorExceedsFortyPercentOfAssistant(t *testing.T) {
+	mockRepo := NewMockAssignmentRepository()
+	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
+
+	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      40,
+		WorkspaceID: 1,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 10,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating baseline assistant assignment, got %v", err)
+	}
+
+	_, err = createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      40,
+		WorkspaceID: 2,
+		Role:        domain.RoleMonitor,
+		WeeklyHours: 3,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating monitor assignment before forty-percent check, got %v", err)
+	}
+
+	_, err = createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      40,
+		WorkspaceID: 3,
+		Role:        domain.RoleMonitor,
+		WeeklyHours: 2,
+	})
+	if !errors.Is(err, domain.ErrAssignmentMonitorFortyPercentExceeded) {
+		t.Fatalf("expected ErrAssignmentMonitorFortyPercentExceeded, got %v", err)
+	}
+}
+
+func TestCreateAssignmentAllowsMonitorHoursAtRoundedFortyPercentLimit(t *testing.T) {
+	mockRepo := NewMockAssignmentRepository()
+	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
+
+	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      50,
+		WorkspaceID: 1,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 11,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating assistant assignment, got %v", err)
+	}
+
+	_, err = createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      50,
+		WorkspaceID: 2,
+		Role:        domain.RoleMonitor,
+		WeeklyHours: 4,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating monitor assignment before rounded limit check, got %v", err)
+	}
+
+	output, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      50,
+		WorkspaceID: 3,
+		Role:        domain.RoleMonitor,
+		WeeklyHours: 1,
+	})
+	if err != nil {
+		t.Fatalf("expected no error at rounded forty percent limit, got %v", err)
+	}
+	if output.ID == 0 {
+		t.Fatalf("expected generated id at rounded forty percent limit, got %d", output.ID)
+	}
+}
+
+func TestCreateAssignmentValidCaseWithMixedRoles(t *testing.T) {
+	mockRepo := NewMockAssignmentRepository()
+	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
+
+	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      60,
+		WorkspaceID: 1,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 20,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating assistant assignment, got %v", err)
+	}
+
+	_, err = createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      60,
+		WorkspaceID: 2,
+		Role:        domain.RoleMonitor,
+		WeeklyHours: 5,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating first monitor assignment in mixed-role case, got %v", err)
+	}
+
+	output, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      60,
+		WorkspaceID: 3,
+		Role:        domain.RoleMonitor,
+		WeeklyHours: 3,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating valid mixed-role assignment, got %v", err)
+	}
+	if output.WeeklyHours != 3 {
+		t.Fatalf("expected weekly hours 3, got %d", output.WeeklyHours)
+	}
+}
