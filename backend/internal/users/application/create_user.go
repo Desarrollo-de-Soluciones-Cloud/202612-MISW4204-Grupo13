@@ -1,19 +1,23 @@
 package application
 
 import (
+	sharedHelpers "backend/internal/shared/helpers"
 	"backend/internal/users/domain"
+	"errors"
 )
 
 type CreateUserInput struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Name       string          `json:"name"`
+	Email      string          `json:"email"`
+	Password   string          `json:"password"`
+	GlobalRole domain.UserRole `json:"global_role"`
 }
 
 type CreateUserOutput struct {
-	ID    uint   `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID         uint            `json:"id"`
+	Name       string          `json:"name"`
+	Email      string          `json:"email"`
+	GlobalRole domain.UserRole `json:"global_role"`
 }
 
 type CreateUser struct {
@@ -25,28 +29,40 @@ func NewCreateUser(repo domain.UserRepository) *CreateUser {
 }
 
 func (uc *CreateUser) Execute(input CreateUserInput) (*CreateUserOutput, error) {
-	if input.Name == "" || input.Email == "" || input.Password == "" {
-		return nil, domain.ErrInvalidInput
+	normalizedEmail := domain.NormalizeEmail(input.Email)
+
+	existing, err := uc.repository.FindByEmail(normalizedEmail)
+	if err == nil && existing != nil {
+		return nil, domain.ErrUserEmailAlreadyInUse
+	}
+	if err != nil && !errors.Is(err, domain.ErrUserNotFound) {
+		return nil, err
 	}
 
-	existing, _ := uc.repository.FindByEmail(input.Email)
-	if existing != nil {
-		return nil, domain.ErrUserAlreadyExists
+	user, err := domain.NewUser(
+		input.Name,
+		normalizedEmail,
+		input.Password,
+		input.GlobalRole,
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	user := &domain.User{
-		Name: input.Name,
-		Email: input.Email,
-		Password: input.Password,
+	passwordHash, err := sharedHelpers.HashPassword(input.Password)
+	if err != nil {
+		return nil, err
 	}
+	user.Password = passwordHash
 
 	if err := uc.repository.Create(user); err != nil {
 		return nil, err
 	}
 
 	return &CreateUserOutput{
-		ID: user.ID,
-		Name: user.Name,
-		Email: user.Email,
+		ID:         user.ID,
+		Name:       user.Name,
+		Email:      user.Email,
+		GlobalRole: user.GlobalRole,
 	}, nil
 }

@@ -3,7 +3,7 @@
 # ============================================
 FROM golang:1.26-alpine AS builder
 # Install dependencies for build
-RUN apk add --no-cache gcc musl-dev
+RUN apk add --no-cache gcc musl-dev make
 WORKDIR /app
 # Copy go.mod and go.sum first (leverages Docker cache)
 COPY go.mod go.sum ./
