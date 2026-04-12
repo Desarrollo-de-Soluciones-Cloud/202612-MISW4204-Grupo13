@@ -19,5 +19,5 @@ test-verbose:
 
 # Coverage
 test-coverage:
-	go test -coverpkg=./internal/auth/...,./internal/users/... -coverprofile=coverage.out ./internal/auth/... ./internal/auth/test/... ./internal/users/... ./internal/users/test/...
+	go test -coverpkg=./internal/... -coverprofile=coverage.out ./internal/...
 	go tool cover -func=coverage.out
