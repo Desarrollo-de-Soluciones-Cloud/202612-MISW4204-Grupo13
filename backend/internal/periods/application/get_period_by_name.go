@@ -2,7 +2,6 @@ package application
 
 import (
 	"backend/internal/periods/domain"
-	"time"
 )
 
 type GetPeriodByNameInput struct {
@@ -12,9 +11,9 @@ type GetPeriodByNameInput struct {
 type GetPeriodByNameOutput struct {
 	ID                   uint                `json:"id"`
 	Name                 string              `json:"name"`
-	InitialDate          time.Time           `json:"initial_date"`
-	FinalDate            time.Time           `json:"final_date"`
-	InscriptionFinalDate time.Time           `json:"inscription_final_date"`
+	InitialDate          string              `json:"initial_date"`
+	FinalDate            string              `json:"final_date"`
+	InscriptionFinalDate string              `json:"inscription_final_date"`
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 

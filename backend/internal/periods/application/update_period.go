@@ -2,24 +2,23 @@ package application
 
 import (
 	"backend/internal/periods/domain"
-	"time"
 )
 
 type UpdatePeriodInput struct {
 	ID                   uint
 	Name                 string
-	InitialDate          time.Time
-	FinalDate            time.Time
-	InscriptionFinalDate time.Time
+	InitialDate          string
+	FinalDate            string
+	InscriptionFinalDate string
 	PeriodState          domain.PeriodState
 }
 
 type UpdatePeriodOutput struct {
 	ID                   uint                `json:"id"`
 	Name                 string              `json:"name"`
-	InitialDate          time.Time           `json:"initial_date"`
-	FinalDate            time.Time           `json:"final_date"`
-	InscriptionFinalDate time.Time           `json:"inscription_final_date"`
+	InitialDate          string              `json:"initial_date"`
+	FinalDate            string              `json:"final_date"`
+	InscriptionFinalDate string              `json:"inscription_final_date"`
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 
@@ -45,6 +44,11 @@ func (uc *UpdatePeriod) Execute(input UpdatePeriodInput) (*UpdatePeriodOutput, e
 		input.PeriodState,
 	); err != nil {
 		return nil, err
+	}
+
+	p, _ := uc.repository.FindByName(period.Name)
+	if p != nil && p.ID != period.ID {
+		return nil, domain.ErrPeriodNameAlreadyExists
 	}
 
 	if err := uc.repository.Update(period); err != nil {

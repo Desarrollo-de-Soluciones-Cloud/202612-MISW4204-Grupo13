@@ -5,19 +5,26 @@ import (
 	"backend/internal/periods/domain"
 	"errors"
 	"testing"
-	"time"
 )
 
 func TestListPeriodsByStateSuccess(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate1 := "2024-01-01"
+	finalDate1 := "2024-06-30"
+	inscriptionDate1 := "2024-01-15"
 
-	period1, _ := domain.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domain.ActivePeriod)
-	period2, _ := domain.NewPeriod("2024-02", initialDate.AddDate(0, 1, 0), finalDate.AddDate(0, 1, 0), inscriptionDate.AddDate(0, 1, 0), domain.ActivePeriod)
-	period3, _ := domain.NewPeriod("2024-03", initialDate.AddDate(0, 2, 0), finalDate.AddDate(0, 2, 0), inscriptionDate.AddDate(0, 2, 0), domain.ClosedPeriod)
+    initialDate2 := "2024-07-01"
+	finalDate2 := "2024-12-31"
+	inscriptionDate2 := "2024-08-15"
+
+	initialDate3 := "2025-01-01"
+	finalDate3 := "2025-06-30"
+	inscriptionDate3 := "2025-01-15"
+
+	period1, _ := domain.NewPeriod("2024-01", initialDate1, finalDate1, inscriptionDate1, domain.ActivePeriod)
+	period2, _ := domain.NewPeriod("2024-02", initialDate2, finalDate2, inscriptionDate2, domain.ActivePeriod)
+	period3, _ := domain.NewPeriod("2024-03", initialDate3, finalDate3, inscriptionDate3, domain.ClosedPeriod)
 
 	mockRepo.Create(period1)
 	mockRepo.Create(period2)
@@ -57,9 +64,9 @@ func TestListPeriodsByStateInvalidState(t *testing.T) {
 func TestListPeriodsByStateNoResults(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2024-01-01"
+	finalDate := "2024-06-30"
+	inscriptionDate := "2024-01-15"
 
 	period1, _ := domain.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domain.ActivePeriod)
 	mockRepo.Create(period1)

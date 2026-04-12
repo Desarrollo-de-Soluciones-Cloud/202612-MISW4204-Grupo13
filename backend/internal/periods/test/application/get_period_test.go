@@ -5,15 +5,14 @@ import (
 	"backend/internal/periods/domain"
 	"errors"
 	"testing"
-	"time"
 )
 
 func TestGetPeriodByIDSuccess(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2024-01-01"
+	finalDate := "2024-06-30"
+	inscriptionDate := "2024-01-15"
 
 	period, _ := domain.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domain.ActivePeriod)
 	mockRepo.Create(period)
