@@ -16,4 +16,5 @@ var (
 	ErrPeriodDateSequenceInvalid          = errors.New("period date sequence is invalid: initial_date must be before final_date and inscription_final_date")
 	ErrPeriodStateRequired                = errors.New("period state is required")
 	ErrPeriodStateInvalid                 = errors.New("period state is invalid")
+	ErrPeriodCannotBeDeleted              = errors.New("period cannot be deleted while it is active")
 )

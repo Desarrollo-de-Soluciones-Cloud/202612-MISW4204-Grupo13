@@ -7,4 +7,5 @@ type PeriodRepository interface {
 	FindAll() ([]Period, error)
 	FindAllByState(state PeriodState) ([]Period, error)
 	Update(period *Period) error
+	Delete(id uint) error
 }
