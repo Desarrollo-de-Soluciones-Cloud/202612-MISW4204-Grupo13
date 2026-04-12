@@ -2,6 +2,7 @@ package main
 
 import (
 	authDelivery "backend/internal/auth/delivery"
+	periodDelivery "backend/internal/periods/delivery"
 	"backend/internal/shared/config"
 	"backend/internal/shared/database"
 	usersDelivery "backend/internal/users/delivery"
