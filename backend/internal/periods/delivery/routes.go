@@ -26,4 +26,3 @@ func SetupRoutes(r gin.IRouter) {
 		periods.DELETE("/:id", handler.DeletePeriod)
 	}
 }
-// merge into develop
