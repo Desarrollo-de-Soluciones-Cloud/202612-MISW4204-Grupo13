@@ -2,12 +2,18 @@ package delivery
 
 import (
 	"backend/internal/users/application"
+	"backend/internal/users/domain"
 	"backend/internal/users/infrastructure"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(r gin.IRouter) {
+type RouteAuthorizer interface {
+	RequireAuthentication() gin.HandlerFunc
+	RequireRoles(...domain.UserRole) gin.HandlerFunc
+}
+
+func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 	repo := infrastructure.NewUserRepository()
 	repo.AutoMigrate()
 	createUser := application.NewCreateUser(repo)
@@ -19,10 +25,17 @@ func SetupRoutes(r gin.IRouter) {
 	handler := NewUserHandler(createUser, listUsers, listUsersByRole, getUserByID, updateUser, changeUserRole)
 	users := r.Group("/users")
 	{
-		users.POST("", handler.CreateUser)
-		users.GET("", handler.ListUsers)
-		users.GET("/:id", handler.GetUserByID)
-		users.PUT("/:id", handler.UpdateUser)
-		users.PATCH("/:id/role", handler.ChangeUserRole)
+		users.Use(authorizer.RequireAuthentication())
+
+		adminUsers := users.Group("")
+		adminUsers.Use(authorizer.RequireRoles(domain.RoleAdmin))
+		adminUsers.POST("", handler.CreateUser)
+		adminUsers.PUT("/:id", handler.UpdateUser)
+		adminUsers.PATCH("/:id/role", handler.ChangeUserRole)
+
+		adminAndProfessorUsers := users.Group("")
+		adminAndProfessorUsers.Use(authorizer.RequireRoles(domain.RoleAdmin, domain.RoleProfessor))
+		adminAndProfessorUsers.GET("", handler.ListUsers)
+		adminAndProfessorUsers.GET("/:id", handler.GetUserByID)
 	}
 }

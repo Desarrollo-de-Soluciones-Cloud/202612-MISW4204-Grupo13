@@ -16,7 +16,7 @@ func TestChangeUserRoleSuccess(t *testing.T) {
 		Name:       "John Doe",
 		Email:      "john@example.com",
 		Password:   "password123",
-		GlobalRole: domain.RoleStaff,
+		GlobalRole: domain.RoleMonitor,
 	})
 	if err != nil {
 		t.Fatalf("expected create user to succeed, got %v", err)
@@ -61,6 +61,19 @@ func TestChangeUserRoleInvalidRole(t *testing.T) {
 	}
 }
 
+func TestChangeUserRoleRequiresRole(t *testing.T) {
+	mockRepo := NewMockUserRepository()
+	changeUserRole := applicationpkg.NewChangeUserRole(mockRepo)
+
+	_, err := changeUserRole.Execute(applicationpkg.ChangeUserRoleInput{
+		ID:         1,
+		GlobalRole: "",
+	})
+	if !errors.Is(err, domain.ErrUserRoleRequired) {
+		t.Fatalf("expected ErrUserRoleRequired, got %v", err)
+	}
+}
+
 func TestChangeUserRoleUserNotFound(t *testing.T) {
 	mockRepo := NewMockUserRepository()
 	changeUserRole := applicationpkg.NewChangeUserRole(mockRepo)
@@ -71,5 +84,31 @@ func TestChangeUserRoleUserNotFound(t *testing.T) {
 	})
 	if !errors.Is(err, domain.ErrUserNotFound) {
 		t.Fatalf("expected ErrUserNotFound, got %v", err)
+	}
+}
+
+func TestChangeUserRolePropagatesUpdateError(t *testing.T) {
+	mockRepo := NewMockUserRepository()
+	createUser := applicationpkg.NewCreateUser(mockRepo)
+	changeUserRole := applicationpkg.NewChangeUserRole(mockRepo)
+
+	created, err := createUser.Execute(applicationpkg.CreateUserInput{
+		Name:       "John Doe",
+		Email:      "john@example.com",
+		Password:   "password123",
+		GlobalRole: domain.RoleMonitor,
+	})
+	if err != nil {
+		t.Fatalf("expected create user to succeed, got %v", err)
+	}
+
+	mockRepo.updateErr = errors.New("update failure")
+
+	_, err = changeUserRole.Execute(applicationpkg.ChangeUserRoleInput{
+		ID:         created.ID,
+		GlobalRole: domain.RoleProfessor,
+	})
+	if err == nil || err.Error() != "update failure" {
+		t.Fatalf("expected update failure, got %v", err)
 	}
 }
