@@ -26,6 +26,8 @@ func NewCreateAssignment(repo domain.AssignmentRepository) *CreateAssignment {
 }
 
 func (uc *CreateAssignment) Execute(input CreateAssignmentInput) (*CreateAssignmentOutput, error) {
+	//nolint:godox // TODO RF04: Validar que user_id exista realmente cuando se defina la integracion con users.
+	//nolint:godox // TODO RF04: Validar que workspace_id exista realmente cuando el modulo de workspaces este terminado.
 	assignment, err := domain.NewAssignment(
 		input.UserID,
 		input.WorkspaceID,

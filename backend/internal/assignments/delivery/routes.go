@@ -23,6 +23,7 @@ func SetupRoutes(r gin.IRouter) {
 		assignments.POST("", handler.CreateAssignment)
 		assignments.GET("/:id", handler.GetAssignmentByID)
 		assignments.GET("", handler.ListAssignmentsByUserID)
+		//nolint:godox // TODO RF04: Proteger esta ruta para que solo admin pueda actualizar vinculaciones cuando auth este integrado.
 		assignments.PUT("/:id/admin", handler.UpdateAssignment)
 	}
 }

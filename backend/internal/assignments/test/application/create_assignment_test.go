@@ -7,6 +7,8 @@ import (
 	"testing"
 )
 
+//nolint:godox // TODO RF04: Agregar tests de delivery e infrastructure para fortalecer la cobertura del modulo.
+
 type MockAssignmentRepository struct {
 	byID    map[uint]*domain.Assignment
 	nextID  uint
