@@ -1,0 +1,48 @@
+name: create-release
+
+on:
+  workflow_run:
+    workflows:
+      - tests
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: create release branch
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'develop' &&
+      contains(github.event.workflow_run.head_commit.message, 'create release')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: develop
+
+      - name: read version
+        id: version
+        run: |
+          version=$(tr -d '[:space:]' < version)
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: create release branch
+        env:
+          release_branch: release/${{ steps.version.outputs.value }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin
+          git checkout origin/develop
+          if git ls-remote --exit-code --heads origin "$release_branch" > /dev/null; then
+            echo "branch $release_branch already exists"
+            exit 1
+          fi
+          git checkout -b "$release_branch"
+          git push origin "$release_branch"
