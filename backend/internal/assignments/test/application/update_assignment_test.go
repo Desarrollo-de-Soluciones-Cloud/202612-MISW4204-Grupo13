@@ -13,6 +13,8 @@ const (
 	errCreateMonitorToUpdateMsg     = "expected no error creating monitor assignment to update, got %v"
 )
 
+// TODO RF05: Reforzar RF05 con pruebas de delivery e integracion/E2E para respuestas HTTP bloqueantes en update admin.
+
 func TestUpdateAssignmentSuccess(t *testing.T) {
 	mockRepo := NewMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)

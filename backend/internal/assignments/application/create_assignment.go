@@ -28,6 +28,8 @@ func NewCreateAssignment(repo domain.AssignmentRepository) *CreateAssignment {
 func (uc *CreateAssignment) Execute(input CreateAssignmentInput) (*CreateAssignmentOutput, error) {
 	//nolint:godox // TODO RF04: Validar que user_id exista realmente cuando se defina la integracion con users.
 	//nolint:godox // TODO RF04: Validar que workspace_id exista realmente cuando el modulo de workspaces este terminado.
+	// TODO RF05: Validar RF05 usando solo vinculaciones activas cuando workspaces exponga estados activos/cerrados.
+	// TODO RF05: Confirmar si RF05 debe ejecutarse con filtros por periodo academico cuando periodos y workspaces esten integrados.
 	assistantHours, err := uc.repository.SumWeeklyHoursByUserAndRole(input.UserID, domain.RoleAssistant)
 	if err != nil {
 		return nil, err

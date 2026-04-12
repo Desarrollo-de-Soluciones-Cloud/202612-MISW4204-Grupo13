@@ -25,6 +25,8 @@ func NewUpdateAssignment(repo domain.AssignmentRepository) *UpdateAssignment {
 }
 
 func (uc *UpdateAssignment) Execute(input UpdateAssignmentInput) (*UpdateAssignmentOutput, error) {
+	// TODO RF05: Revisar si las validaciones RF05 deben excluir vinculaciones de espacios cerrados cuando exista esa integracion.
+	// TODO RF05: Revisar aplicacion de RF05 en futuras operaciones administrativas adicionales fuera de create/update.
 	assignment, err := uc.repository.FindByID(input.ID)
 	if err != nil {
 		return nil, err
