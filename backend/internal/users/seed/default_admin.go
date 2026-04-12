@@ -36,7 +36,7 @@ func SeedDefaultAdmin() error {
 		return err
 	}
 
-	_, err := repo.FindByEmail(domain.NormalizeEmail(defaultAdminEmail))
+	_, err = repo.FindByEmail(domain.NormalizeEmail(defaultAdminEmail))
 	if err == nil {
 		return nil
 	}
