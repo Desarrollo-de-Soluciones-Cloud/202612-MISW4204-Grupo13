@@ -1,0 +1,84 @@
+name: create-tag
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+permissions:
+  contents: write
+
+jobs:
+  create-tag:
+    name: create tag and sync branches
+    if: >
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: read version
+        id: version
+        run: |
+          version=$(tr -d '[:space:]' < version)
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: prepare release variables
+        id: release
+        run: |
+          echo "branch=${{ github.event.pull_request.head.ref }}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${{ steps.version.outputs.value }}" >> "$GITHUB_OUTPUT"
+
+      - name: ensure tag does not exist
+        env:
+          tag_name: ${{ steps.release.outputs.tag }}
+        run: |
+          git fetch --tags origin
+          if git rev-parse "$tag_name" >/dev/null 2>&1; then
+            echo "tag $tag_name already exists"
+            exit 1
+          fi
+
+      - name: create github release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          name: ${{ steps.release.outputs.tag }}
+          target_commitish: main
+          generate_release_notes: true
+
+      - name: sync main into release
+        env:
+          release_branch: ${{ steps.release.outputs.branch }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main "$release_branch" || true
+          if ! git ls-remote --exit-code --heads origin "$release_branch" > /dev/null; then
+            git checkout -b "$release_branch" origin/main
+            git push origin "$release_branch"
+          fi
+
+      - name: merge main into release
+        uses: tukasz/direct-merge-action@master
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          source-branch: main
+          target-branch: ${{ steps.release.outputs.branch }}
+
+      - name: merge release into develop
+        env:
+          release_branch: ${{ steps.release.outputs.branch }}
+        uses: tukasz/direct-merge-action@master
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          source-branch: ${{ steps.release.outputs.branch }}
+          target-branch: develop

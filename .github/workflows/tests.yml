@@ -1,0 +1,30 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  tests:
+    name: run backend tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - name: download dependencies
+        run: go mod download
+
+      - name: run tests
+        run: make test-verbose
