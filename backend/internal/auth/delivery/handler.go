@@ -131,7 +131,7 @@ func (h *AuthHandler) RequireRoles(roles ...usersDomain.UserRole) gin.HandlerFun
 	}
 }
 
-func getCurrentUser(c *gin.Context) (domain.AuthenticatedUser, bool) {
+func GetCurrentUser(c *gin.Context) (domain.AuthenticatedUser, bool) {
 	rawCurrentUser, exists := c.Get(currentUserContextKey)
 	if !exists {
 		return domain.AuthenticatedUser{}, false
@@ -143,6 +143,10 @@ func getCurrentUser(c *gin.Context) (domain.AuthenticatedUser, bool) {
 	}
 
 	return currentUser, true
+}
+
+func getCurrentUser(c *gin.Context) (domain.AuthenticatedUser, bool) {
+	return GetCurrentUser(c)
 }
 
 func isAuthValidationError(err error) bool {

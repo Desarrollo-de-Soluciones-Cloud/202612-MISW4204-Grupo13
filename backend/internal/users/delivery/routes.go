@@ -30,12 +30,12 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 		adminUsers := users.Group("")
 		adminUsers.Use(authorizer.RequireRoles(domain.RoleAdmin))
 		adminUsers.POST("", handler.CreateUser)
-		adminUsers.GET("", handler.ListUsers)
 		adminUsers.PUT("/:id", handler.UpdateUser)
 		adminUsers.PATCH("/:id/role", handler.ChangeUserRole)
 
 		adminAndProfessorUsers := users.Group("")
 		adminAndProfessorUsers.Use(authorizer.RequireRoles(domain.RoleAdmin, domain.RoleProfessor))
+		adminAndProfessorUsers.GET("", handler.ListUsers)
 		adminAndProfessorUsers.GET("/:id", handler.GetUserByID)
 	}
 }

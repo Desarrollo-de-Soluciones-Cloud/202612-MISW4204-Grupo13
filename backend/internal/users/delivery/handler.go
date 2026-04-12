@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	authDelivery "backend/internal/auth/delivery"
 	sharedErrors "backend/internal/shared/errors"
 	sharedHelpers "backend/internal/shared/helpers"
 	"backend/internal/users/application"
@@ -71,9 +72,25 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 }
 
 func (h *UserHandler) ListUsers(c *gin.Context) {
+	currentUser, ok := authDelivery.GetCurrentUser(c)
+	if !ok {
+		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, sharedErrors.ErrUnauthorized)
+		return
+	}
+
 	roleFilter := c.Query("role")
 	if roleFilter != "" {
+		if currentUser.GlobalRole == domain.RoleProfessor && !isProfessorAllowedRoleFilter(domain.UserRole(roleFilter)) {
+			sharedHelpers.RespondWithError(c, http.StatusForbidden, sharedErrors.ErrForbidden)
+			return
+		}
+
 		h.ListUsersByRole(c, roleFilter)
+		return
+	}
+
+	if currentUser.GlobalRole == domain.RoleProfessor {
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, sharedErrors.ErrForbidden)
 		return
 	}
 
@@ -237,4 +254,8 @@ func isUserValidationError(err error) bool {
 		errors.Is(err, domain.ErrUserPasswordTooLong) ||
 		errors.Is(err, domain.ErrUserRoleRequired) ||
 		errors.Is(err, domain.ErrUserRoleInvalid)
+}
+
+func isProfessorAllowedRoleFilter(role domain.UserRole) bool {
+	return role == domain.RoleProfessor || role == domain.RoleMonitor
 }
