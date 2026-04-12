@@ -1,7 +1,7 @@
 package delivery
 
 type CreateUserRequest struct {
-	Name       string `json:"name" binding:"required"`
+	Name       string `json:"name" binding:"required,min=3,max=100"`
 	Email      string `json:"email" binding:"required,email"`
 	Password   string `json:"password" binding:"required,min=8,max=72"`
 	GlobalRole string `json:"global_role" binding:"required"`
@@ -15,7 +15,7 @@ type CreateUserResponse struct {
 }
 
 type UpdateUserRequest struct {
-	Name       string `json:"name" binding:"required"`
+	Name       string `json:"name" binding:"required,min=3,max=100"`
 	Email      string `json:"email" binding:"required,email"`
 	GlobalRole string `json:"global_role" binding:"required"`
 }
