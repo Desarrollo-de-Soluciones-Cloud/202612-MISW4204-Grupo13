@@ -12,6 +12,20 @@ type Assignment struct {
 	UpdatedAt   time.Time      `json:"updated_at"`
 }
 
+func (a *Assignment) UpdateAdmin(role AssignmentRole, weeklyHours int) error {
+	if err := ValidateAssignmentRole(role); err != nil {
+		return err
+	}
+	if err := ValidateAssignmentWeeklyHours(weeklyHours); err != nil {
+		return err
+	}
+
+	a.Role = role
+	a.WeeklyHours = weeklyHours
+
+	return nil
+}
+
 func NewAssignment(userID, workspaceID uint, role AssignmentRole, weeklyHours int) (*Assignment, error) {
 	if err := ValidateAssignmentUserID(userID); err != nil {
 		return nil, err

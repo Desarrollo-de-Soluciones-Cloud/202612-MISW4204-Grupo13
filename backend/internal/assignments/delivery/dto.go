@@ -18,3 +18,8 @@ type AssignmentResponse struct {
 type ListAssignmentsResponse struct {
 	Assignments []AssignmentResponse `json:"assignments"`
 }
+
+type UpdateAssignmentRequest struct {
+	Role        string `json:"role" binding:"required"`
+	WeeklyHours int    `json:"weekly_hours" binding:"required,min=1"`
+}

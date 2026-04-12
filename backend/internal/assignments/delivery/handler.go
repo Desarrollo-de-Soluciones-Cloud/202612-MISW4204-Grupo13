@@ -16,17 +16,20 @@ type AssignmentHandler struct {
 	createAssignment        *application.CreateAssignment
 	getAssignmentByID       *application.GetAssignmentByID
 	listAssignmentsByUserID *application.ListAssignmentsByUserID
+	updateAssignment        *application.UpdateAssignment
 }
 
 func NewAssignmentHandler(
 	createAssignment *application.CreateAssignment,
 	getAssignmentByID *application.GetAssignmentByID,
 	listAssignmentsByUserID *application.ListAssignmentsByUserID,
+	updateAssignment *application.UpdateAssignment,
 ) *AssignmentHandler {
 	return &AssignmentHandler{
 		createAssignment:        createAssignment,
 		getAssignmentByID:       getAssignmentByID,
 		listAssignmentsByUserID: listAssignmentsByUserID,
+		updateAssignment:        updateAssignment,
 	}
 }
 
@@ -74,6 +77,45 @@ func (h *AssignmentHandler) GetAssignmentByID(c *gin.Context) {
 		switch {
 		case errors.Is(err, domain.ErrAssignmentNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		default:
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, AssignmentResponse{
+		ID:          output.ID,
+		UserID:      output.UserID,
+		WorkspaceID: output.WorkspaceID,
+		Role:        string(output.Role),
+		WeeklyHours: output.WeeklyHours,
+	})
+}
+
+func (h *AssignmentHandler) UpdateAssignment(c *gin.Context) {
+	id, err := sharedHelpers.ParseResourceID(c.Param("id"))
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+		return
+	}
+
+	var req UpdateAssignmentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		sharedHelpers.RespondWithErrors(c, http.StatusBadRequest, mapBindingErrors(err))
+		return
+	}
+
+	output, err := h.updateAssignment.Execute(application.UpdateAssignmentInput{
+		ID:          id,
+		Role:        domain.AssignmentRole(req.Role),
+		WeeklyHours: req.WeeklyHours,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrAssignmentNotFound):
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		case isAssignmentValidationError(err):
+			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		default:
 			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
 		}
