@@ -171,7 +171,7 @@ func TestUpdateAssignmentBlocksWhenMonitorAssignmentsExceed3(t *testing.T) {
 		UserID:      110,
 		WorkspaceID: 4,
 		Role:        domain.RoleAssistant,
-		WeeklyHours: 5,
+		WeeklyHours: 15,
 	})
 	if err != nil {
 		t.Fatalf("expected no error creating assistant assignment to update, got %v", err)
