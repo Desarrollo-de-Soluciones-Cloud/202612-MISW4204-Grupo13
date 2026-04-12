@@ -5,15 +5,11 @@ import (
 	"time"
 )
 
-type CreatePeriodInput struct {
-	Name                 string
-	InitialDate          time.Time
-	FinalDate            time.Time
-	InscriptionFinalDate time.Time
-	PeriodState          domain.PeriodState
+type GetPeriodByIDInput struct {
+	ID uint
 }
 
-type CreatePeriodOutput struct {
+type GetPeriodByIDOutput struct {
 	ID                   uint                `json:"id"`
 	Name                 string              `json:"name"`
 	InitialDate          time.Time           `json:"initial_date"`
@@ -22,31 +18,21 @@ type CreatePeriodOutput struct {
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 
-type CreatePeriod struct {
+type GetPeriodByID struct {
 	repository domain.PeriodRepository
 }
 
-func NewCreatePeriod(repo domain.PeriodRepository) *CreatePeriod {
-	return &CreatePeriod{repository: repo}
+func NewGetPeriodByID(repo domain.PeriodRepository) *GetPeriodByID {
+	return &GetPeriodByID{repository: repo}
 }
 
-func (uc *CreatePeriod) Execute(input CreatePeriodInput) (*CreatePeriodOutput, error) {
-	period, err := domain.NewPeriod(
-		input.Name,
-		input.InitialDate,
-		input.FinalDate,
-		input.InscriptionFinalDate,
-		input.PeriodState,
-	)
+func (uc *GetPeriodByID) Execute(input GetPeriodByIDInput) (*GetPeriodByIDOutput, error) {
+	period, err := uc.repository.FindByID(input.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := uc.repository.Create(period); err != nil {
-		return nil, err
-	}
-
-	return &CreatePeriodOutput{
+	return &GetPeriodByIDOutput{
 		ID:                   period.ID,
 		Name:                 period.Name,
 		InitialDate:          period.InitialDate,

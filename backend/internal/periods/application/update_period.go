@@ -5,7 +5,8 @@ import (
 	"time"
 )
 
-type CreatePeriodInput struct {
+type UpdatePeriodInput struct {
+	ID                   uint
 	Name                 string
 	InitialDate          time.Time
 	FinalDate            time.Time
@@ -13,7 +14,7 @@ type CreatePeriodInput struct {
 	PeriodState          domain.PeriodState
 }
 
-type CreatePeriodOutput struct {
+type UpdatePeriodOutput struct {
 	ID                   uint                `json:"id"`
 	Name                 string              `json:"name"`
 	InitialDate          time.Time           `json:"initial_date"`
@@ -22,31 +23,35 @@ type CreatePeriodOutput struct {
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 
-type CreatePeriod struct {
+type UpdatePeriod struct {
 	repository domain.PeriodRepository
 }
 
-func NewCreatePeriod(repo domain.PeriodRepository) *CreatePeriod {
-	return &CreatePeriod{repository: repo}
+func NewUpdatePeriod(repo domain.PeriodRepository) *UpdatePeriod {
+	return &UpdatePeriod{repository: repo}
 }
 
-func (uc *CreatePeriod) Execute(input CreatePeriodInput) (*CreatePeriodOutput, error) {
-	period, err := domain.NewPeriod(
+func (uc *UpdatePeriod) Execute(input UpdatePeriodInput) (*UpdatePeriodOutput, error) {
+	period, err := uc.repository.FindByID(input.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := period.UpdatePeriod(
 		input.Name,
 		input.InitialDate,
 		input.FinalDate,
 		input.InscriptionFinalDate,
 		input.PeriodState,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, err
 	}
 
-	if err := uc.repository.Create(period); err != nil {
+	if err := uc.repository.Update(period); err != nil {
 		return nil, err
 	}
 
-	return &CreatePeriodOutput{
+	return &UpdatePeriodOutput{
 		ID:                   period.ID,
 		Name:                 period.Name,
 		InitialDate:          period.InitialDate,

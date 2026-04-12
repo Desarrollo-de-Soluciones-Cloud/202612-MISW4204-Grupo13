@@ -5,15 +5,11 @@ import (
 	"time"
 )
 
-type CreatePeriodInput struct {
-	Name                 string
-	InitialDate          time.Time
-	FinalDate            time.Time
-	InscriptionFinalDate time.Time
-	PeriodState          domain.PeriodState
+type GetPeriodByNameInput struct {
+	Name string
 }
 
-type CreatePeriodOutput struct {
+type GetPeriodByNameOutput struct {
 	ID                   uint                `json:"id"`
 	Name                 string              `json:"name"`
 	InitialDate          time.Time           `json:"initial_date"`
@@ -22,31 +18,25 @@ type CreatePeriodOutput struct {
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 
-type CreatePeriod struct {
+type GetPeriodByName struct {
 	repository domain.PeriodRepository
 }
 
-func NewCreatePeriod(repo domain.PeriodRepository) *CreatePeriod {
-	return &CreatePeriod{repository: repo}
+func NewGetPeriodByName(repo domain.PeriodRepository) *GetPeriodByName {
+	return &GetPeriodByName{repository: repo}
 }
 
-func (uc *CreatePeriod) Execute(input CreatePeriodInput) (*CreatePeriodOutput, error) {
-	period, err := domain.NewPeriod(
-		input.Name,
-		input.InitialDate,
-		input.FinalDate,
-		input.InscriptionFinalDate,
-		input.PeriodState,
-	)
+func (uc *GetPeriodByName) Execute(input GetPeriodByNameInput) (*GetPeriodByNameOutput, error) {
+	if err := domain.ValidatePeriodName(input.Name); err != nil {
+		return nil, err
+	}
+
+	period, err := uc.repository.FindByName(domain.NormalizePeriodName(input.Name))
 	if err != nil {
 		return nil, err
 	}
 
-	if err := uc.repository.Create(period); err != nil {
-		return nil, err
-	}
-
-	return &CreatePeriodOutput{
+	return &GetPeriodByNameOutput{
 		ID:                   period.ID,
 		Name:                 period.Name,
 		InitialDate:          period.InitialDate,
