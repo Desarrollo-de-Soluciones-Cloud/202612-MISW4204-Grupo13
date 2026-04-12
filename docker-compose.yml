@@ -1,0 +1,49 @@
+services:
+  seneprojects_backend:
+    build: ./backend
+    container_name: seneprojects_backend
+    env_file:
+      - .env
+    depends_on:
+      seneprojects_db:
+        condition: service_healthy
+    restart: on-failure
+
+  seneprojects_backend_test:
+    build:
+      context: ./backend
+      target: builder
+    container_name: seneprojects_backend_test
+    profiles:
+      - test
+    working_dir: /app
+
+  seneprojects_nginx:
+    build: ./nginx
+    container_name: seneprojects_nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - seneprojects_backend
+
+  seneprojects_db:
+    image: postgres:15
+    container_name: seneprojects_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - seneprojects_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p ${DB_PORT} -d ${DB_NAME} -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  seneprojects_data:
