@@ -10,11 +10,27 @@ jobs:
   build:
     name: Build and analyze
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
     
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - name: download dependencies
+        run: go mod download
+
+      - name: run coverage
+        run: make test-coverage
+
       - uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
