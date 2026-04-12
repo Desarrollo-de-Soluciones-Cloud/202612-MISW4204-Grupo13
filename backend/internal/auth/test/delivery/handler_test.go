@@ -158,6 +158,24 @@ func TestSignInBindingErrorRequiredAndMax(t *testing.T) {
 	}
 }
 
+func TestSignInBindingErrorPasswordRequired(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler, _, _ := newAuthHandler(t)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	requestBody := bytes.NewBufferString(`{"email":"john@example.com","password":""}`)
+	request, _ := http.NewRequest(http.MethodPost, "/auth/sign-in", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.SignIn(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+}
+
 func TestSignInBindingErrorWithMalformedJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

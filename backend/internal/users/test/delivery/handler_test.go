@@ -498,6 +498,44 @@ func TestCreateUserBindingErrorNameTooLong(t *testing.T) {
 	}
 }
 
+func TestCreateUserBindingErrorNameTooShort(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := newUserHandler(newMockUserRepository())
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	requestBody := bytes.NewBufferString(`{"name":"Jo","email":"john@example.com","password":"password123","global_role":"professor"}`)
+	request, _ := http.NewRequest(http.MethodPost, "/users", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.CreateUser(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+}
+
+func TestUpdateUserBindingErrorNameTooLong(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := newUserHandler(newMockUserRepository())
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Params = gin.Params{{Key: "id", Value: "1"}}
+	longName := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	requestBody := bytes.NewBufferString(`{"name":"` + longName + `","email":"john@example.com","global_role":"professor"}`)
+	request, _ := http.NewRequest(http.MethodPut, "/users/1", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.UpdateUser(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+}
+
 func TestUpdateUserBindingError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

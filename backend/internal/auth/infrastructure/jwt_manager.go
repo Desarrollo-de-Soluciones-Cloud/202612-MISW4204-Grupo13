@@ -46,15 +46,12 @@ func (m *TokenManager) GenerateToken(user *domain.AuthenticatedUser) (*domain.Au
 	now := time.Now().UTC()
 	expiresAt := now.Add(time.Duration(m.expirationMinutes) * time.Minute)
 
-	headerBytes, err := json.Marshal(tokenHeader{
+	headerBytes, _ := json.Marshal(tokenHeader{
 		Algorithm: "HS256",
 		Type:      "JWT",
 	})
-	if err != nil {
-		return nil, err
-	}
 
-	claimsBytes, err := json.Marshal(tokenClaims{
+	claimsBytes, _ := json.Marshal(tokenClaims{
 		Subject:    user.ID,
 		Name:       user.Name,
 		Email:      user.Email,
@@ -62,9 +59,6 @@ func (m *TokenManager) GenerateToken(user *domain.AuthenticatedUser) (*domain.Au
 		IssuedAt:   now.Unix(),
 		ExpiresAt:  expiresAt.Unix(),
 	})
-	if err != nil {
-		return nil, err
-	}
 
 	encodedHeader := base64.RawURLEncoding.EncodeToString(headerBytes)
 	encodedClaims := base64.RawURLEncoding.EncodeToString(claimsBytes)
