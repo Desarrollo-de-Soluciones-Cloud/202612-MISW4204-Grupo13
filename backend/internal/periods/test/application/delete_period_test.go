@@ -15,7 +15,7 @@ func TestDeletePeriodSuccess(t *testing.T) {
 	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
 	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
 
-	period, _ := domain.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domain.ClosedPeriod)
+	period, _ := domain.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domain.ActivePeriod)
 	mockRepo.Create(period)
 
 	deletePeriod := applicationpkg.NewDeletePeriod(mockRepo)
@@ -39,28 +39,5 @@ func TestDeletePeriodNotFound(t *testing.T) {
 
 	if !errors.Is(err, domain.ErrPeriodNotFound) {
 		t.Errorf("expected ErrPeriodNotFound, got %v", err)
-	}
-}
-
-func TestDeletePeriodCannotDeleteActive(t *testing.T) {
-	mockRepo := NewMockPeriodRepository()
-
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
-
-	period, _ := domain.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domain.ActivePeriod)
-	mockRepo.Create(period)
-
-	deletePeriod := applicationpkg.NewDeletePeriod(mockRepo)
-	err := deletePeriod.Execute(applicationpkg.DeletePeriodInput{ID: period.ID})
-
-	if !errors.Is(err, domain.ErrPeriodCannotBeDeleted) {
-		t.Errorf("expected ErrPeriodCannotBeDeleted, got %v", err)
-	}
-
-	_, err = mockRepo.FindByID(period.ID)
-	if err != nil {
-		t.Errorf("expected period to still exist, but got %v", err)
 	}
 }

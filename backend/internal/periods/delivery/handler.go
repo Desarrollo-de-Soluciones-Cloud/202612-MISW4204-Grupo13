@@ -214,8 +214,6 @@ func (h *PeriodHandler) DeletePeriod(c *gin.Context) {
 		switch {
 		case errors.Is(err, domain.ErrPeriodNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
-		case errors.Is(err, domain.ErrPeriodCannotBeDeleted):
-			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
 		default:
 			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
 		}
