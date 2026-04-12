@@ -154,3 +154,74 @@ func TestSignInRejectsInvalidEmail(t *testing.T) {
 		t.Fatalf("expected ErrAuthEmailInvalid, got %v", err)
 	}
 }
+
+func TestSignInRejectsShortPassword(t *testing.T) {
+	userReader := NewMockUserReader()
+	tokenManager := NewMockTokenManager()
+	signIn := applicationpkg.NewSignIn(userReader, tokenManager)
+
+	_, err := signIn.Execute(applicationpkg.SignInInput{
+		Email:    "john@example.com",
+		Password: "short",
+	})
+	if !errors.Is(err, authDomain.ErrAuthPasswordTooShort) {
+		t.Fatalf("expected ErrAuthPasswordTooShort, got %v", err)
+	}
+}
+
+func TestSignInPropagatesUnexpectedReaderError(t *testing.T) {
+	userReader := NewMockUserReader()
+	tokenManager := NewMockTokenManager()
+	signIn := applicationpkg.NewSignIn(userReader, tokenManager)
+
+	userReader.users = nil
+	readerErr := errors.New("reader failure")
+	userReaderWithErr := &MockUserReaderWithError{err: readerErr}
+	signIn = applicationpkg.NewSignIn(userReaderWithErr, tokenManager)
+
+	_, err := signIn.Execute(applicationpkg.SignInInput{
+		Email:    "john@example.com",
+		Password: "password123",
+	})
+	if !errors.Is(err, readerErr) {
+		t.Fatalf("expected reader error, got %v", err)
+	}
+}
+
+func TestSignInPropagatesTokenGenerationError(t *testing.T) {
+	userReader := NewMockUserReader()
+	tokenManager := NewMockTokenManager()
+	tokenManager.generateErr = errors.New("token generation failed")
+	signIn := applicationpkg.NewSignIn(userReader, tokenManager)
+
+	passwordHash, err := sharedHelpers.HashPassword("password123")
+	if err != nil {
+		t.Fatalf("expected password hash, got %v", err)
+	}
+
+	userReader.users["john@example.com"] = &authDomain.AuthenticatedUserCredentials{
+		AuthenticatedUser: authDomain.AuthenticatedUser{
+			ID:         1,
+			Name:       "John Doe",
+			Email:      "john@example.com",
+			GlobalRole: usersDomain.RoleProfessor,
+		},
+		Password: passwordHash,
+	}
+
+	_, err = signIn.Execute(applicationpkg.SignInInput{
+		Email:    "john@example.com",
+		Password: "password123",
+	})
+	if err == nil || err.Error() != "token generation failed" {
+		t.Fatalf("expected token generation error, got %v", err)
+	}
+}
+
+type MockUserReaderWithError struct {
+	err error
+}
+
+func (m *MockUserReaderWithError) GetByEmail(email string) (*authDomain.AuthenticatedUserCredentials, error) {
+	return nil, m.err
+}

@@ -108,6 +108,35 @@ func TestParseTokenRejectsInvalidRole(t *testing.T) {
 	}
 }
 
+func TestParseTokenRejectsInvalidBase64Signature(t *testing.T) {
+	manager := authInfrastructure.NewTokenManager("secret", 10)
+
+	_, err := manager.ParseToken("a.b.invalid@@")
+	if !errors.Is(err, authDomain.ErrAuthTokenInvalid) {
+		t.Fatalf("expected ErrAuthTokenInvalid, got %v", err)
+	}
+}
+
+func TestParseTokenRejectsInvalidClaimsPayload(t *testing.T) {
+	manager := authInfrastructure.NewTokenManager("secret", 10)
+	token := buildMalformedClaimsToken(t, "secret")
+
+	_, err := manager.ParseToken(token)
+	if !errors.Is(err, authDomain.ErrAuthTokenInvalid) {
+		t.Fatalf("expected ErrAuthTokenInvalid, got %v", err)
+	}
+}
+
+func TestParseTokenRejectsInvalidClaimsBase64(t *testing.T) {
+	manager := authInfrastructure.NewTokenManager("secret", 10)
+	token := buildTokenWithInvalidClaimsBase64(t, "secret")
+
+	_, err := manager.ParseToken(token)
+	if !errors.Is(err, authDomain.ErrAuthTokenInvalid) {
+		t.Fatalf("expected ErrAuthTokenInvalid, got %v", err)
+	}
+}
+
 type tokenHeader struct {
 	Algorithm string `json:"alg"`
 	Type      string `json:"typ"`
@@ -141,6 +170,49 @@ func buildSignedToken(t *testing.T, secret string, claims tokenClaims) string {
 	encodedHeader := base64.RawURLEncoding.EncodeToString(headerBytes)
 	encodedClaims := base64.RawURLEncoding.EncodeToString(claimsBytes)
 	signingInput := encodedHeader + "." + encodedClaims
+
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(signingInput))
+	signature := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+
+	return signingInput + "." + signature
+}
+
+func buildMalformedClaimsToken(t *testing.T, secret string) string {
+	t.Helper()
+
+	headerBytes, err := json.Marshal(tokenHeader{
+		Algorithm: "HS256",
+		Type:      "JWT",
+	})
+	if err != nil {
+		t.Fatalf("expected header marshal, got %v", err)
+	}
+
+	encodedHeader := base64.RawURLEncoding.EncodeToString(headerBytes)
+	encodedClaims := base64.RawURLEncoding.EncodeToString([]byte("{"))
+	signingInput := encodedHeader + "." + encodedClaims
+
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(signingInput))
+	signature := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+
+	return signingInput + "." + signature
+}
+
+func buildTokenWithInvalidClaimsBase64(t *testing.T, secret string) string {
+	t.Helper()
+
+	headerBytes, err := json.Marshal(tokenHeader{
+		Algorithm: "HS256",
+		Type:      "JWT",
+	})
+	if err != nil {
+		t.Fatalf("expected header marshal, got %v", err)
+	}
+
+	encodedHeader := base64.RawURLEncoding.EncodeToString(headerBytes)
+	signingInput := encodedHeader + ".invalid@@"
 
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte(signingInput))

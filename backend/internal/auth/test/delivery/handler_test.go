@@ -139,6 +139,43 @@ func TestSignInBindingError(t *testing.T) {
 	}
 }
 
+func TestSignInBindingErrorRequiredAndMax(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler, _, _ := newAuthHandler(t)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	longPassword := "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstu"
+	requestBody := bytes.NewBufferString(`{"email":"","password":"` + longPassword + `"}`)
+	request, _ := http.NewRequest(http.MethodPost, "/auth/sign-in", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.SignIn(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+}
+
+func TestSignInBindingErrorWithMalformedJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler, _, _ := newAuthHandler(t)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	requestBody := bytes.NewBufferString(`{"email":`)
+	request, _ := http.NewRequest(http.MethodPost, "/auth/sign-in", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.SignIn(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+}
+
 func TestSignInRejectsInvalidCredentials(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -187,6 +224,93 @@ func TestGetCurrentUserWithoutUser(t *testing.T) {
 	context, _ := gin.CreateTestContext(recorder)
 
 	handler.GetCurrentUser(context)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status 401, got %d", recorder.Code)
+	}
+}
+
+func TestGetCurrentUserSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler, _, _ := newAuthHandler(t)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Set("current_user", authDomain.AuthenticatedUser{
+		ID:         1,
+		Name:       "John Doe",
+		Email:      "john@example.com",
+		GlobalRole: usersDomain.RoleProfessor,
+	})
+
+	handler.GetCurrentUser(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", recorder.Code)
+	}
+}
+
+func TestRequireAuthenticationSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler, _, _ := newAuthHandler(t)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	request, _ := http.NewRequest(http.MethodGet, "/secure", nil)
+	request.Header.Set("Authorization", "Bearer valid-token")
+	context.Request = request
+
+	handler.RequireAuthentication()(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", recorder.Code)
+	}
+}
+
+func TestRequireAuthenticationMissingToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler, _, _ := newAuthHandler(t)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	request, _ := http.NewRequest(http.MethodGet, "/secure", nil)
+	context.Request = request
+
+	handler.RequireAuthentication()(context)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status 401, got %d", recorder.Code)
+	}
+}
+
+func TestRequireAuthenticationInvalidHeader(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler, _, _ := newAuthHandler(t)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	request, _ := http.NewRequest(http.MethodGet, "/secure", nil)
+	request.Header.Set("Authorization", "Basic bad-token")
+	context.Request = request
+
+	handler.RequireAuthentication()(context)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status 401, got %d", recorder.Code)
+	}
+}
+
+func TestRequireAuthenticationEmptyBearerToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler, _, _ := newAuthHandler(t)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	request, _ := http.NewRequest(http.MethodGet, "/secure", nil)
+	request.Header.Set("Authorization", "Bearer ")
+	context.Request = request
+
+	handler.RequireAuthentication()(context)
 
 	if recorder.Code != http.StatusUnauthorized {
 		t.Fatalf("expected status 401, got %d", recorder.Code)
@@ -242,5 +366,75 @@ func TestRequireRolesRejectsMissingCurrentUser(t *testing.T) {
 
 	if recorder.Code != http.StatusUnauthorized {
 		t.Fatalf("expected status 401, got %d", recorder.Code)
+	}
+}
+
+func TestRequireRolesSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler, _, _ := newAuthHandler(t)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Set("current_user", authDomain.AuthenticatedUser{
+		ID:         1,
+		Name:       "John Doe",
+		Email:      "john@example.com",
+		GlobalRole: usersDomain.RoleProfessor,
+	})
+
+	handler.RequireRoles(usersDomain.RoleAdmin, usersDomain.RoleProfessor)(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", recorder.Code)
+	}
+}
+
+func TestRequireRolesForbidden(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler, _, _ := newAuthHandler(t)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Set("current_user", authDomain.AuthenticatedUser{
+		ID:         1,
+		Name:       "John Doe",
+		Email:      "john@example.com",
+		GlobalRole: usersDomain.RoleMonitor,
+	})
+
+	handler.RequireRoles(usersDomain.RoleAdmin, usersDomain.RoleProfessor)(context)
+
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("expected status 403, got %d", recorder.Code)
+	}
+}
+
+func TestExportedGetCurrentUserHelper(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+
+	if _, ok := authDelivery.GetCurrentUser(context); ok {
+		t.Fatal("expected no current user in empty context")
+	}
+
+	context.Set("current_user", "invalid")
+	if _, ok := authDelivery.GetCurrentUser(context); ok {
+		t.Fatal("expected invalid typed current user to fail")
+	}
+
+	context.Set("current_user", authDomain.AuthenticatedUser{
+		ID:         1,
+		Name:       "John Doe",
+		Email:      "john@example.com",
+		GlobalRole: usersDomain.RoleProfessor,
+	})
+	currentUser, ok := authDelivery.GetCurrentUser(context)
+	if !ok {
+		t.Fatal("expected current user to be returned")
+	}
+	if currentUser.Email != "john@example.com" {
+		t.Fatalf("expected john@example.com, got %q", currentUser.Email)
 	}
 }

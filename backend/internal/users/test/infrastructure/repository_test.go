@@ -94,3 +94,30 @@ func TestUserRepositoryReturnsNotFound(t *testing.T) {
 		t.Fatalf("expected ErrUserNotFound, got %v", err)
 	}
 }
+
+func TestUserRepositoryPropagatesDatabaseErrors(t *testing.T) {
+	setupTestDB(t)
+
+	repo := usersInfrastructure.NewUserRepository()
+	if err := repo.AutoMigrate(); err != nil {
+		t.Fatalf("expected automigrate, got %v", err)
+	}
+
+	sqlDB, err := database.DB.DB()
+	if err != nil {
+		t.Fatalf("expected sql db, got %v", err)
+	}
+	if err := sqlDB.Close(); err != nil {
+		t.Fatalf("expected close db, got %v", err)
+	}
+
+	_, err = repo.FindByID(1)
+	if err == nil || errors.Is(err, usersDomain.ErrUserNotFound) {
+		t.Fatalf("expected propagated database error, got %v", err)
+	}
+
+	_, err = repo.FindByEmail("john@example.com")
+	if err == nil || errors.Is(err, usersDomain.ErrUserNotFound) {
+		t.Fatalf("expected propagated database error, got %v", err)
+	}
+}

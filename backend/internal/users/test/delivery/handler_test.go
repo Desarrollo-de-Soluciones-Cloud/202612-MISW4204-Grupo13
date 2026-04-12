@@ -18,6 +18,7 @@ type mockUserRepository struct {
 	users            map[string]*usersDomain.User
 	byID             map[uint]*usersDomain.User
 	nextID           uint
+	findByIDErr      error
 	findAllErr       error
 	findAllByRoleErr error
 	updateErr        error
@@ -44,6 +45,9 @@ func (m *mockUserRepository) Create(user *usersDomain.User) error {
 }
 
 func (m *mockUserRepository) FindByID(id uint) (*usersDomain.User, error) {
+	if m.findByIDErr != nil {
+		return nil, m.findByIDErr
+	}
 	if user, ok := m.byID[id]; ok {
 		return user, nil
 	}
@@ -142,6 +146,82 @@ func TestCreateUserBindingError(t *testing.T) {
 	}
 }
 
+func TestCreateUserSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := newUserHandler(newMockUserRepository())
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	requestBody := bytes.NewBufferString(`{"name":"John Doe","email":"john@example.com","password":"password123","global_role":"professor"}`)
+	request, _ := http.NewRequest(http.MethodPost, "/users", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.CreateUser(context)
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("expected status 201, got %d", recorder.Code)
+	}
+}
+
+func TestCreateUserInternalError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := newMockUserRepository()
+	repo.createErr = errors.New("db error")
+	handler := newUserHandler(repo)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	requestBody := bytes.NewBufferString(`{"name":"John Doe","email":"john@example.com","password":"password123","global_role":"professor"}`)
+	request, _ := http.NewRequest(http.MethodPost, "/users", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.CreateUser(context)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status 500, got %d", recorder.Code)
+	}
+}
+
+func TestCreateUserConflict(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := newMockUserRepository()
+	seedUser(t, repo, "John Doe", "john@example.com", usersDomain.RoleProfessor)
+	handler := newUserHandler(repo)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	requestBody := bytes.NewBufferString(`{"name":"Jane Doe","email":"john@example.com","password":"password123","global_role":"assistant"}`)
+	request, _ := http.NewRequest(http.MethodPost, "/users", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.CreateUser(context)
+
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("expected status 409, got %d", recorder.Code)
+	}
+}
+
+func TestCreateUserDomainValidationError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := newUserHandler(newMockUserRepository())
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	requestBody := bytes.NewBufferString(`{"name":"John Doe","email":"john@example.com","password":"password123","global_role":"guest"}`)
+	request, _ := http.NewRequest(http.MethodPost, "/users", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.CreateUser(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+}
+
 func TestListUsersWithoutCurrentUser(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -211,6 +291,25 @@ func TestListUsersProfessorRejectedFilter(t *testing.T) {
 	}
 }
 
+func TestListUsersAdminSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := newMockUserRepository()
+	seedUser(t, repo, "John Doe", "john@example.com", usersDomain.RoleProfessor)
+	handler := newUserHandler(repo)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	request, _ := http.NewRequest(http.MethodGet, "/users", nil)
+	context.Request = request
+	context.Set("current_user", authDomain.AuthenticatedUser{GlobalRole: usersDomain.RoleAdmin})
+
+	handler.ListUsers(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", recorder.Code)
+	}
+}
+
 func TestListUsersInternalError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -227,6 +326,25 @@ func TestListUsersInternalError(t *testing.T) {
 
 	if recorder.Code != http.StatusInternalServerError {
 		t.Fatalf("expected status 500, got %d", recorder.Code)
+	}
+}
+
+func TestListUsersAdminWithRoleFilterDelegatesSuccessfully(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := newMockUserRepository()
+	seedUser(t, repo, "Monitor One", "monitor@example.com", usersDomain.RoleMonitor)
+	handler := newUserHandler(repo)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	request, _ := http.NewRequest(http.MethodGet, "/users?role=monitor", nil)
+	context.Request = request
+	context.Set("current_user", authDomain.AuthenticatedUser{GlobalRole: usersDomain.RoleAdmin})
+
+	handler.ListUsers(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", recorder.Code)
 	}
 }
 
@@ -269,6 +387,111 @@ func TestGetUserByIDInvalidID(t *testing.T) {
 	context.Params = gin.Params{{Key: "id", Value: "bad"}}
 
 	handler.GetUserByID(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+}
+
+func TestGetUserByIDSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := newMockUserRepository()
+	seedUser(t, repo, "John Doe", "john@example.com", usersDomain.RoleProfessor)
+	handler := newUserHandler(repo)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Params = gin.Params{{Key: "id", Value: "1"}}
+
+	handler.GetUserByID(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", recorder.Code)
+	}
+}
+
+func TestGetUserByIDNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := newUserHandler(newMockUserRepository())
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Params = gin.Params{{Key: "id", Value: "99"}}
+
+	handler.GetUserByID(context)
+
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", recorder.Code)
+	}
+}
+
+func TestGetUserByIDInternalError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := newMockUserRepository()
+	repo.findByIDErr = errors.New("db error")
+	handler := newUserHandler(repo)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Params = gin.Params{{Key: "id", Value: "1"}}
+
+	handler.GetUserByID(context)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status 500, got %d", recorder.Code)
+	}
+}
+
+func TestCreateUserBindingErrorRequiredAndMax(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := newUserHandler(newMockUserRepository())
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	longPassword := "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstu"
+	requestBody := bytes.NewBufferString(`{"name":"","email":"","password":"` + longPassword + `","global_role":""}`)
+	request, _ := http.NewRequest(http.MethodPost, "/users", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.CreateUser(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+}
+
+func TestCreateUserBindingErrorWithMalformedJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := newUserHandler(newMockUserRepository())
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	requestBody := bytes.NewBufferString(`{"name":`)
+	request, _ := http.NewRequest(http.MethodPost, "/users", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.CreateUser(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+}
+
+func TestCreateUserBindingErrorNameTooLong(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := newUserHandler(newMockUserRepository())
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	longName := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	requestBody := bytes.NewBufferString(`{"name":"` + longName + `","email":"john@example.com","password":"password123","global_role":"professor"}`)
+	request, _ := http.NewRequest(http.MethodPost, "/users", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.CreateUser(context)
 
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("expected status 400, got %d", recorder.Code)
@@ -374,6 +597,46 @@ func TestUpdateUserInternalError(t *testing.T) {
 	}
 }
 
+func TestUpdateUserSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := newMockUserRepository()
+	seedUser(t, repo, "John Doe", "john@example.com", usersDomain.RoleProfessor)
+	handler := newUserHandler(repo)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Params = gin.Params{{Key: "id", Value: "1"}}
+	requestBody := bytes.NewBufferString(`{"name":"Jane Doe","email":"jane@example.com","global_role":"assistant"}`)
+	request, _ := http.NewRequest(http.MethodPut, "/users/1", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.UpdateUser(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", recorder.Code)
+	}
+}
+
+func TestUpdateUserNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := newUserHandler(newMockUserRepository())
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Params = gin.Params{{Key: "id", Value: "99"}}
+	requestBody := bytes.NewBufferString(`{"name":"Jane Doe","email":"jane@example.com","global_role":"assistant"}`)
+	request, _ := http.NewRequest(http.MethodPut, "/users/99", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.UpdateUser(context)
+
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", recorder.Code)
+	}
+}
+
 func TestChangeUserRoleBindingError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -426,5 +689,45 @@ func TestChangeUserRoleValidationError(t *testing.T) {
 
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+}
+
+func TestChangeUserRoleNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := newUserHandler(newMockUserRepository())
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Params = gin.Params{{Key: "id", Value: "99"}}
+	requestBody := bytes.NewBufferString(`{"global_role":"assistant"}`)
+	request, _ := http.NewRequest(http.MethodPatch, "/users/99/role", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.ChangeUserRole(context)
+
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", recorder.Code)
+	}
+}
+
+func TestChangeUserRoleSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := newMockUserRepository()
+	seedUser(t, repo, "John Doe", "john@example.com", usersDomain.RoleProfessor)
+	handler := newUserHandler(repo)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Params = gin.Params{{Key: "id", Value: "1"}}
+	requestBody := bytes.NewBufferString(`{"global_role":"assistant"}`)
+	request, _ := http.NewRequest(http.MethodPatch, "/users/1/role", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.ChangeUserRole(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", recorder.Code)
 	}
 }
