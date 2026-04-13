@@ -52,6 +52,15 @@ func TestSetupRoutesRegistersWeekByNumberRoute(t *testing.T) {
 		t.Fatalf("expected automigrate, got %v", err)
 	}
 
+	if err := database.DB.Create(&weeksDomain.Week{
+		PeriodID:    1,
+		Number:      1,
+		InitialDate: "2026-01-12",
+		FinalDate:   "2026-01-18",
+	}).Error; err != nil {
+		t.Fatalf("expected seed week, got %v", err)
+	}
+
 	router := gin.New()
 
 	delivery.SetupRoutes(router)
