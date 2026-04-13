@@ -14,6 +14,7 @@ type PeriodDTO struct {
 	InitialDate          string              `json:"initial_date"`
 	FinalDate            string              `json:"final_date"`
 	InscriptionFinalDate string              `json:"inscription_final_date"`
+	WeeksCount           int                 `json:"weeks_count"`
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 
@@ -38,6 +39,7 @@ func (uc *ListPeriods) Execute() (*ListPeriodsOutput, error) {
 			InitialDate:          p.InitialDate,
 			FinalDate:            p.FinalDate,
 			InscriptionFinalDate: p.InscriptionFinalDate,
+			WeeksCount:           p.WeeksCount,
 			PeriodState:          p.PeriodState,
 		}
 	}

@@ -8,6 +8,8 @@ import (
 
 const (
 	PeriodNameLength = 7
+	WeeksCount8      = 8
+	WeeksCount16     = 16
 )
 
 func NormalizePeriodName(name string) string {
@@ -18,9 +20,9 @@ func ValidatePeriodName(name string) error {
 	trimmedName := strings.TrimSpace(name)
 
 	matched, _ := regexp.MatchString(`^\d{4}-\d{2}$`, trimmedName)
-    if !matched {
-        return ErrPeriodNameWrongFormat
-    }
+	if !matched {
+		return ErrPeriodNameWrongFormat
+	}
 
 	switch {
 	case trimmedName == "":
@@ -36,9 +38,9 @@ func ValidatePeriodInitialDate(date string) error {
 	timmedDate := strings.TrimSpace(date)
 
 	_, err := time.Parse("2006-01-02", date)
-    if err != nil {
-        return ErrPeriodInitialDateWrongFormat
-    }
+	if err != nil {
+		return ErrPeriodInitialDateWrongFormat
+	}
 
 	switch {
 	case timmedDate == "":
@@ -49,49 +51,36 @@ func ValidatePeriodInitialDate(date string) error {
 	return nil
 }
 
-func ValidatePeriodFinalDate(date string) error {
-	timmedDate := strings.TrimSpace(date)
-
-	_, err := time.Parse("2006-01-02", date)
-    if err != nil {
-        return ErrPeriodFinalDateWrongFormat
-    }
-
-	switch {
-	case timmedDate == "":
-		return ErrPeriodFinalDateRequired
-	case len(timmedDate) != 10:
-		return ErrPeriodFinalDateWrongFormat
-	}
-	return nil
-}
-
-func ValidatePeriodInscriptionFinalDate(date string) error {
-	timmedDate := strings.TrimSpace(date)
-
-	_, err := time.Parse("2006-01-02", date)
+func ValidatePeriodInitialDateIsMonday(date string) error {
+	parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(date))
 	if err != nil {
-		return ErrPeriodInscriptionFinalDateWrongFormat
+		return ErrPeriodInitialDateWrongFormat
 	}
 
-	switch {
-	case timmedDate == "":
-		return ErrPeriodInscriptionFinalDateRequired
-	case len(timmedDate) != 10:
-		return ErrPeriodInscriptionFinalDateWrongFormat
+	if parsedDate.Weekday() != time.Monday {
+		return ErrPeriodInitialDateMustBeMonday
 	}
+
 	return nil
 }
 
-func ValidatePeriodDateSequence(initialDate, finalDate, inscriptionFinalDate string) error {
-	if initialDate > finalDate {
-		return ErrPeriodDateSequenceInvalid
+func ValidatePeriodInitialDateIsFuture(date string) error {
+	parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(date))
+	if err != nil {
+		return ErrPeriodInitialDateWrongFormat
 	}
-	if initialDate > inscriptionFinalDate {
-		return ErrPeriodDateSequenceInvalid
+
+	now := time.Now()
+	if parsedDate.Before(now) || parsedDate.Format("2006-01-02") == now.Format("2006-01-02") {
+		return ErrPeriodInitialDateMustBeFuture
 	}
-	if inscriptionFinalDate > finalDate {
-		return ErrPeriodDateSequenceInvalid
+
+	return nil
+}
+
+func ValidatePeriodWeeksCount(weeksCount int) error {
+	if weeksCount != WeeksCount8 && weeksCount != WeeksCount16 {
+		return ErrPeriodWeeksCountInvalid
 	}
 	return nil
 }
@@ -106,3 +95,38 @@ func ValidatePeriodState(state PeriodState) error {
 		return nil
 	}
 }
+
+// Helper functions for date calculations
+
+func CalculatePeriodFinalDate(initialDate string, weeksCount int) (string, error) {
+	// Validate initial date is Monday
+	if err := ValidatePeriodInitialDateIsMonday(initialDate); err != nil {
+		return "", err
+	}
+
+	// Validate weeks count
+	if err := ValidatePeriodWeeksCount(weeksCount); err != nil {
+		return "", err
+	}
+
+	parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(initialDate))
+	if err != nil {
+		return "", ErrPeriodInitialDateWrongFormat
+	}
+
+	// final_date = initial_date + (weeks_count * 7) - 1 day (to make it Sunday)
+	finalDate := parsedDate.AddDate(0, 0, (weeksCount*7)-1)
+	return finalDate.Format("2006-01-02"), nil
+}
+
+func CalculatePeriodInscriptionFinalDate(initialDate string) (string, error) {
+	parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(initialDate))
+	if err != nil {
+		return "", ErrPeriodInitialDateWrongFormat
+	}
+
+	// inscription_final_date = initial_date - 1 day
+	inscriptionFinalDate := parsedDate.AddDate(0, 0, -1)
+	return inscriptionFinalDate.Format("2006-01-02"), nil
+}
+

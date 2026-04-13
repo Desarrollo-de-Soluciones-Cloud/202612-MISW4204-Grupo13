@@ -14,6 +14,7 @@ type GetPeriodByIDOutput struct {
 	InitialDate          string              `json:"initial_date"`
 	FinalDate            string              `json:"final_date"`
 	InscriptionFinalDate string              `json:"inscription_final_date"`
+	WeeksCount           int                 `json:"weeks_count"`
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 
@@ -37,6 +38,7 @@ func (uc *GetPeriodByID) Execute(input GetPeriodByIDInput) (*GetPeriodByIDOutput
 		InitialDate:          period.InitialDate,
 		FinalDate:            period.FinalDate,
 		InscriptionFinalDate: period.InscriptionFinalDate,
+		WeeksCount:           period.WeeksCount,
 		PeriodState:          period.PeriodState,
 	}, nil
 }
