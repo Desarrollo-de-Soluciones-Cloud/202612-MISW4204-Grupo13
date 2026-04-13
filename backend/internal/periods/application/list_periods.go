@@ -2,7 +2,6 @@ package application
 
 import (
 	"backend/internal/periods/domain"
-	"time"
 )
 
 type ListPeriodsOutput struct {
@@ -12,9 +11,10 @@ type ListPeriodsOutput struct {
 type PeriodDTO struct {
 	ID                   uint                `json:"id"`
 	Name                 string              `json:"name"`
-	InitialDate          time.Time           `json:"initial_date"`
-	FinalDate            time.Time           `json:"final_date"`
-	InscriptionFinalDate time.Time           `json:"inscription_final_date"`
+	InitialDate          string              `json:"initial_date"`
+	FinalDate            string              `json:"final_date"`
+	InscriptionFinalDate string              `json:"inscription_final_date"`
+	WeeksCount           int                 `json:"weeks_count"`
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 
@@ -39,6 +39,7 @@ func (uc *ListPeriods) Execute() (*ListPeriodsOutput, error) {
 			InitialDate:          p.InitialDate,
 			FinalDate:            p.FinalDate,
 			InscriptionFinalDate: p.InscriptionFinalDate,
+			WeeksCount:           p.WeeksCount,
 			PeriodState:          p.PeriodState,
 		}
 	}

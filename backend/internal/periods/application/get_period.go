@@ -2,7 +2,6 @@ package application
 
 import (
 	"backend/internal/periods/domain"
-	"time"
 )
 
 type GetPeriodByIDInput struct {
@@ -12,9 +11,10 @@ type GetPeriodByIDInput struct {
 type GetPeriodByIDOutput struct {
 	ID                   uint                `json:"id"`
 	Name                 string              `json:"name"`
-	InitialDate          time.Time           `json:"initial_date"`
-	FinalDate            time.Time           `json:"final_date"`
-	InscriptionFinalDate time.Time           `json:"inscription_final_date"`
+	InitialDate          string              `json:"initial_date"`
+	FinalDate            string              `json:"final_date"`
+	InscriptionFinalDate string              `json:"inscription_final_date"`
+	WeeksCount           int                 `json:"weeks_count"`
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 
@@ -38,6 +38,7 @@ func (uc *GetPeriodByID) Execute(input GetPeriodByIDInput) (*GetPeriodByIDOutput
 		InitialDate:          period.InitialDate,
 		FinalDate:            period.FinalDate,
 		InscriptionFinalDate: period.InscriptionFinalDate,
+		WeeksCount:           period.WeeksCount,
 		PeriodState:          period.PeriodState,
 	}, nil
 }

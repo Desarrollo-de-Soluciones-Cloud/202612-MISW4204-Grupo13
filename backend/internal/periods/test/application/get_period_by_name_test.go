@@ -5,27 +5,24 @@ import (
 	"backend/internal/periods/domain"
 	"errors"
 	"testing"
-	"time"
 )
 
 func TestGetPeriodByNameSuccess(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2026-10-05"
 
-	period, _ := domain.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domain.ActivePeriod)
+	period, _ := domain.NewPeriod("2026-10", initialDate, 16, domain.ActivePeriod)
 	mockRepo.Create(period)
 
 	getPeriodByName := applicationpkg.NewGetPeriodByName(mockRepo)
-	output, err := getPeriodByName.Execute(applicationpkg.GetPeriodByNameInput{Name: "2024-01"})
+	output, err := getPeriodByName.Execute(applicationpkg.GetPeriodByNameInput{Name: "2026-10"})
 
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if output.Name != "2024-01" {
-		t.Errorf("expected name '2024-01', got %q", output.Name)
+	if output.Name != "2026-10" {
+		t.Errorf("expected name '2026-10', got %q", output.Name)
 	}
 }
 
@@ -33,7 +30,7 @@ func TestGetPeriodByNameNotFound(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 	getPeriodByName := applicationpkg.NewGetPeriodByName(mockRepo)
 
-	_, err := getPeriodByName.Execute(applicationpkg.GetPeriodByNameInput{Name: "2024-99"})
+	_, err := getPeriodByName.Execute(applicationpkg.GetPeriodByNameInput{Name: "2024-10"})
 
 	if !errors.Is(err, domain.ErrPeriodNotFound) {
 		t.Errorf("expected ErrPeriodNotFound, got %v", err)

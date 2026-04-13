@@ -2,48 +2,71 @@ package application
 
 import (
 	"backend/internal/periods/domain"
-	"time"
+	weeksApplication "backend/internal/weeks/application"
 )
 
 type CreatePeriodInput struct {
-	Name                 string
-	InitialDate          time.Time
-	FinalDate            time.Time
-	InscriptionFinalDate time.Time
-	PeriodState          domain.PeriodState
+	Name        string
+	InitialDate string
+	WeeksCount  int
+	PeriodState domain.PeriodState
 }
 
 type CreatePeriodOutput struct {
 	ID                   uint                `json:"id"`
 	Name                 string              `json:"name"`
-	InitialDate          time.Time           `json:"initial_date"`
-	FinalDate            time.Time           `json:"final_date"`
-	InscriptionFinalDate time.Time           `json:"inscription_final_date"`
+	InitialDate          string              `json:"initial_date"`
+	FinalDate            string              `json:"final_date"`
+	InscriptionFinalDate string              `json:"inscription_final_date"`
+	WeeksCount           int                 `json:"weeks_count"`
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 
 type CreatePeriod struct {
 	repository domain.PeriodRepository
+	createWeeksForPeriod createWeeksForPeriodExecutor
 }
 
-func NewCreatePeriod(repo domain.PeriodRepository) *CreatePeriod {
-	return &CreatePeriod{repository: repo}
+type createWeeksForPeriodExecutor interface {
+	Execute(input weeksApplication.CreateWeeksForPeriodInput) (*weeksApplication.CreateWeeksForPeriodOutput, error)
+}
+
+func NewCreatePeriod(repo domain.PeriodRepository, createWeeksForPeriod createWeeksForPeriodExecutor) *CreatePeriod {
+	return &CreatePeriod{
+		repository: repo,
+		createWeeksForPeriod: createWeeksForPeriod,
+	}
 }
 
 func (uc *CreatePeriod) Execute(input CreatePeriodInput) (*CreatePeriodOutput, error) {
 	period, err := domain.NewPeriod(
 		input.Name,
 		input.InitialDate,
-		input.FinalDate,
-		input.InscriptionFinalDate,
+		input.WeeksCount,
 		input.PeriodState,
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	p, err := uc.repository.FindByName(period.Name)
+	if err == nil && p != nil {
+		return nil, domain.ErrPeriodNameAlreadyExists
+	}
+
 	if err := uc.repository.Create(period); err != nil {
 		return nil, err
+	}
+
+	if uc.createWeeksForPeriod != nil {
+		if _, err := uc.createWeeksForPeriod.Execute(weeksApplication.CreateWeeksForPeriodInput{
+			PeriodID:    period.ID,
+			InitialDate: period.InitialDate,
+			FinalDate:   period.FinalDate,
+			WeeksCount:  period.WeeksCount,
+		}); err != nil {
+			return nil, err
+		}
 	}
 
 	return &CreatePeriodOutput{
@@ -52,6 +75,7 @@ func (uc *CreatePeriod) Execute(input CreatePeriodInput) (*CreatePeriodOutput, e
 		InitialDate:          period.InitialDate,
 		FinalDate:            period.FinalDate,
 		InscriptionFinalDate: period.InscriptionFinalDate,
+		WeeksCount:           period.WeeksCount,
 		PeriodState:          period.PeriodState,
 	}, nil
 }

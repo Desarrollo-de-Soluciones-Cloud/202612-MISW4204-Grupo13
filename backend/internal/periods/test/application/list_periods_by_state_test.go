@@ -5,19 +5,18 @@ import (
 	"backend/internal/periods/domain"
 	"errors"
 	"testing"
-	"time"
 )
 
 func TestListPeriodsByStateSuccess(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate1 := "2026-10-05"
+	initialDate2 := "2026-10-12"
+	initialDate3 := "2026-11-09"
 
-	period1, _ := domain.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domain.ActivePeriod)
-	period2, _ := domain.NewPeriod("2024-02", initialDate.AddDate(0, 1, 0), finalDate.AddDate(0, 1, 0), inscriptionDate.AddDate(0, 1, 0), domain.ActivePeriod)
-	period3, _ := domain.NewPeriod("2024-03", initialDate.AddDate(0, 2, 0), finalDate.AddDate(0, 2, 0), inscriptionDate.AddDate(0, 2, 0), domain.ClosedPeriod)
+	period1, _ := domain.NewPeriod("2026-10", initialDate1, 16, domain.ActivePeriod)
+	period2, _ := domain.NewPeriod("2026-11", initialDate2, 16, domain.ActivePeriod)
+	period3, _ := domain.NewPeriod("2026-12", initialDate3, 16, domain.ClosedPeriod)
 
 	mockRepo.Create(period1)
 	mockRepo.Create(period2)
@@ -57,11 +56,9 @@ func TestListPeriodsByStateInvalidState(t *testing.T) {
 func TestListPeriodsByStateNoResults(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+		initialDate := "2026-10-05"
 
-	period1, _ := domain.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domain.ActivePeriod)
+		period1, _ := domain.NewPeriod("2026-10", initialDate, 16, domain.ActivePeriod)
 	mockRepo.Create(period1)
 
 	listPeriodsByState := applicationpkg.NewListPeriodsByState(mockRepo)

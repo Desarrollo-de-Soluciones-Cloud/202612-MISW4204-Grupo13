@@ -5,30 +5,25 @@ import (
 	"errors"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestNewPeriodSuccess(t *testing.T) {
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2026-10-05"
+	weeksCount := 8
 
-	period, err := domainpkg.NewPeriod(" 2024-01 ", initialDate, finalDate, inscriptionDate, domainpkg.ActivePeriod)
+	period, err := domainpkg.NewPeriod(" 2026-10 ", initialDate, weeksCount, domainpkg.ActivePeriod)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if period.Name != "2024-01" {
+	if period.Name != "2026-10" {
 		t.Fatalf("expected normalized name, got %q", period.Name)
 	}
 	if period.InitialDate != initialDate {
 		t.Fatalf("expected initial date %v, got %v", initialDate, period.InitialDate)
 	}
-	if period.FinalDate != finalDate {
-		t.Fatalf("expected final date %v, got %v", finalDate, period.FinalDate)
-	}
-	if period.InscriptionFinalDate != inscriptionDate {
-		t.Fatalf("expected inscription date %v, got %v", inscriptionDate, period.InscriptionFinalDate)
+	if period.WeeksCount != weeksCount {
+		t.Fatalf("expected weeks count %v, got %v", weeksCount, period.WeeksCount)
 	}
 	if period.PeriodState != domainpkg.ActivePeriod {
 		t.Fatalf("expected state %q, got %q", domainpkg.ActivePeriod, period.PeriodState)
@@ -36,36 +31,33 @@ func TestNewPeriodSuccess(t *testing.T) {
 }
 
 func TestNewPeriodRejectsInvalidState(t *testing.T) {
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2026-10-05"
+	weeksCount := 8
 
-	_, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domainpkg.PeriodState("invalid"))
+	_, err := domainpkg.NewPeriod("2026-10", initialDate, weeksCount, domainpkg.PeriodState("invalid"))
 	if !errors.Is(err, domainpkg.ErrPeriodStateInvalid) {
 		t.Fatalf("expected ErrPeriodStateInvalid, got %v", err)
 	}
 }
 
 func TestUpdatePeriodNormalizesValues(t *testing.T) {
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2026-10-05"
+	weeksCount := 8
 
-	period, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domainpkg.ActivePeriod)
+	period, err := domainpkg.NewPeriod("2026-10", initialDate, weeksCount, domainpkg.ActivePeriod)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	newInitialDate := time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC)
-	newFinalDate := time.Date(2024, 7, 31, 0, 0, 0, 0, time.UTC)
-	newInscriptionDate := time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC)
+	newInitialDate := "2026-10-12"
+	newWeeksCount := 16
 
-	err = period.UpdatePeriod(" 2024-02 ", newInitialDate, newFinalDate, newInscriptionDate, domainpkg.ClosedPeriod)
+	err = period.UpdatePeriod(" 2026-11 ", newInitialDate, newWeeksCount, domainpkg.ClosedPeriod)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if period.Name != "2024-02" {
+	if period.Name != "2026-11" {
 		t.Fatalf("expected normalized name, got %q", period.Name)
 	}
 	if period.PeriodState != domainpkg.ClosedPeriod {
@@ -74,49 +66,56 @@ func TestUpdatePeriodNormalizesValues(t *testing.T) {
 }
 
 func TestNewPeriodRejectsShortName(t *testing.T) {
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2026-10-05"
+	weeksCount := 8
 
-	_, err := domainpkg.NewPeriod("ab", initialDate, finalDate, inscriptionDate, domainpkg.ActivePeriod)
+	_, err := domainpkg.NewPeriod("ab", initialDate, weeksCount, domainpkg.ActivePeriod)
 	if !errors.Is(err, domainpkg.ErrPeriodNameWrongFormat) {
 		t.Fatalf("expected ErrPeriodNameWrongFormat, got %v", err)
 	}
 }
 
-func TestNewPeriodRejectsInvalidDateSequence(t *testing.T) {
-	initialDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+func TestNewPeriodRejectsNonMondayInitialDate(t *testing.T) {
+	// 2026-10-06 is a Tuesday
+	initialDate := "2026-10-06"
+	weeksCount := 8
 
-	_, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domainpkg.ActivePeriod)
-	if !errors.Is(err, domainpkg.ErrPeriodDateSequenceInvalid) {
-		t.Fatalf("expected ErrPeriodDateSequenceInvalid, got %v", err)
+	_, err := domainpkg.NewPeriod("2026-10", initialDate, weeksCount, domainpkg.ActivePeriod)
+	if !errors.Is(err, domainpkg.ErrPeriodInitialDateMustBeMonday) {
+		t.Fatalf("expected ErrPeriodInitialDateMustBeMonday, got %v", err)
 	}
 }
 
-func TestNewPeriodRejectsInscriptionDateBeforeInitial(t *testing.T) {
-	initialDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+func TestNewPeriodRejectsPastInitialDate(t *testing.T) {
+	initialDate := "2020-11-16"
+	weeksCount := 8
 
-	_, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domainpkg.ActivePeriod)
-	if !errors.Is(err, domainpkg.ErrPeriodDateSequenceInvalid) {
-		t.Fatalf("expected ErrPeriodDateSequenceInvalid, got %v", err)
+	_, err := domainpkg.NewPeriod("2020-10", initialDate, weeksCount, domainpkg.ActivePeriod)
+	if !errors.Is(err, domainpkg.ErrPeriodInitialDateMustBeFuture) {
+		t.Fatalf("expected ErrPeriodInitialDateMustBeFuture, got %v", err)
+	}
+}
+
+func TestNewPeriodRejectsInvalidWeeksCount(t *testing.T) {
+	initialDate := "2026-10-05"
+	weeksCount := 10
+
+	_, err := domainpkg.NewPeriod("2026-10", initialDate, weeksCount, domainpkg.ActivePeriod)
+	if !errors.Is(err, domainpkg.ErrPeriodWeeksCountInvalid) {
+		t.Fatalf("expected ErrPeriodWeeksCountInvalid, got %v", err)
 	}
 }
 
 func TestUpdatePeriodRejectsInvalidState(t *testing.T) {
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2026-10-05"
+	weeksCount := 8
 
-	period, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domainpkg.ActivePeriod)
+	period, err := domainpkg.NewPeriod("2026-10", initialDate, weeksCount, domainpkg.ActivePeriod)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	err = period.UpdatePeriod("2024-01", initialDate, finalDate, inscriptionDate, domainpkg.PeriodState("unknown"))
+	err = period.UpdatePeriod("2026-10", initialDate, weeksCount, domainpkg.PeriodState("unknown"))
 	if !errors.Is(err, domainpkg.ErrPeriodStateInvalid) {
 		t.Fatalf("expected ErrPeriodStateInvalid, got %v", err)
 	}
@@ -134,17 +133,6 @@ func TestValidatePeriodNameTooLong(t *testing.T) {
 	err := domainpkg.ValidatePeriodName(longName)
 	if !errors.Is(err, domainpkg.ErrPeriodNameWrongFormat) {
 		t.Fatalf("expected error for too long name, got %v", err)
-	}
-}
-
-func TestValidatePeriodDateSequence(t *testing.T) {
-	initialDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
-
-	err := domainpkg.ValidatePeriodDateSequence(initialDate, finalDate, inscriptionDate)
-	if !errors.Is(err, domainpkg.ErrPeriodDateSequenceInvalid) {
-		t.Fatalf("expected ErrPeriodDateSequenceInvalid, got %v", err)
 	}
 }
 

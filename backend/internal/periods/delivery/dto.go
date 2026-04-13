@@ -1,30 +1,28 @@
 package delivery
 
-import "time"
-
 type CreatePeriodRequest struct {
-	Name                 string    `json:"name" binding:"required"`
-	InitialDate          time.Time `json:"initial_date" binding:"required"`
-	FinalDate            time.Time `json:"final_date" binding:"required"`
-	InscriptionFinalDate time.Time `json:"inscription_final_date" binding:"required"`
-	PeriodState          string    `json:"period_state" binding:"required"`
+	Name        string `json:"name" binding:"required"`
+	InitialDate string `json:"initial_date" binding:"required"`
+	WeeksCount  *int   `json:"weeks_count" binding:"required"`
+	PeriodState string `json:"period_state" binding:"required"`
 }
 
 type CreatePeriodResponse struct {
-	ID                   uint      `json:"id"`
-	Name                 string    `json:"name"`
-	InitialDate          time.Time `json:"initial_date"`
-	FinalDate            time.Time `json:"final_date"`
-	InscriptionFinalDate time.Time `json:"inscription_final_date"`
-	PeriodState          string    `json:"period_state"`
+	ID                   uint   `json:"id"`
+	Name                 string `json:"name"`
+	InitialDate          string `json:"initial_date"`
+	FinalDate            string `json:"final_date"`
+	InscriptionFinalDate string `json:"inscription_final_date"`
+	WeeksCount           int    `json:"weeks_count"`
+	PeriodState          string `json:"period_state"`
 }
 
 type UpdatePeriodRequest struct {
-	Name                 string    `json:"name" binding:"required"`
-	InitialDate          time.Time `json:"initial_date" binding:"required"`
-	FinalDate            time.Time `json:"final_date" binding:"required"`
-	InscriptionFinalDate time.Time `json:"inscription_final_date" binding:"required"`
-	PeriodState          string    `json:"period_state" binding:"required"`
+	Name string `json:"name" binding:"required"`
+}
+
+type ClosePeriodRequest struct {
+	// No body needed - ID comes from URL parameter
 }
 
 type ListPeriodsResponse struct {
@@ -32,10 +30,11 @@ type ListPeriodsResponse struct {
 }
 
 type PeriodResponse struct {
-	ID                   uint      `json:"id"`
-	Name                 string    `json:"name"`
-	InitialDate          time.Time `json:"initial_date"`
-	FinalDate            time.Time `json:"final_date"`
-	InscriptionFinalDate time.Time `json:"inscription_final_date"`
-	PeriodState          string    `json:"period_state"`
+	ID                   uint   `json:"id"`
+	Name                 string `json:"name"`
+	InitialDate          string `json:"initial_date"`
+	FinalDate            string `json:"final_date"`
+	InscriptionFinalDate string `json:"inscription_final_date"`
+	WeeksCount           int    `json:"weeks_count"`
+	PeriodState          string `json:"period_state"`
 }

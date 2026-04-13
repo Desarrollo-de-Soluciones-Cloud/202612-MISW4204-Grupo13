@@ -5,17 +5,15 @@ import (
 	"backend/internal/periods/domain"
 	"errors"
 	"testing"
-	"time"
 )
 
 func TestGetPeriodByIDSuccess(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2026-10-05"
+	weeksCount := 8
 
-	period, _ := domain.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domain.ActivePeriod)
+	period, _ := domain.NewPeriod("2026-10", initialDate, weeksCount, domain.ActivePeriod)
 	mockRepo.Create(period)
 
 	getPeriodByID := applicationpkg.NewGetPeriodByID(mockRepo)
@@ -24,11 +22,14 @@ func TestGetPeriodByIDSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if output.Name != "2024-01" {
-		t.Errorf("expected name '2024-01', got %q", output.Name)
+	if output.Name != "2026-10" {
+		t.Errorf("expected name '2026-10', got %q", output.Name)
 	}
 	if output.PeriodState != domain.ActivePeriod {
 		t.Errorf("expected state %q, got %q", domain.ActivePeriod, output.PeriodState)
+	}
+	if output.WeeksCount != weeksCount {
+		t.Errorf("expected weeks count %d, got %d", weeksCount, output.WeeksCount)
 	}
 }
 

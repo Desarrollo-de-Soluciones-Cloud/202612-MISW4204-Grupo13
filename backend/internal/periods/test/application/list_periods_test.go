@@ -4,18 +4,19 @@ import (
 	applicationpkg "backend/internal/periods/application"
 	"backend/internal/periods/domain"
 	"testing"
-	"time"
 )
 
 func TestListPeriodsSuccess(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate1 := "2026-10-05"
+	weeksCount1 := 8
 
-	period1, _ := domain.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domain.ActivePeriod)
-	period2, _ := domain.NewPeriod("2024-02", initialDate.AddDate(0, 1, 0), finalDate.AddDate(0, 1, 0), inscriptionDate.AddDate(0, 1, 0), domain.ClosedPeriod)
+	initialDate2 := "2026-10-12"
+	weeksCount2 := 16
+
+	period1, _ := domain.NewPeriod("2026-10", initialDate1, weeksCount1, domain.ActivePeriod)
+	period2, _ := domain.NewPeriod("2026-11", initialDate2, weeksCount2, domain.ClosedPeriod)
 
 	mockRepo.Create(period1)
 	mockRepo.Create(period2)
@@ -28,6 +29,19 @@ func TestListPeriodsSuccess(t *testing.T) {
 	}
 	if len(output.Periods) != 2 {
 		t.Errorf("expected 2 periods, got %d", len(output.Periods))
+	}
+
+	periodsByName := make(map[string]applicationpkg.PeriodDTO, len(output.Periods))
+	for _, period := range output.Periods {
+		periodsByName[period.Name] = period
+	}
+
+	if periodsByName["2026-10"].WeeksCount != weeksCount1 {
+		t.Errorf("expected period 2026-10 weeks count %d, got %d", weeksCount1, periodsByName["2026-10"].WeeksCount)
+	}
+
+	if periodsByName["2026-11"].WeeksCount != weeksCount2 {
+		t.Errorf("expected period 2026-11 weeks count %d, got %d", weeksCount2, periodsByName["2026-11"].WeeksCount)
 	}
 }
 

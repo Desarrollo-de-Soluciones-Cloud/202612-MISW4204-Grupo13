@@ -15,5 +15,9 @@ func NewDeletePeriod(repo domain.PeriodRepository) *DeletePeriod {
 }
 
 func (uc *DeletePeriod) Execute(input DeletePeriodInput) error {
+	_, err := uc.repository.FindByID(input.ID)
+	if err != nil {
+		return err
+	}
 	return uc.repository.Delete(input.ID)
 }

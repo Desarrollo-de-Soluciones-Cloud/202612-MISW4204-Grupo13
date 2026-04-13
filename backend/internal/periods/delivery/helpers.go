@@ -26,15 +26,10 @@ func mapBindingErrors(err error) []error {
 			case "required":
 				result = append(result, domain.ErrPeriodInitialDateRequired)
 			}
-		case "FinalDate":
+		case "WeeksCount":
 			switch validationError.Tag() {
 			case "required":
-				result = append(result, domain.ErrPeriodFinalDateRequired)
-			}
-		case "InscriptionFinalDate":
-			switch validationError.Tag() {
-			case "required":
-				result = append(result, domain.ErrPeriodInscriptionFinalDateRequired)
+				result = append(result, domain.ErrPeriodWeeksCountRequired)
 			}
 		case "PeriodState":
 			switch validationError.Tag() {

@@ -17,7 +17,7 @@ type PeriodHandler struct {
 	listPeriodsByState *application.ListPeriodsByState
 	getPeriodByID      *application.GetPeriodByID
 	updatePeriod       *application.UpdatePeriod
-	deletePeriod       *application.DeletePeriod
+	closePeriod        *application.ClosePeriod
 }
 
 func NewPeriodHandler(
@@ -26,7 +26,7 @@ func NewPeriodHandler(
 	listPeriodsByState *application.ListPeriodsByState,
 	getPeriodByID *application.GetPeriodByID,
 	updatePeriod *application.UpdatePeriod,
-	deletePeriod *application.DeletePeriod,
+	closePeriod *application.ClosePeriod,
 ) *PeriodHandler {
 	return &PeriodHandler{
 		createPeriod:       createPeriod,
@@ -34,7 +34,7 @@ func NewPeriodHandler(
 		listPeriodsByState: listPeriodsByState,
 		getPeriodByID:      getPeriodByID,
 		updatePeriod:       updatePeriod,
-		deletePeriod:       deletePeriod,
+		closePeriod:        closePeriod,
 	}
 }
 
@@ -46,11 +46,10 @@ func (h *PeriodHandler) CreatePeriod(c *gin.Context) {
 	}
 
 	input := application.CreatePeriodInput{
-		Name:                 req.Name,
-		InitialDate:          req.InitialDate,
-		FinalDate:            req.FinalDate,
-		InscriptionFinalDate: req.InscriptionFinalDate,
-		PeriodState:          domain.PeriodState(req.PeriodState),
+		Name:        req.Name,
+		InitialDate: req.InitialDate,
+		WeeksCount:  *req.WeeksCount,
+		PeriodState: domain.PeriodState(req.PeriodState),
 	}
 
 	output, err := h.createPeriod.Execute(input)
@@ -70,6 +69,7 @@ func (h *PeriodHandler) CreatePeriod(c *gin.Context) {
 		InitialDate:          output.InitialDate,
 		FinalDate:            output.FinalDate,
 		InscriptionFinalDate: output.InscriptionFinalDate,
+		WeeksCount:           output.WeeksCount,
 		PeriodState:          string(output.PeriodState),
 	})
 }
@@ -95,6 +95,7 @@ func (h *PeriodHandler) ListPeriods(c *gin.Context) {
 			InitialDate:          p.InitialDate,
 			FinalDate:            p.FinalDate,
 			InscriptionFinalDate: p.InscriptionFinalDate,
+			WeeksCount:           p.WeeksCount,
 			PeriodState:          string(p.PeriodState),
 		}
 	}
@@ -124,6 +125,7 @@ func (h *PeriodHandler) listPeriodsByStateHandler(c *gin.Context, rawState strin
 			InitialDate:          p.InitialDate,
 			FinalDate:            p.FinalDate,
 			InscriptionFinalDate: p.InscriptionFinalDate,
+			WeeksCount:           p.WeeksCount,
 			PeriodState:          string(p.PeriodState),
 		}
 	}
@@ -155,6 +157,7 @@ func (h *PeriodHandler) GetPeriodByID(c *gin.Context) {
 		InitialDate:          output.InitialDate,
 		FinalDate:            output.FinalDate,
 		InscriptionFinalDate: output.InscriptionFinalDate,
+		WeeksCount:           output.WeeksCount,
 		PeriodState:          string(output.PeriodState),
 	})
 }
@@ -173,12 +176,8 @@ func (h *PeriodHandler) UpdatePeriod(c *gin.Context) {
 	}
 
 	output, err := h.updatePeriod.Execute(application.UpdatePeriodInput{
-		ID:                   id,
-		Name:                 req.Name,
-		InitialDate:          req.InitialDate,
-		FinalDate:            req.FinalDate,
-		InscriptionFinalDate: req.InscriptionFinalDate,
-		PeriodState:          domain.PeriodState(req.PeriodState),
+		ID:   id,
+		Name: req.Name,
 	})
 	if err != nil {
 		switch {
@@ -198,42 +197,60 @@ func (h *PeriodHandler) UpdatePeriod(c *gin.Context) {
 		InitialDate:          output.InitialDate,
 		FinalDate:            output.FinalDate,
 		InscriptionFinalDate: output.InscriptionFinalDate,
+		WeeksCount:           output.WeeksCount,
 		PeriodState:          string(output.PeriodState),
 	})
 }
 
-func (h *PeriodHandler) DeletePeriod(c *gin.Context) {
+func (h *PeriodHandler) ClosePeriod(c *gin.Context) {
 	id, err := sharedHelpers.ParseResourceID(c.Param("id"))
 	if err != nil {
 		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		return
 	}
 
-	err = h.deletePeriod.Execute(application.DeletePeriodInput{ID: id})
+	output, err := h.closePeriod.Execute(application.ClosePeriodInput{
+		ID: id,
+	})
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrPeriodNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		case isPeriodValidationError(err):
+			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		default:
 			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
 		}
 		return
 	}
 
-	c.JSON(http.StatusNoContent, nil)
+	c.JSON(http.StatusOK, PeriodResponse{
+		ID:                   output.ID,
+		Name:                 output.Name,
+		InitialDate:          output.InitialDate,
+		FinalDate:            output.FinalDate,
+		InscriptionFinalDate: output.InscriptionFinalDate,
+		WeeksCount:           output.WeeksCount,
+		PeriodState:          string(output.PeriodState),
+	})
+}
+
+func (h *PeriodHandler) DeletePeriod(c *gin.Context) {
+	sharedHelpers.RespondWithError(c, http.StatusNotFound, errors.New("not found"))
 }
 
 func isPeriodValidationError(err error) bool {
 	return errors.Is(err, domain.ErrInvalidInput) ||
 		errors.Is(err, domain.ErrPeriodNameRequired) ||
 		errors.Is(err, domain.ErrPeriodNameWrongFormat) ||
+		errors.Is(err, domain.ErrPeriodNameAlreadyExists) ||
 		errors.Is(err, domain.ErrPeriodInitialDateRequired) ||
-		errors.Is(err, domain.ErrPeriodInitialDateInvalid) ||
-		errors.Is(err, domain.ErrPeriodFinalDateRequired) ||
-		errors.Is(err, domain.ErrPeriodFinalDateInvalid) ||
-		errors.Is(err, domain.ErrPeriodInscriptionFinalDateRequired) ||
-		errors.Is(err, domain.ErrPeriodInscriptionFinalDateInvalid) ||
-		errors.Is(err, domain.ErrPeriodDateSequenceInvalid) ||
+		errors.Is(err, domain.ErrPeriodInitialDateWrongFormat) ||
+		errors.Is(err, domain.ErrPeriodInitialDateMustBeMonday) ||
+		errors.Is(err, domain.ErrPeriodInitialDateMustBeFuture) ||
+		errors.Is(err, domain.ErrPeriodWeeksCountRequired) ||
+		errors.Is(err, domain.ErrPeriodWeeksCountInvalid) ||
 		errors.Is(err, domain.ErrPeriodStateRequired) ||
-		errors.Is(err, domain.ErrPeriodStateInvalid)
+		errors.Is(err, domain.ErrPeriodStateInvalid) ||
+		errors.Is(err, domain.ErrPeriodCannotBeUpdated)
 }
