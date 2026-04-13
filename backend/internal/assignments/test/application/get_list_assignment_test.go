@@ -59,6 +59,11 @@ func TestListAssignmentsByUserIDSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error creating first assignment: %v", err)
 	}
+
+
+
+
+	
 	_, err = createAssignment.Execute(applicationpkg.CreateAssignmentInput{
 		UserID: 5, WorkspaceID: 2, Role: domain.RoleAssistant, WeeklyHours: 20,
 	})
