@@ -10,9 +10,12 @@ import (
 )
 
 type MockUserRepository struct {
-	users  map[string]*domain.User
-	byID   map[uint]*domain.User
-	nextID uint
+	users          map[string]*domain.User
+	byID           map[uint]*domain.User
+	nextID         uint
+	createErr      error
+	updateErr      error
+	findByEmailErr error
 }
 
 func NewMockUserRepository() *MockUserRepository {
@@ -24,6 +27,9 @@ func NewMockUserRepository() *MockUserRepository {
 }
 
 func (m *MockUserRepository) Create(user *domain.User) error {
+	if m.createErr != nil {
+		return m.createErr
+	}
 	user.ID = m.nextID
 	m.nextID++
 	m.users[user.Email] = user
@@ -32,6 +38,9 @@ func (m *MockUserRepository) Create(user *domain.User) error {
 }
 
 func (m *MockUserRepository) FindByEmail(email string) (*domain.User, error) {
+	if m.findByEmailErr != nil {
+		return nil, m.findByEmailErr
+	}
 	if user, ok := m.users[email]; ok {
 		return user, nil
 	}
@@ -64,6 +73,9 @@ func (m *MockUserRepository) FindByID(id uint) (*domain.User, error) {
 }
 
 func (m *MockUserRepository) Update(user *domain.User) error {
+	if m.updateErr != nil {
+		return m.updateErr
+	}
 	if _, ok := m.byID[user.ID]; !ok {
 		return domain.ErrUserNotFound
 	}
@@ -201,5 +213,52 @@ func TestCreateUserPasswordTooShort(t *testing.T) {
 	})
 	if !errors.Is(err, domain.ErrUserPasswordTooShort) {
 		t.Errorf("expected ErrUserPasswordTooShort, got %v", err)
+	}
+}
+
+func TestCreateUserPropagatesUnexpectedFindByEmailError(t *testing.T) {
+	mockRepo := NewMockUserRepository()
+	mockRepo.findByEmailErr = errors.New("database failure")
+	createUser := applicationpkg.NewCreateUser(mockRepo)
+
+	_, err := createUser.Execute(applicationpkg.CreateUserInput{
+		Name:       "John Doe",
+		Email:      "john@example.com",
+		Password:   "password123",
+		GlobalRole: domain.RoleProfessor,
+	})
+	if err == nil || err.Error() != "database failure" {
+		t.Fatalf("expected database failure, got %v", err)
+	}
+}
+
+func TestCreateUserPropagatesCreateError(t *testing.T) {
+	mockRepo := NewMockUserRepository()
+	mockRepo.createErr = errors.New("create failure")
+	createUser := applicationpkg.NewCreateUser(mockRepo)
+
+	_, err := createUser.Execute(applicationpkg.CreateUserInput{
+		Name:       "John Doe",
+		Email:      "john@example.com",
+		Password:   "password123",
+		GlobalRole: domain.RoleProfessor,
+	})
+	if err == nil || err.Error() != "create failure" {
+		t.Fatalf("expected create failure, got %v", err)
+	}
+}
+
+func TestCreateUserRejectsRequiredPassword(t *testing.T) {
+	mockRepo := NewMockUserRepository()
+	createUser := applicationpkg.NewCreateUser(mockRepo)
+
+	_, err := createUser.Execute(applicationpkg.CreateUserInput{
+		Name:       "John Doe",
+		Email:      "john@example.com",
+		Password:   "   ",
+		GlobalRole: domain.RoleProfessor,
+	})
+	if !errors.Is(err, domain.ErrUserPasswordRequired) {
+		t.Fatalf("expected ErrUserPasswordRequired, got %v", err)
 	}
 }
