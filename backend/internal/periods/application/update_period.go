@@ -46,8 +46,8 @@ func (uc *UpdatePeriod) Execute(input UpdatePeriodInput) (*UpdatePeriodOutput, e
 		return nil, err
 	}
 
-	p, _ := uc.repository.FindByName(period.Name)
-	if p != nil && p.ID != period.ID {
+	p, err := uc.repository.FindByName(period.Name)
+	if err == nil && p != nil && p.ID != period.ID {
 		return nil, domain.ErrPeriodNameAlreadyExists
 	}
 

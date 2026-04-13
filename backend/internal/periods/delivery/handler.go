@@ -227,6 +227,7 @@ func isPeriodValidationError(err error) bool {
 	return errors.Is(err, domain.ErrInvalidInput) ||
 		errors.Is(err, domain.ErrPeriodNameRequired) ||
 		errors.Is(err, domain.ErrPeriodNameWrongFormat) ||
+		errors.Is(err, domain.ErrPeriodNameAlreadyExists) ||
 		errors.Is(err, domain.ErrPeriodInitialDateRequired) ||
 		errors.Is(err, domain.ErrPeriodInitialDateWrongFormat) ||
 		errors.Is(err, domain.ErrPeriodFinalDateRequired) ||

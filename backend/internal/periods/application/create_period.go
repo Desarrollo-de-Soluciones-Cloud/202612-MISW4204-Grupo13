@@ -41,8 +41,8 @@ func (uc *CreatePeriod) Execute(input CreatePeriodInput) (*CreatePeriodOutput, e
 		return nil, err
 	}
 
-	p, _ := uc.repository.FindByName(period.Name)
-	if p != nil {
+	p, err := uc.repository.FindByName(period.Name)
+	if err == nil && p != nil {
 		return nil, domain.ErrPeriodNameAlreadyExists
 	}
 
