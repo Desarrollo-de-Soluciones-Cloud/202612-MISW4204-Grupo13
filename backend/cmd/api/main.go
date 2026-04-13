@@ -3,12 +3,13 @@ package main
 import (
 	authDelivery "backend/internal/auth/delivery"
 	periodDelivery "backend/internal/periods/delivery"
-	usersDelivery "backend/internal/users/delivery"
-	usersSeed "backend/internal/users/seed"
 	"backend/internal/shared/config"
 	"backend/internal/shared/database"
+	usersDelivery "backend/internal/users/delivery"
+	usersSeed "backend/internal/users/seed"
+	workspacesDelivery "backend/internal/workspaces/delivery"
 	"log"
-	
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -37,6 +38,7 @@ func main() {
 	authHandler := authDelivery.SetupRoutes(api, cfg)
 	usersDelivery.SetupRoutes(api, authHandler)
 	periodDelivery.SetupRoutes(api)
+	workspacesDelivery.SetupRoutes(api)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
