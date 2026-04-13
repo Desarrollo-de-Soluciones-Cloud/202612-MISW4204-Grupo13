@@ -36,7 +36,7 @@ func TestRoutesIntegration(t *testing.T) {
 	getPeriodByID := application.NewGetPeriodByID(repo)
 	updatePeriod := application.NewUpdatePeriod(repo)
 
-	handler := delivery.NewPeriodHandler(createPeriod, listPeriods, listPeriodsByState, getPeriodByID, updatePeriod)
+	handler := delivery.NewPeriodHandler(createPeriod, listPeriods, listPeriodsByState, getPeriodByID, updatePeriod, application.NewClosePeriod(repo))
 
 	// Register routes manually (since SetupRoutes requires database)
 	periods := router.Group("/periods")
@@ -100,6 +100,7 @@ func TestRoutesPostCreatePeriod(t *testing.T) {
 		application.NewListPeriodsByState(repo),
 		application.NewGetPeriodByID(repo),
 		application.NewUpdatePeriod(repo),
+		application.NewClosePeriod(repo),
 	)
 
 	periods := router.Group("/periods")
@@ -150,6 +151,7 @@ func TestRoutesGetPeriods(t *testing.T) {
 		application.NewListPeriodsByState(repo),
 		application.NewGetPeriodByID(repo),
 		application.NewUpdatePeriod(repo),
+		application.NewClosePeriod(repo),
 	)
 
 	periods := router.Group("/periods")
@@ -190,6 +192,7 @@ func TestRoutesGetPeriodsWithStateFilter(t *testing.T) {
 		application.NewListPeriodsByState(repo),
 		application.NewGetPeriodByID(repo),
 		application.NewUpdatePeriod(repo),
+		application.NewClosePeriod(repo),
 	)
 
 	periods := router.Group("/periods")
@@ -230,6 +233,7 @@ func TestRoutesGetPeriodByID(t *testing.T) {
 		application.NewListPeriodsByState(repo),
 		application.NewGetPeriodByID(repo),
 		application.NewUpdatePeriod(repo),
+		application.NewClosePeriod(repo),
 	)
 
 	periods := router.Group("/periods")
@@ -267,17 +271,14 @@ func TestRoutesPutUpdatePeriod(t *testing.T) {
 		application.NewListPeriodsByState(repo),
 		application.NewGetPeriodByID(repo),
 		application.NewUpdatePeriod(repo),
+		application.NewClosePeriod(repo),
 	)
 
 	periods := router.Group("/periods")
 	periods.PUT("/:id", handler.UpdatePeriod)
 
-	weeksCount := 16
 	body := delivery.UpdatePeriodRequest{
-		Name:        "2026-10",
-		InitialDate: "2026-10-05",
-		WeeksCount:  &weeksCount,
-		PeriodState: "closed",
+		Name: "2026-11",
 	}
 
 	bodyJSON, _ := json.Marshal(body)
@@ -293,7 +294,7 @@ func TestRoutesPutUpdatePeriod(t *testing.T) {
 
 	var resp delivery.PeriodResponse
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp.PeriodState != "closed" || resp.WeeksCount != 16 {
+	if resp.Name != "2026-11" {
 		t.Errorf("PUT /periods/1 did not update correctly")
 	}
 }

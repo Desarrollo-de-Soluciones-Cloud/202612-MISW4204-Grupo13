@@ -16,16 +16,10 @@ func TestUpdatePeriodSuccess(t *testing.T) {
 	period, _ := domain.NewPeriod("2026-10", initialDate, weeksCount, domain.ActivePeriod)
 	mockRepo.Create(period)
 
-	newInitialDate := "2026-10-12"
-	newWeeksCount := 16
-
 	updatePeriod := applicationpkg.NewUpdatePeriod(mockRepo)
 	output, err := updatePeriod.Execute(applicationpkg.UpdatePeriodInput{
-		ID:          period.ID,
-		Name:        "2026-11",
-		InitialDate: newInitialDate,
-		WeeksCount:  newWeeksCount,
-		PeriodState: domain.ClosedPeriod,
+		ID:   period.ID,
+		Name: "2026-11",
 	})
 
 	if err != nil {
@@ -34,27 +28,21 @@ func TestUpdatePeriodSuccess(t *testing.T) {
 	if output.Name != "2026-11" {
 		t.Errorf("expected name '2026-11', got %q", output.Name)
 	}
-	if output.PeriodState != domain.ClosedPeriod {
-		t.Errorf("expected state %q, got %q", domain.ClosedPeriod, output.PeriodState)
+	if output.PeriodState != domain.ActivePeriod {
+		t.Errorf("expected state to remain %q, got %q", domain.ActivePeriod, output.PeriodState)
 	}
-	if output.WeeksCount != newWeeksCount {
-		t.Errorf("expected weeks count %d, got %d", newWeeksCount, output.WeeksCount)
+	if output.WeeksCount != weeksCount {
+		t.Errorf("expected weeks count to remain %d, got %d", weeksCount, output.WeeksCount)
 	}
 }
 
 func TestUpdatePeriodNotFound(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
-	initialDate := "2026-10-05"
-	weeksCount := 8
-
 	updatePeriod := applicationpkg.NewUpdatePeriod(mockRepo)
 	_, err := updatePeriod.Execute(applicationpkg.UpdatePeriodInput{
-		ID:          999,
-		Name:        "2026-10",
-		InitialDate: initialDate,
-		WeeksCount:  weeksCount,
-		PeriodState: domain.ActivePeriod,
+		ID:   999,
+		Name: "2026-10",
 	})
 
 	if !errors.Is(err, domain.ErrPeriodNotFound) {
@@ -62,7 +50,7 @@ func TestUpdatePeriodNotFound(t *testing.T) {
 	}
 }
 
-func TestUpdatePeriodInvalidState(t *testing.T) {
+func TestUpdatePeriodInvalidName(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
 	initialDate := "2026-10-05"
@@ -73,15 +61,12 @@ func TestUpdatePeriodInvalidState(t *testing.T) {
 
 	updatePeriod := applicationpkg.NewUpdatePeriod(mockRepo)
 	_, err := updatePeriod.Execute(applicationpkg.UpdatePeriodInput{
-		ID:          period.ID,
-		Name:        "2026-10",
-		InitialDate: initialDate,
-		WeeksCount:  weeksCount,
-		PeriodState: domain.PeriodState("invalid"),
+		ID:   period.ID,
+		Name: "ab",
 	})
 
-	if !errors.Is(err, domain.ErrPeriodStateInvalid) {
-		t.Errorf("expected ErrPeriodStateInvalid, got %v", err)
+	if !errors.Is(err, domain.ErrPeriodNameWrongFormat) {
+		t.Errorf("expected ErrPeriodNameWrongFormat, got %v", err)
 	}
 }
 
@@ -99,83 +84,11 @@ func TestUpdatePeriodNameAlreadyExists(t *testing.T) {
 
 	updatePeriod := applicationpkg.NewUpdatePeriod(mockRepo)
 	_, err := updatePeriod.Execute(applicationpkg.UpdatePeriodInput{
-		ID:          period2.ID,
-		Name:        "2026-10",
-		InitialDate: initialDate,
-		WeeksCount:  weeksCount,
-		PeriodState: domain.ActivePeriod,
+		ID:   period2.ID,
+		Name: "2026-10",
 	})
 
 	if !errors.Is(err, domain.ErrPeriodNameAlreadyExists) {
 		t.Errorf("expected ErrPeriodNameAlreadyExists, got %v", err)
-	}
-}
-
-func TestUpdatePeriodInvalidName(t *testing.T) {
-	mockRepo := NewMockPeriodRepository()
-
-	initialDate := "2026-10-05"
-	weeksCount := 8
-
-	period, _ := domain.NewPeriod("2026-10", initialDate, weeksCount, domain.ActivePeriod)
-	mockRepo.Create(period)
-
-	updatePeriod := applicationpkg.NewUpdatePeriod(mockRepo)
-	_, err := updatePeriod.Execute(applicationpkg.UpdatePeriodInput{
-		ID:          period.ID,
-		Name:        "invalid name",
-		InitialDate: initialDate,
-		WeeksCount:  weeksCount,
-		PeriodState: domain.ActivePeriod,
-	})
-
-	if !errors.Is(err, domain.ErrPeriodNameWrongFormat) {
-		t.Errorf("expected ErrPeriodNameWrongFormat, got %v", err)
-	}
-}
-
-func TestUpdatePeriodInvalidInitialDateFormat(t *testing.T) {
-	mockRepo := NewMockPeriodRepository()
-
-	initialDate := "2026-10-05"
-	weeksCount := 8
-
-	period, _ := domain.NewPeriod("2026-10", initialDate, weeksCount, domain.ActivePeriod)
-	mockRepo.Create(period)
-
-	updatePeriod := applicationpkg.NewUpdatePeriod(mockRepo)
-	_, err := updatePeriod.Execute(applicationpkg.UpdatePeriodInput{
-		ID:          period.ID,
-		Name:        "2026-11",
-		InitialDate: "2024",
-		WeeksCount:  weeksCount,
-		PeriodState: domain.ActivePeriod,
-	})
-
-	if !errors.Is(err, domain.ErrPeriodInitialDateWrongFormat) {
-		t.Errorf("expected ErrPeriodInitialDateWrongFormat, got %v", err)
-	}
-}
-
-func TestUpdatePeriodInvalidWeeksCount(t *testing.T) {
-	mockRepo := NewMockPeriodRepository()
-
-	initialDate := "2026-10-05"
-	weeksCount := 8
-
-	period, _ := domain.NewPeriod("2026-10", initialDate, weeksCount, domain.ActivePeriod)
-	mockRepo.Create(period)
-
-	updatePeriod := applicationpkg.NewUpdatePeriod(mockRepo)
-	_, err := updatePeriod.Execute(applicationpkg.UpdatePeriodInput{
-		ID:          period.ID,
-		Name:        "2026-11",
-		InitialDate: initialDate,
-		WeeksCount:  10,
-		PeriodState: domain.ActivePeriod,
-	})
-
-	if !errors.Is(err, domain.ErrPeriodWeeksCountInvalid) {
-		t.Errorf("expected ErrPeriodWeeksCountInvalid, got %v", err)
 	}
 }

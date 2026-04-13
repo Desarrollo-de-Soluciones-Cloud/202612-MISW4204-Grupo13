@@ -18,10 +18,11 @@ type CreatePeriodResponse struct {
 }
 
 type UpdatePeriodRequest struct {
-	Name        string `json:"name" binding:"required"`
-	InitialDate string `json:"initial_date" binding:"required"`
-	WeeksCount  *int   `json:"weeks_count" binding:"required"`
-	PeriodState string `json:"period_state" binding:"required"`
+	Name string `json:"name" binding:"required"`
+}
+
+type ClosePeriodRequest struct {
+	// No body needed - ID comes from URL parameter
 }
 
 type ListPeriodsResponse struct {

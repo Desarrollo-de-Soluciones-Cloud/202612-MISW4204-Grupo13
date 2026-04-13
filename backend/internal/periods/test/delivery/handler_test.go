@@ -93,6 +93,7 @@ func setupTestHandler(repo domain.PeriodRepository) *delivery.PeriodHandler {
 		application.NewListPeriodsByState(repo),
 		application.NewGetPeriodByID(repo),
 		application.NewUpdatePeriod(repo),
+		application.NewClosePeriod(repo),
 	)
 }
 
@@ -301,12 +302,8 @@ func TestUpdatePeriodSuccess(t *testing.T) {
 	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
 	repo.Create(period)
 
-	weeksCount := 16
 	body := delivery.UpdatePeriodRequest{
-		Name:        "2026-10",
-		InitialDate: "2026-10-05",
-		WeeksCount:  &weeksCount,
-		PeriodState: "closed",
+		Name: "2026-11",
 	}
 
 	bodyJSON, _ := json.Marshal(body)
@@ -326,11 +323,12 @@ func TestUpdatePeriodSuccess(t *testing.T) {
 
 	var resp delivery.PeriodResponse
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp.PeriodState != "closed" {
-		t.Errorf("UpdatePeriod() state = %s, want closed", resp.PeriodState)
+	if resp.Name != "2026-11" {
+		t.Errorf("UpdatePeriod() name = %s, want 2026-11", resp.Name)
 	}
-	if resp.WeeksCount != weeksCount {
-		t.Errorf("UpdatePeriod() weeks count = %d, want %d", resp.WeeksCount, weeksCount)
+	// State and other fields should remain unchanged
+	if resp.PeriodState != "active" {
+		t.Errorf("UpdatePeriod() state = %s, want active", resp.PeriodState)
 	}
 }
 
@@ -339,12 +337,8 @@ func TestUpdatePeriodNotFound(t *testing.T) {
 	repo := newMockPeriodRepository()
 	handler := setupTestHandler(repo)
 
-	weeksCount := 8
 	body := delivery.UpdatePeriodRequest{
-		Name:        "2026-10",
-		InitialDate: "2026-10-05",
-		WeeksCount:  &weeksCount,
-		PeriodState: "active",
+		Name: "2026-10",
 	}
 
 	bodyJSON, _ := json.Marshal(body)
@@ -359,11 +353,11 @@ func TestUpdatePeriodNotFound(t *testing.T) {
 	handler.UpdatePeriod(c)
 
 	if w.Code != http.StatusNotFound {
-		t.Errorf("UpdatePeriod() status = %d, want %d", w.Code, http.StatusNotFound)
+		t.Errorf("UpdatePeriod(not found) status = %d, want %d", w.Code, http.StatusNotFound)
 	}
 }
 
-func TestDeletePeriodNotFound(t *testing.T) {
+func TestUpdatePeriodInvalidID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := newMockPeriodRepository()
 	handler := setupTestHandler(repo)
@@ -574,36 +568,7 @@ func TestCreatePeriodInvalidWeeksCount(t *testing.T) {
 }
 
 // TestUpdatePeriodInvalidID tests UpdatePeriod with invalid ID format
-func TestUpdatePeriodInvalidID(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	repo := newMockPeriodRepository()
-	handler := setupTestHandler(repo)
-
-	weeksCount := 8
-	body := delivery.UpdatePeriodRequest{
-		Name:        "2026-10",
-		InitialDate: "2026-10-05",
-		WeeksCount:  &weeksCount,
-		PeriodState: "active",
-	}
-
-	bodyJSON, _ := json.Marshal(body)
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("PUT", "/periods/invalid", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
-
-	c, _ := gin.CreateTestContext(w)
-	c.Request = req
-	c.Params = append(c.Params, gin.Param{Key: "id", Value: "invalid"})
-
-	handler.UpdatePeriod(c)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("UpdatePeriod(invalid id) status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
-// TestUpdatePeriodInvalidState tests UpdatePeriod with invalid state
+// TestUpdatePeriodInvalidState tests UpdatePeriod with invalid name
 func TestUpdatePeriodInvalidState(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := newMockPeriodRepository()
@@ -612,12 +577,8 @@ func TestUpdatePeriodInvalidState(t *testing.T) {
 	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
 	repo.Create(period)
 
-	weeksCount := 8
 	body := delivery.UpdatePeriodRequest{
-		Name:        "2026-10",
-		InitialDate: "2026-10-05",
-		WeeksCount:  &weeksCount,
-		PeriodState: "invalidstate",
+		Name: "ab",
 	}
 
 	bodyJSON, _ := json.Marshal(body)
@@ -632,11 +593,102 @@ func TestUpdatePeriodInvalidState(t *testing.T) {
 	handler.UpdatePeriod(c)
 
 	if w.Code != http.StatusBadRequest {
-		t.Errorf("UpdatePeriod(invalid state) status = %d, want %d", w.Code, http.StatusBadRequest)
+		t.Errorf("UpdatePeriod(invalid name) status = %d, want %d", w.Code, http.StatusBadRequest)
 	}
 }
 
-// TestDeletePeriodInvalidID tests DeletePeriod with invalid ID format
+// TestClosePeriodSuccess tests ClosePeriod successfully closing an active period
+func TestClosePeriodSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := newMockPeriodRepository()
+	handler := setupTestHandler(repo)
+
+	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	repo.Create(period)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PATCH", "/periods/1/close", nil)
+
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Params = append(c.Params, gin.Param{Key: "id", Value: "1"})
+
+	handler.ClosePeriod(c)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("ClosePeriod() status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	var resp delivery.PeriodResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp.PeriodState != "closed" {
+		t.Errorf("ClosePeriod() state = %s, want closed", resp.PeriodState)
+	}
+}
+
+// TestClosePeriodNotFound tests ClosePeriod with non-existent period
+func TestClosePeriodNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := newMockPeriodRepository()
+	handler := setupTestHandler(repo)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PATCH", "/periods/999/close", nil)
+
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Params = append(c.Params, gin.Param{Key: "id", Value: "999"})
+
+	handler.ClosePeriod(c)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("ClosePeriod(not found) status = %d, want %d", w.Code, http.StatusNotFound)
+	}
+}
+
+// TestClosePeriodAlreadyClosed tests ClosePeriod with already closed period
+func TestClosePeriodAlreadyClosed(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := newMockPeriodRepository()
+	handler := setupTestHandler(repo)
+
+	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ClosedPeriod)
+	repo.Create(period)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PATCH", "/periods/1/close", nil)
+
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Params = append(c.Params, gin.Param{Key: "id", Value: "1"})
+
+	handler.ClosePeriod(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ClosePeriod(already closed) status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+// TestClosePeriodInvalidID tests ClosePeriod with invalid ID format
+func TestClosePeriodInvalidID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := newMockPeriodRepository()
+	handler := setupTestHandler(repo)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PATCH", "/periods/invalid/close", nil)
+
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Params = append(c.Params, gin.Param{Key: "id", Value: "invalid"})
+
+	handler.ClosePeriod(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("ClosePeriod(invalid id) status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
 func TestDeletePeriodInvalidID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := newMockPeriodRepository()

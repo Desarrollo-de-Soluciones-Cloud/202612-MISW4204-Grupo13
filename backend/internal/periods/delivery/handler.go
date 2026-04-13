@@ -17,6 +17,7 @@ type PeriodHandler struct {
 	listPeriodsByState *application.ListPeriodsByState
 	getPeriodByID      *application.GetPeriodByID
 	updatePeriod       *application.UpdatePeriod
+	closePeriod        *application.ClosePeriod
 }
 
 func NewPeriodHandler(
@@ -25,6 +26,7 @@ func NewPeriodHandler(
 	listPeriodsByState *application.ListPeriodsByState,
 	getPeriodByID *application.GetPeriodByID,
 	updatePeriod *application.UpdatePeriod,
+	closePeriod *application.ClosePeriod,
 ) *PeriodHandler {
 	return &PeriodHandler{
 		createPeriod:       createPeriod,
@@ -32,6 +34,7 @@ func NewPeriodHandler(
 		listPeriodsByState: listPeriodsByState,
 		getPeriodByID:      getPeriodByID,
 		updatePeriod:       updatePeriod,
+		closePeriod:        closePeriod,
 	}
 }
 
@@ -173,11 +176,41 @@ func (h *PeriodHandler) UpdatePeriod(c *gin.Context) {
 	}
 
 	output, err := h.updatePeriod.Execute(application.UpdatePeriodInput{
-		ID:          id,
-		Name:        req.Name,
-		InitialDate: req.InitialDate,
-		WeeksCount:  *req.WeeksCount,
-		PeriodState: domain.PeriodState(req.PeriodState),
+		ID:   id,
+		Name: req.Name,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrPeriodNotFound):
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		case isPeriodValidationError(err):
+			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+		default:
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, PeriodResponse{
+		ID:                   output.ID,
+		Name:                 output.Name,
+		InitialDate:          output.InitialDate,
+		FinalDate:            output.FinalDate,
+		InscriptionFinalDate: output.InscriptionFinalDate,
+		WeeksCount:           output.WeeksCount,
+		PeriodState:          string(output.PeriodState),
+	})
+}
+
+func (h *PeriodHandler) ClosePeriod(c *gin.Context) {
+	id, err := sharedHelpers.ParseResourceID(c.Param("id"))
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+		return
+	}
+
+	output, err := h.closePeriod.Execute(application.ClosePeriodInput{
+		ID: id,
 	})
 	if err != nil {
 		switch {

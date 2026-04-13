@@ -4,12 +4,11 @@ import (
 	"backend/internal/periods/domain"
 )
 
-type UpdatePeriodInput struct {
-	ID   uint
-	Name string
+type ClosePeriodInput struct {
+	ID uint
 }
 
-type UpdatePeriodOutput struct {
+type ClosePeriodOutput struct {
 	ID                   uint                `json:"id"`
 	Name                 string              `json:"name"`
 	InitialDate          string              `json:"initial_date"`
@@ -19,35 +18,29 @@ type UpdatePeriodOutput struct {
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 
-type UpdatePeriod struct {
+type ClosePeriod struct {
 	repository domain.PeriodRepository
 }
 
-func NewUpdatePeriod(repo domain.PeriodRepository) *UpdatePeriod {
-	return &UpdatePeriod{repository: repo}
+func NewClosePeriod(repo domain.PeriodRepository) *ClosePeriod {
+	return &ClosePeriod{repository: repo}
 }
 
-func (uc *UpdatePeriod) Execute(input UpdatePeriodInput) (*UpdatePeriodOutput, error) {
+func (uc *ClosePeriod) Execute(input ClosePeriodInput) (*ClosePeriodOutput, error) {
 	period, err := uc.repository.FindByID(input.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := period.UpdatePeriodName(input.Name); err != nil {
+	if err := period.ClosePeriod(); err != nil {
 		return nil, err
-	}
-
-	// Check if new name already exists
-	p, err := uc.repository.FindByName(period.Name)
-	if err == nil && p != nil && p.ID != period.ID {
-		return nil, domain.ErrPeriodNameAlreadyExists
 	}
 
 	if err := uc.repository.Update(period); err != nil {
 		return nil, err
 	}
 
-	return &UpdatePeriodOutput{
+	return &ClosePeriodOutput{
 		ID:                   period.ID,
 		Name:                 period.Name,
 		InitialDate:          period.InitialDate,

@@ -60,6 +60,28 @@ func NewPeriod(name, initialDate string, weeksCount int, state PeriodState) (*Pe
 	}, nil
 }
 
+// UpdatePeriodName updates only the name of an existing period
+func (p *Period) UpdatePeriodName(name string) error {
+	normalizedName := NormalizePeriodName(name)
+
+	if err := ValidatePeriodName(normalizedName); err != nil {
+		return err
+	}
+
+	p.Name = normalizedName
+	return nil
+}
+
+// ClosePeriod changes the period state from Active to Closed
+func (p *Period) ClosePeriod() error {
+	if p.PeriodState != ActivePeriod {
+		return ErrPeriodStateInvalid
+	}
+	p.PeriodState = ClosedPeriod
+	return nil
+}
+
+// UpdatePeriod updates period with full details (legacy method - kept for compatibility)
 func (p *Period) UpdatePeriod(name, initialDate string, weeksCount int, state PeriodState) error {
 	// Validate that period hasn't started yet
 	parsedInitialDate, err := time.Parse("2006-01-02", initialDate)
