@@ -11,7 +11,6 @@ import (
 	weeksDelivery "backend/internal/weeks/delivery"
 	workspacesDelivery "backend/internal/workspaces/delivery"
 	"log"
-
 	"github.com/gin-gonic/gin"
 )
 
