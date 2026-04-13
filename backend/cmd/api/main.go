@@ -1,11 +1,12 @@
 package main
 
 import (
+	assignmentsDelivery "backend/internal/assignments/delivery"
 	authDelivery "backend/internal/auth/delivery"
-    assignmentsDelivery "backend/internal/assignments/delivery"
 	periodDelivery "backend/internal/periods/delivery"
 	"backend/internal/shared/config"
 	"backend/internal/shared/database"
+	tasksDelivery "backend/internal/tasks/delivery"
 	usersDelivery "backend/internal/users/delivery"
 	usersSeed "backend/internal/users/seed"
 	workspacesDelivery "backend/internal/workspaces/delivery"
@@ -40,7 +41,8 @@ func main() {
 	usersDelivery.SetupRoutes(api, authHandler)
 	periodDelivery.SetupRoutes(api)
 	workspacesDelivery.SetupRoutes(api)
-    assignmentsDelivery.SetupRoutes(api)
+	assignmentsDelivery.SetupRoutes(api)
+	tasksDelivery.SetupRoutes(api)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
