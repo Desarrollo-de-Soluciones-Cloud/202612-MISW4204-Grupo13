@@ -5,11 +5,10 @@ import (
 )
 
 type CreatePeriodInput struct {
-	Name                 string
-	InitialDate          string
-	FinalDate            string
-	InscriptionFinalDate string
-	PeriodState          domain.PeriodState
+	Name        string
+	InitialDate string
+	WeeksCount  int
+	PeriodState domain.PeriodState
 }
 
 type CreatePeriodOutput struct {
@@ -18,6 +17,7 @@ type CreatePeriodOutput struct {
 	InitialDate          string              `json:"initial_date"`
 	FinalDate            string              `json:"final_date"`
 	InscriptionFinalDate string              `json:"inscription_final_date"`
+	WeeksCount           int                 `json:"weeks_count"`
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 
@@ -33,8 +33,7 @@ func (uc *CreatePeriod) Execute(input CreatePeriodInput) (*CreatePeriodOutput, e
 	period, err := domain.NewPeriod(
 		input.Name,
 		input.InitialDate,
-		input.FinalDate,
-		input.InscriptionFinalDate,
+		input.WeeksCount,
 		input.PeriodState,
 	)
 	if err != nil {
@@ -56,6 +55,7 @@ func (uc *CreatePeriod) Execute(input CreatePeriodInput) (*CreatePeriodOutput, e
 		InitialDate:          period.InitialDate,
 		FinalDate:            period.FinalDate,
 		InscriptionFinalDate: period.InscriptionFinalDate,
+		WeeksCount:           period.WeeksCount,
 		PeriodState:          period.PeriodState,
 	}, nil
 }

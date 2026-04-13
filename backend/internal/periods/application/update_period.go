@@ -5,12 +5,11 @@ import (
 )
 
 type UpdatePeriodInput struct {
-	ID                   uint
-	Name                 string
-	InitialDate          string
-	FinalDate            string
-	InscriptionFinalDate string
-	PeriodState          domain.PeriodState
+	ID          uint
+	Name        string
+	InitialDate string
+	WeeksCount  int
+	PeriodState domain.PeriodState
 }
 
 type UpdatePeriodOutput struct {
@@ -19,6 +18,7 @@ type UpdatePeriodOutput struct {
 	InitialDate          string              `json:"initial_date"`
 	FinalDate            string              `json:"final_date"`
 	InscriptionFinalDate string              `json:"inscription_final_date"`
+	WeeksCount           int                 `json:"weeks_count"`
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 
@@ -39,8 +39,7 @@ func (uc *UpdatePeriod) Execute(input UpdatePeriodInput) (*UpdatePeriodOutput, e
 	if err := period.UpdatePeriod(
 		input.Name,
 		input.InitialDate,
-		input.FinalDate,
-		input.InscriptionFinalDate,
+		input.WeeksCount,
 		input.PeriodState,
 	); err != nil {
 		return nil, err
@@ -61,6 +60,7 @@ func (uc *UpdatePeriod) Execute(input UpdatePeriodInput) (*UpdatePeriodOutput, e
 		InitialDate:          period.InitialDate,
 		FinalDate:            period.FinalDate,
 		InscriptionFinalDate: period.InscriptionFinalDate,
+		WeeksCount:           period.WeeksCount,
 		PeriodState:          period.PeriodState,
 	}, nil
 }

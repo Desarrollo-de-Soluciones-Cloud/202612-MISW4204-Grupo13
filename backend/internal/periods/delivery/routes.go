@@ -15,15 +15,13 @@ func SetupRoutes(r gin.IRouter) {
 	listPeriodsByState := application.NewListPeriodsByState(repo)
 	getPeriodByID := application.NewGetPeriodByID(repo)
 	updatePeriod := application.NewUpdatePeriod(repo)
-	deletePeriod := application.NewDeletePeriod(repo)
-	handler := NewPeriodHandler(createPeriod, listPeriods, listPeriodsByState, getPeriodByID, updatePeriod, deletePeriod)
+	handler := NewPeriodHandler(createPeriod, listPeriods, listPeriodsByState, getPeriodByID, updatePeriod)
 	periods := r.Group("/periods")
 	{
 		periods.POST("", handler.CreatePeriod)
 		periods.GET("", handler.ListPeriods)
 		periods.GET("/:id", handler.GetPeriodByID)
 		periods.PUT("/:id", handler.UpdatePeriod)
-		periods.DELETE("/:id", handler.DeletePeriod)
 	}
 }
 // merge a develop

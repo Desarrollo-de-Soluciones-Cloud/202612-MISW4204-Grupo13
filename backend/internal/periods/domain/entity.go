@@ -10,12 +10,13 @@ type Period struct {
 	InitialDate          string      `gorm:"size:100;not null" json:"initial_date"`
 	FinalDate            string      `gorm:"size:100;not null" json:"final_date"`
 	InscriptionFinalDate string      `gorm:"size:100;not null" json:"inscription_final_date"`
+	WeeksCount           int         `gorm:"not null" json:"weeks_count"`
 	PeriodState          PeriodState `gorm:"size:20;not null" json:"period_state"`
 	CreatedAt            time.Time   `json:"created_at"`
 	UpdatedAt            time.Time   `json:"updated_at"`
 }
 
-func NewPeriod(name, initialDate, finalDate, inscriptionFinalDate string, state PeriodState) (*Period, error) {
+func NewPeriod(name, initialDate string, weeksCount int, state PeriodState) (*Period, error) {
 	normalizedName := NormalizePeriodName(name)
 
 	if err := ValidatePeriodName(normalizedName); err != nil {
@@ -24,16 +25,28 @@ func NewPeriod(name, initialDate, finalDate, inscriptionFinalDate string, state 
 	if err := ValidatePeriodInitialDate(initialDate); err != nil {
 		return nil, err
 	}
-	if err := ValidatePeriodFinalDate(finalDate); err != nil {
+	if err := ValidatePeriodInitialDateIsMonday(initialDate); err != nil {
 		return nil, err
 	}
-	if err := ValidatePeriodInscriptionFinalDate(inscriptionFinalDate); err != nil {
+	if err := ValidatePeriodInitialDateIsFuture(initialDate); err != nil {
 		return nil, err
 	}
-	if err := ValidatePeriodDateSequence(initialDate, finalDate, inscriptionFinalDate); err != nil {
+	if err := ValidatePeriodWeeksCount(weeksCount); err != nil {
 		return nil, err
 	}
 	if err := ValidatePeriodState(state); err != nil {
+		return nil, err
+	}
+
+	// Calculate final date: initial_date + (weeks_count * 7) - 1 day
+	finalDate, err := CalculatePeriodFinalDate(initialDate, weeksCount)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate inscription final date: initial_date - 1 day
+	inscriptionFinalDate, err := CalculatePeriodInscriptionFinalDate(initialDate)
+	if err != nil {
 		return nil, err
 	}
 
@@ -42,11 +55,22 @@ func NewPeriod(name, initialDate, finalDate, inscriptionFinalDate string, state 
 		InitialDate:          initialDate,
 		FinalDate:            finalDate,
 		InscriptionFinalDate: inscriptionFinalDate,
+		WeeksCount:           weeksCount,
 		PeriodState:          state,
 	}, nil
 }
 
-func (p *Period) UpdatePeriod(name, initialDate, finalDate, inscriptionFinalDate string, state PeriodState) error {
+func (p *Period) UpdatePeriod(name, initialDate string, weeksCount int, state PeriodState) error {
+	// Validate that period hasn't started yet
+	parsedInitialDate, err := time.Parse("2006-01-02", initialDate)
+	if err != nil {
+		return ErrPeriodInitialDateWrongFormat
+	}
+	now := time.Now()
+	if parsedInitialDate.Before(now) && parsedInitialDate.Format("2006-01-02") != now.Format("2006-01-02") {
+		return ErrPeriodCannotBeUpdated
+	}
+
 	normalizedName := NormalizePeriodName(name)
 
 	if err := ValidatePeriodName(normalizedName); err != nil {
@@ -55,16 +79,25 @@ func (p *Period) UpdatePeriod(name, initialDate, finalDate, inscriptionFinalDate
 	if err := ValidatePeriodInitialDate(initialDate); err != nil {
 		return err
 	}
-	if err := ValidatePeriodFinalDate(finalDate); err != nil {
+	if err := ValidatePeriodInitialDateIsMonday(initialDate); err != nil {
 		return err
 	}
-	if err := ValidatePeriodInscriptionFinalDate(inscriptionFinalDate); err != nil {
-		return err
-	}
-	if err := ValidatePeriodDateSequence(initialDate, finalDate, inscriptionFinalDate); err != nil {
+	if err := ValidatePeriodWeeksCount(weeksCount); err != nil {
 		return err
 	}
 	if err := ValidatePeriodState(state); err != nil {
+		return err
+	}
+
+	// Calculate final date
+	finalDate, err := CalculatePeriodFinalDate(initialDate, weeksCount)
+	if err != nil {
+		return err
+	}
+
+	// Calculate inscription final date
+	inscriptionFinalDate, err := CalculatePeriodInscriptionFinalDate(initialDate)
+	if err != nil {
 		return err
 	}
 
@@ -72,6 +105,7 @@ func (p *Period) UpdatePeriod(name, initialDate, finalDate, inscriptionFinalDate
 	p.InitialDate = initialDate
 	p.FinalDate = finalDate
 	p.InscriptionFinalDate = inscriptionFinalDate
+	p.WeeksCount = weeksCount
 	p.PeriodState = state
 
 	return nil
