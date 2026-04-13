@@ -48,6 +48,12 @@ func (h *AssignmentHandler) CreateAssignment(c *gin.Context) {
 	})
 	if err != nil {
 		switch {
+		case errors.Is(err, domain.ErrAssignmentUserNotFound),
+			errors.Is(err, domain.ErrAssignmentWorkspaceNotFound):
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		case errors.Is(err, domain.ErrAssignmentWorkspaceClosed),
+			errors.Is(err, domain.ErrAssignmentAlreadyExists):
+			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
 		case isAssignmentValidationError(err):
 			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		default:
@@ -114,6 +120,8 @@ func (h *AssignmentHandler) UpdateAssignment(c *gin.Context) {
 		switch {
 		case errors.Is(err, domain.ErrAssignmentNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		case errors.Is(err, domain.ErrAssignmentAlreadyExists):
+			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
 		case isAssignmentValidationError(err):
 			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		default:

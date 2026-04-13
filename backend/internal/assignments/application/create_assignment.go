@@ -1,6 +1,11 @@
 package application
 
-import "backend/internal/assignments/domain"
+import (
+	"backend/internal/assignments/domain"
+	usersDomain "backend/internal/users/domain"
+	workspacesDomain "backend/internal/workspaces/domain"
+	"errors"
+)
 
 type CreateAssignmentInput struct {
 	UserID      uint                  `json:"user_id"`
@@ -18,11 +23,96 @@ type CreateAssignmentOutput struct {
 }
 
 type CreateAssignment struct {
-	repository domain.AssignmentRepository
+	repository          domain.AssignmentRepository
+	userRepository      AssignmentUserRepository
+	workspaceRepository AssignmentWorkspaceRepository
+}
+
+type AssignmentUserRepository interface {
+	FindByID(id uint) (*usersDomain.User, error)
+}
+
+type AssignmentWorkspaceRepository interface {
+	FindByID(id uint) (*workspacesDomain.Workspace, error)
 }
 
 func NewCreateAssignment(repo domain.AssignmentRepository) *CreateAssignment {
 	return &CreateAssignment{repository: repo}
+}
+
+func (uc *CreateAssignment) WithRepositories(userRepo AssignmentUserRepository, workspaceRepo AssignmentWorkspaceRepository) *CreateAssignment {
+	uc.userRepository = userRepo
+	uc.workspaceRepository = workspaceRepo
+
+	return uc
+}
+
+func mapWorkspaceNotFoundError(err error) bool {
+	return errors.Is(err, workspacesDomain.ErrWorkspaceNotFound) || err.Error() == workspacesDomain.ErrWorkspaceNotFound.Error()
+}
+
+func (uc *CreateAssignment) validateUserAndWorkspace(userID, workspaceID uint) error {
+	if uc.userRepository != nil {
+		if _, err := uc.userRepository.FindByID(userID); err != nil {
+			if errors.Is(err, usersDomain.ErrUserNotFound) {
+				return domain.ErrAssignmentUserNotFound
+			}
+			return err
+		}
+	}
+
+	if uc.workspaceRepository != nil {
+		workspace, err := uc.workspaceRepository.FindByID(workspaceID)
+		if err != nil {
+			if mapWorkspaceNotFoundError(err) {
+				return domain.ErrAssignmentWorkspaceNotFound
+			}
+			return err
+		}
+		if workspace.State == workspacesDomain.ClosedState {
+			return domain.ErrAssignmentWorkspaceClosed
+		}
+	}
+
+	return nil
+}
+
+func (uc *CreateAssignment) ensureNoExactDuplicate(userID, workspaceID uint, role domain.AssignmentRole) error {
+	assignments, err := uc.repository.FindAllByUserID(userID)
+	if err != nil {
+		return err
+	}
+
+	for _, existing := range assignments {
+		if existing.WorkspaceID == workspaceID && existing.Role == role {
+			return domain.ErrAssignmentAlreadyExists
+		}
+	}
+
+	return nil
+}
+
+func (uc *CreateAssignment) buildNextWorkload(userID uint, role domain.AssignmentRole, weeklyHours int) (domain.UserAssignmentWorkload, error) {
+	assistantHours, err := uc.repository.SumWeeklyHoursByUserAndRole(userID, domain.RoleAssistant)
+	if err != nil {
+		return domain.UserAssignmentWorkload{}, err
+	}
+
+	monitorHours, err := uc.repository.SumWeeklyHoursByUserAndRole(userID, domain.RoleMonitor)
+	if err != nil {
+		return domain.UserAssignmentWorkload{}, err
+	}
+
+	monitorCount, err := uc.repository.CountAssignmentsByUserAndRole(userID, domain.RoleMonitor)
+	if err != nil {
+		return domain.UserAssignmentWorkload{}, err
+	}
+
+	return domain.BuildWorkloadWithAssignment(domain.UserAssignmentWorkload{
+		AssistantWeeklyHours: assistantHours,
+		MonitorWeeklyHours:   monitorHours,
+		MonitorAssignments:   monitorCount,
+	}, role, weeklyHours)
 }
 
 func (uc *CreateAssignment) Execute(input CreateAssignmentInput) (*CreateAssignmentOutput, error) {
@@ -30,26 +120,15 @@ func (uc *CreateAssignment) Execute(input CreateAssignmentInput) (*CreateAssignm
 	//nolint:godox // TODO RF04: Validar que workspace_id exista realmente cuando el modulo de workspaces este terminado.
 	// TODO RF05: Validar RF05 usando solo vinculaciones activas cuando workspaces exponga estados activos/cerrados.
 	// TODO RF05: Confirmar si RF05 debe ejecutarse con filtros por periodo academico cuando periodos y workspaces esten integrados.
-	assistantHours, err := uc.repository.SumWeeklyHoursByUserAndRole(input.UserID, domain.RoleAssistant)
-	if err != nil {
+	if err := uc.validateUserAndWorkspace(input.UserID, input.WorkspaceID); err != nil {
 		return nil, err
 	}
 
-	monitorHours, err := uc.repository.SumWeeklyHoursByUserAndRole(input.UserID, domain.RoleMonitor)
-	if err != nil {
+	if err := uc.ensureNoExactDuplicate(input.UserID, input.WorkspaceID, input.Role); err != nil {
 		return nil, err
 	}
 
-	monitorCount, err := uc.repository.CountAssignmentsByUserAndRole(input.UserID, domain.RoleMonitor)
-	if err != nil {
-		return nil, err
-	}
-
-	nextWorkload, err := domain.BuildWorkloadWithAssignment(domain.UserAssignmentWorkload{
-		AssistantWeeklyHours: assistantHours,
-		MonitorWeeklyHours:   monitorHours,
-		MonitorAssignments:   monitorCount,
-	}, input.Role, input.WeeklyHours)
+	nextWorkload, err := uc.buildNextWorkload(input.UserID, input.Role, input.WeeklyHours)
 	if err != nil {
 		return nil, err
 	}

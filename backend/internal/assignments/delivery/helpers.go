@@ -52,5 +52,9 @@ func isAssignmentValidationError(err error) bool {
 		errors.Is(err, domain.ErrAssignmentRoleInvalid) ||
 		errors.Is(err, domain.ErrAssignmentWeeklyHoursInvalid) ||
 		errors.Is(err, domain.ErrAssignmentUserIDRequired) ||
-		errors.Is(err, domain.ErrAssignmentWorkspaceIDRequired)
+		errors.Is(err, domain.ErrAssignmentWorkspaceIDRequired) ||
+		errors.Is(err, domain.ErrAssignmentAssistantHoursLimitExceeded) ||
+		errors.Is(err, domain.ErrAssignmentMonitorCountLimitExceeded) ||
+		errors.Is(err, domain.ErrAssignmentMonitorHoursLimitExceeded) ||
+		errors.Is(err, domain.ErrAssignmentMonitorFortyPercentExceeded)
 }

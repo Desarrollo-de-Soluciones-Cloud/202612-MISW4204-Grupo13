@@ -3,6 +3,8 @@ package application
 import (
 	applicationpkg "backend/internal/assignments/application"
 	"backend/internal/assignments/domain"
+	usersDomain "backend/internal/users/domain"
+	workspacesDomain "backend/internal/workspaces/domain"
 	"errors"
 	"testing"
 )
@@ -14,6 +16,44 @@ type MockAssignmentRepository struct {
 	byID    map[uint]*domain.Assignment
 	nextID  uint
 	failErr error
+}
+
+type MockUserRepository struct {
+	users map[uint]*usersDomain.User
+}
+
+func NewMockUserRepository() *MockUserRepository {
+	return &MockUserRepository{users: make(map[uint]*usersDomain.User)}
+}
+
+func (m *MockUserRepository) FindByID(id uint) (*usersDomain.User, error) {
+	if user, ok := m.users[id]; ok {
+		return user, nil
+	}
+	return nil, usersDomain.ErrUserNotFound
+}
+
+type MockWorkspaceRepository struct {
+	workspaces map[uint]*workspacesDomain.Workspace
+}
+
+func NewMockWorkspaceRepository() *MockWorkspaceRepository {
+	return &MockWorkspaceRepository{workspaces: make(map[uint]*workspacesDomain.Workspace)}
+}
+
+func (m *MockWorkspaceRepository) FindByID(id uint) (*workspacesDomain.Workspace, error) {
+	if workspace, ok := m.workspaces[id]; ok {
+		return workspace, nil
+	}
+	return nil, workspacesDomain.ErrWorkspaceNotFound
+}
+
+func newCreateAssignmentWithDependencies(
+	assignmentRepo *MockAssignmentRepository,
+	userRepo *MockUserRepository,
+	workspaceRepo *MockWorkspaceRepository,
+) *applicationpkg.CreateAssignment {
+	return applicationpkg.NewCreateAssignment(assignmentRepo).WithRepositories(userRepo, workspaceRepo)
 }
 
 func NewMockAssignmentRepository() *MockAssignmentRepository {
@@ -83,7 +123,11 @@ func (m *MockAssignmentRepository) Update(assignment *domain.Assignment) error {
 
 func TestCreateAssignmentSuccess(t *testing.T) {
 	mockRepo := NewMockAssignmentRepository()
-	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
+	userRepo := NewMockUserRepository()
+	workspaceRepo := NewMockWorkspaceRepository()
+	userRepo.users[1] = &usersDomain.User{ID: 1}
+	workspaceRepo.workspaces[2] = &workspacesDomain.Workspace{ID: 2, State: workspacesDomain.ActiveState}
+	createAssignment := newCreateAssignmentWithDependencies(mockRepo, userRepo, workspaceRepo)
 
 	output, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
 		UserID:      1,
@@ -109,6 +153,130 @@ func TestCreateAssignmentSuccess(t *testing.T) {
 	}
 	if output.WeeklyHours != 10 {
 		t.Fatalf("expected weekly hours 10, got %d", output.WeeklyHours)
+	}
+}
+
+func TestCreateAssignmentReturnsErrorWhenUserDoesNotExist(t *testing.T) {
+	mockRepo := NewMockAssignmentRepository()
+	userRepo := NewMockUserRepository()
+	workspaceRepo := NewMockWorkspaceRepository()
+	workspaceRepo.workspaces[2] = &workspacesDomain.Workspace{ID: 2, State: workspacesDomain.ActiveState}
+	createAssignment := newCreateAssignmentWithDependencies(mockRepo, userRepo, workspaceRepo)
+
+	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      99,
+		WorkspaceID: 2,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 10,
+	})
+	if !errors.Is(err, domain.ErrAssignmentUserNotFound) {
+		t.Fatalf("expected ErrAssignmentUserNotFound, got %v", err)
+	}
+}
+
+func TestCreateAssignmentReturnsErrorWhenWorkspaceDoesNotExist(t *testing.T) {
+	mockRepo := NewMockAssignmentRepository()
+	userRepo := NewMockUserRepository()
+	workspaceRepo := NewMockWorkspaceRepository()
+	userRepo.users[1] = &usersDomain.User{ID: 1}
+	createAssignment := newCreateAssignmentWithDependencies(mockRepo, userRepo, workspaceRepo)
+
+	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      1,
+		WorkspaceID: 99,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 10,
+	})
+	if !errors.Is(err, domain.ErrAssignmentWorkspaceNotFound) {
+		t.Fatalf("expected ErrAssignmentWorkspaceNotFound, got %v", err)
+	}
+}
+
+func TestCreateAssignmentReturnsErrorWhenWorkspaceIsClosed(t *testing.T) {
+	mockRepo := NewMockAssignmentRepository()
+	userRepo := NewMockUserRepository()
+	workspaceRepo := NewMockWorkspaceRepository()
+	userRepo.users[1] = &usersDomain.User{ID: 1}
+	workspaceRepo.workspaces[2] = &workspacesDomain.Workspace{ID: 2, State: workspacesDomain.ClosedState}
+	createAssignment := newCreateAssignmentWithDependencies(mockRepo, userRepo, workspaceRepo)
+
+	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      1,
+		WorkspaceID: 2,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 10,
+	})
+	if !errors.Is(err, domain.ErrAssignmentWorkspaceClosed) {
+		t.Fatalf("expected ErrAssignmentWorkspaceClosed, got %v", err)
+	}
+}
+
+func TestCreateAssignmentAllowsIndependentAssignments(t *testing.T) {
+	mockRepo := NewMockAssignmentRepository()
+	userRepo := NewMockUserRepository()
+	workspaceRepo := NewMockWorkspaceRepository()
+	userRepo.users[1] = &usersDomain.User{ID: 1}
+	workspaceRepo.workspaces[10] = &workspacesDomain.Workspace{ID: 10, State: workspacesDomain.ActiveState}
+	workspaceRepo.workspaces[11] = &workspacesDomain.Workspace{ID: 11, State: workspacesDomain.ActiveState}
+	createAssignment := newCreateAssignmentWithDependencies(mockRepo, userRepo, workspaceRepo)
+
+	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      1,
+		WorkspaceID: 10,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 10,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating first independent assignment, got %v", err)
+	}
+
+	_, err = createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      1,
+		WorkspaceID: 11,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 8,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating assignment in different workspace, got %v", err)
+	}
+
+	_, err = createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      1,
+		WorkspaceID: 10,
+		Role:        domain.RoleMonitor,
+		WeeklyHours: 4,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating assignment with different role in same workspace, got %v", err)
+	}
+}
+
+func TestCreateAssignmentBlocksExactDuplicate(t *testing.T) {
+	mockRepo := NewMockAssignmentRepository()
+	userRepo := NewMockUserRepository()
+	workspaceRepo := NewMockWorkspaceRepository()
+	userRepo.users[1] = &usersDomain.User{ID: 1}
+	workspaceRepo.workspaces[10] = &workspacesDomain.Workspace{ID: 10, State: workspacesDomain.ActiveState}
+	createAssignment := newCreateAssignmentWithDependencies(mockRepo, userRepo, workspaceRepo)
+
+	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      1,
+		WorkspaceID: 10,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 10,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating baseline assignment, got %v", err)
+	}
+
+	_, err = createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      1,
+		WorkspaceID: 10,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 6,
+	})
+	if !errors.Is(err, domain.ErrAssignmentAlreadyExists) {
+		t.Fatalf("expected ErrAssignmentAlreadyExists, got %v", err)
 	}
 }
 

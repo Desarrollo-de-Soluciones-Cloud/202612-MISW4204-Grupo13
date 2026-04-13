@@ -32,6 +32,17 @@ func (uc *UpdateAssignment) Execute(input UpdateAssignmentInput) (*UpdateAssignm
 		return nil, err
 	}
 
+	assignments, err := uc.repository.FindAllByUserID(assignment.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, existing := range assignments {
+		if existing.ID != assignment.ID && existing.WorkspaceID == assignment.WorkspaceID && existing.Role == input.Role {
+			return nil, domain.ErrAssignmentAlreadyExists
+		}
+	}
+
 	assistantHours, err := uc.repository.SumWeeklyHoursByUserAndRole(assignment.UserID, domain.RoleAssistant)
 	if err != nil {
 		return nil, err

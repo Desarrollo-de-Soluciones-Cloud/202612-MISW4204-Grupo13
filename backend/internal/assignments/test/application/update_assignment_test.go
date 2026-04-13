@@ -334,3 +334,42 @@ func TestUpdateAssignmentValidCaseWithMixedRoles(t *testing.T) {
 		t.Fatalf("expected weekly hours 8, got %d", output.WeeklyHours)
 	}
 }
+
+func TestUpdateAssignmentBlocksExactDuplicate(t *testing.T) {
+	mockRepo := NewMockAssignmentRepository()
+	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
+	updateAssignment := applicationpkg.NewUpdateAssignment(mockRepo)
+
+	first, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      160,
+		WorkspaceID: 1,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 10,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating first assignment, got %v", err)
+	}
+
+	second, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
+		UserID:      160,
+		WorkspaceID: 1,
+		Role:        domain.RoleMonitor,
+		WeeklyHours: 4,
+	})
+	if err != nil {
+		t.Fatalf("expected no error creating second assignment, got %v", err)
+	}
+
+	_, err = updateAssignment.Execute(applicationpkg.UpdateAssignmentInput{
+		ID:          second.ID,
+		Role:        domain.RoleAssistant,
+		WeeklyHours: 4,
+	})
+	if !errors.Is(err, domain.ErrAssignmentAlreadyExists) {
+		t.Fatalf("expected ErrAssignmentAlreadyExists, got %v", err)
+	}
+
+	if first.ID == second.ID {
+		t.Fatalf("expected different assignment ids, got %d and %d", first.ID, second.ID)
+	}
+}

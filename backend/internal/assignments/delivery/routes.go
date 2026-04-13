@@ -3,6 +3,8 @@ package delivery
 import (
 	"backend/internal/assignments/application"
 	"backend/internal/assignments/infrastructure"
+	usersInfrastructure "backend/internal/users/infrastructure"
+	workspacesInfrastructure "backend/internal/workspaces/infrastructure"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,8 +12,10 @@ import (
 func SetupRoutes(r gin.IRouter) {
 	repo := infrastructure.NewAssignmentRepository()
 	repo.AutoMigrate()
+	userRepo := usersInfrastructure.NewUserRepository()
+	workspaceRepo := workspacesInfrastructure.NewWorkspaceRepository()
 
-	createAssignment := application.NewCreateAssignment(repo)
+	createAssignment := application.NewCreateAssignment(repo).WithRepositories(userRepo, workspaceRepo)
 	getAssignmentByID := application.NewGetAssignmentByID(repo)
 	listAssignmentsByUserID := application.NewListAssignmentsByUserID(repo)
 	updateAssignment := application.NewUpdateAssignment(repo)
