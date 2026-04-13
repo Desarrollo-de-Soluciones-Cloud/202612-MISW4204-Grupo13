@@ -3,14 +3,14 @@ package domain
 type TaskStatus string
 
 const (
-	TaskStatusOpen          TaskStatus = "open"
-	TaskStatusInDevelopment TaskStatus = "in_development"
-	TaskStatusFinished      TaskStatus = "finished"
+	TaskStatusAbierto      TaskStatus = "abierto"
+	TaskStatusEnDesarrollo TaskStatus = "en desarrollo"
+	TaskStatusFinalizado   TaskStatus = "finalizado"
 )
 
 func IsValidTaskStatus(status TaskStatus) bool {
 	switch status {
-	case TaskStatusOpen, TaskStatusInDevelopment, TaskStatusFinished:
+	case TaskStatusAbierto, TaskStatusEnDesarrollo, TaskStatusFinalizado:
 		return true
 	default:
 		return false

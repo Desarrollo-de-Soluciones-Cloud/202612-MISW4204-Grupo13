@@ -63,3 +63,21 @@ func (r *TaskRepository) Delete(id uint) error {
 func (r *TaskRepository) AutoMigrate() error {
 	return database.DB.AutoMigrate(&domain.Task{})
 }
+
+func (r *TaskRepository) NormalizeLegacyStatuses() error {
+	legacyStatuses := map[string]domain.TaskStatus{
+		"open":           domain.TaskStatusAbierto,
+		"in_development": domain.TaskStatusEnDesarrollo,
+		"finished":       domain.TaskStatusFinalizado,
+	}
+
+	for legacy, normalized := range legacyStatuses {
+		if err := database.DB.Model(&domain.Task{}).
+			Where("status = ?", legacy).
+			Update("status", string(normalized)).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

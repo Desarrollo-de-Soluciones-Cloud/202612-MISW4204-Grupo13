@@ -36,7 +36,7 @@ func TestTaskRepositoryCRUD(t *testing.T) {
 		nil,
 		"Prepare class",
 		"Review slides",
-		tasksDomain.TaskStatusOpen,
+		tasksDomain.TaskStatusAbierto,
 		2,
 		"",
 		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
@@ -95,5 +95,41 @@ func TestTaskRepositoryReturnsNotFound(t *testing.T) {
 	_, err := repo.FindByID(999)
 	if !errors.Is(err, tasksDomain.ErrTaskNotFound) {
 		t.Fatalf("expected ErrTaskNotFound, got %v", err)
+	}
+}
+
+func TestTaskRepositoryNormalizesLegacyStatuses(t *testing.T) {
+	setupTestDB(t)
+
+	repo := tasksInfrastructure.NewTaskRepository()
+	if err := repo.AutoMigrate(); err != nil {
+		t.Fatalf("expected automigrate, got %v", err)
+	}
+
+	legacyTask := &tasksDomain.Task{
+		UserID:        1,
+		AssignmentID:  10,
+		Title:         "Prepare class",
+		Description:   "Review slides",
+		Status:        tasksDomain.TaskStatus("open"),
+		SpentHours:    2,
+		Observations:  "",
+		WeekStartDate: time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC),
+		Late:          false,
+	}
+	if err := database.DB.Create(legacyTask).Error; err != nil {
+		t.Fatalf("expected create legacy task, got %v", err)
+	}
+
+	if err := repo.NormalizeLegacyStatuses(); err != nil {
+		t.Fatalf("expected legacy normalization, got %v", err)
+	}
+
+	foundByID, err := repo.FindByID(legacyTask.ID)
+	if err != nil {
+		t.Fatalf("expected find by id, got %v", err)
+	}
+	if foundByID.Status != tasksDomain.TaskStatusAbierto {
+		t.Fatalf("expected normalized status %q, got %q", tasksDomain.TaskStatusAbierto, foundByID.Status)
 	}
 }

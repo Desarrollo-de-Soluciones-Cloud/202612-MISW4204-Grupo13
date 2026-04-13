@@ -131,7 +131,7 @@ func seedTask(t *testing.T, repo *mockTaskRepository, userID, assignmentID uint,
 		nil,
 		"Prepare class",
 		"Review slides",
-		tasksDomain.TaskStatusOpen,
+		tasksDomain.TaskStatusAbierto,
 		2,
 		"",
 		weekStartDate,
@@ -157,7 +157,7 @@ func TestCreateTaskSuccess(t *testing.T) {
 	})
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
-	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"Prepare class","description":"Review slides","status":"open","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
+	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"Prepare class","description":"Review slides","status":"abierto","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
 	request, _ := http.NewRequest(http.MethodPost, "/tasks", requestBody)
 	request.Header.Set("Content-Type", "application/json")
 	context.Request = request
@@ -175,7 +175,7 @@ func TestCreateTaskBindingError(t *testing.T) {
 	handler := newTaskHandler(newMockTaskRepository(), newMockAssignmentRepository(), time.Now)
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
-	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"","description":"Review slides","status":"open","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
+	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"","description":"Review slides","status":"abierto","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
 	request, _ := http.NewRequest(http.MethodPost, "/tasks", requestBody)
 	request.Header.Set("Content-Type", "application/json")
 	context.Request = request
@@ -193,7 +193,7 @@ func TestCreateTaskReturnsNotFoundForMissingAssignment(t *testing.T) {
 	handler := newTaskHandler(newMockTaskRepository(), newMockAssignmentRepository(), time.Now)
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
-	requestBody := bytes.NewBufferString(`{"assignment_id":999,"title":"Prepare class","description":"Review slides","status":"open","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
+	requestBody := bytes.NewBufferString(`{"assignment_id":999,"title":"Prepare class","description":"Review slides","status":"abierto","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
 	request, _ := http.NewRequest(http.MethodPost, "/tasks", requestBody)
 	request.Header.Set("Content-Type", "application/json")
 	context.Request = request
@@ -223,6 +223,9 @@ func TestGetTaskByIDSuccess(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d", recorder.Code)
 	}
+	if !bytes.Contains(recorder.Body.Bytes(), []byte(`"status":"abierto"`)) {
+		t.Fatalf("expected response body to expose canonical status, got %s", recorder.Body.String())
+	}
 }
 
 func TestUpdateTaskRejectsLateTask(t *testing.T) {
@@ -237,7 +240,7 @@ func TestUpdateTaskRejectsLateTask(t *testing.T) {
 	})
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
-	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"Prepare class","description":"Review slides","status":"finished","spent_hours":3,"observations":"","week_start_date":"2026-04-06"}`)
+	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"Prepare class","description":"Review slides","status":"finalizado","spent_hours":3,"observations":"","week_start_date":"2026-04-06"}`)
 	request, _ := http.NewRequest(http.MethodPut, "/tasks/1", requestBody)
 	request.Header.Set("Content-Type", "application/json")
 	context.Request = request
@@ -247,6 +250,27 @@ func TestUpdateTaskRejectsLateTask(t *testing.T) {
 
 	if recorder.Code != http.StatusForbidden {
 		t.Fatalf("expected status 403, got %d", recorder.Code)
+	}
+}
+
+func TestCreateTaskRejectsLegacyEnglishStatus(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	taskRepo := newMockTaskRepository()
+	assignmentRepo := newMockAssignmentRepository()
+	seedAssignment(assignmentRepo, 10, 1)
+	handler := newTaskHandler(taskRepo, assignmentRepo, time.Now)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"Prepare class","description":"Review slides","status":"open","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
+	request, _ := http.NewRequest(http.MethodPost, "/tasks", requestBody)
+	request.Header.Set("Content-Type", "application/json")
+	context.Request = request
+
+	handler.CreateTask(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", recorder.Code)
 	}
 }
 
@@ -260,7 +284,7 @@ func TestCreateTaskInternalError(t *testing.T) {
 	handler := newTaskHandler(taskRepo, assignmentRepo, time.Now)
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
-	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"Prepare class","description":"Review slides","status":"open","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
+	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"Prepare class","description":"Review slides","status":"abierto","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
 	request, _ := http.NewRequest(http.MethodPost, "/tasks", requestBody)
 	request.Header.Set("Content-Type", "application/json")
 	context.Request = request

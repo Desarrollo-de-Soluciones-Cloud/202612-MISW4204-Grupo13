@@ -10,7 +10,12 @@ import (
 
 func SetupRoutes(r gin.IRouter) {
 	repo := infrastructure.NewTaskRepository()
-	repo.AutoMigrate()
+	if err := repo.AutoMigrate(); err != nil {
+		panic(err)
+	}
+	if err := repo.NormalizeLegacyStatuses(); err != nil {
+		panic(err)
+	}
 	assignmentRepo := assignmentsInfrastructure.NewAssignmentRepository()
 
 	createTask := application.NewCreateTask(repo, assignmentRepo, nil)

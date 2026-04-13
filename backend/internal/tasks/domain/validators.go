@@ -20,6 +20,10 @@ func NormalizeTaskDescription(description string) string {
 	return strings.TrimSpace(description)
 }
 
+func NormalizeTaskStatus(status TaskStatus) TaskStatus {
+	return TaskStatus(strings.TrimSpace(string(status)))
+}
+
 func NormalizeTaskObservations(observations string) string {
 	return strings.TrimSpace(observations)
 }
@@ -39,10 +43,12 @@ func ValidateTaskDescription(description string) error {
 }
 
 func ValidateTaskStatus(status TaskStatus) error {
+	normalizedStatus := NormalizeTaskStatus(status)
+
 	switch {
-	case strings.TrimSpace(string(status)) == "":
+	case normalizedStatus == "":
 		return ErrTaskStatusRequired
-	case !IsValidTaskStatus(status):
+	case !IsValidTaskStatus(normalizedStatus):
 		return ErrTaskStatusInvalid
 	default:
 		return nil
