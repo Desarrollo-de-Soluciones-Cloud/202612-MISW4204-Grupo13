@@ -8,9 +8,9 @@ import (
 	"backend/internal/shared/database"
 	usersDelivery "backend/internal/users/delivery"
 	usersSeed "backend/internal/users/seed"
+	weeksDelivery "backend/internal/weeks/delivery"
 	workspacesDelivery "backend/internal/workspaces/delivery"
 	"log"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -39,6 +39,7 @@ func main() {
 	authHandler := authDelivery.SetupRoutes(api, cfg)
 	usersDelivery.SetupRoutes(api, authHandler)
 	periodDelivery.SetupRoutes(api)
+	weeksDelivery.SetupRoutes(api)
 	workspacesDelivery.SetupRoutes(api)
     assignmentsDelivery.SetupRoutes(api)
 

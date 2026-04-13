@@ -30,8 +30,18 @@ func TestListPeriodsSuccess(t *testing.T) {
 	if len(output.Periods) != 2 {
 		t.Errorf("expected 2 periods, got %d", len(output.Periods))
 	}
-	if output.Periods[0].WeeksCount != weeksCount1 {
-		t.Errorf("expected weeks count %d, got %d", weeksCount1, output.Periods[0].WeeksCount)
+
+	periodsByName := make(map[string]applicationpkg.PeriodDTO, len(output.Periods))
+	for _, period := range output.Periods {
+		periodsByName[period.Name] = period
+	}
+
+	if periodsByName["2026-10"].WeeksCount != weeksCount1 {
+		t.Errorf("expected period 2026-10 weeks count %d, got %d", weeksCount1, periodsByName["2026-10"].WeeksCount)
+	}
+
+	if periodsByName["2026-11"].WeeksCount != weeksCount2 {
+		t.Errorf("expected period 2026-11 weeks count %d, got %d", weeksCount2, periodsByName["2026-11"].WeeksCount)
 	}
 }
 
