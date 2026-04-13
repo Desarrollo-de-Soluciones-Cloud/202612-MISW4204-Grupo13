@@ -5,15 +5,14 @@ import (
 	"errors"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestNewPeriodSuccess(t *testing.T) {
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2024-01-01"
+	finalDate := "2024-06-30"
+	inscriptionFinalDate := "2024-01-15"
 
-	period, err := domainpkg.NewPeriod(" 2024-01 ", initialDate, finalDate, inscriptionDate, domainpkg.ActivePeriod)
+	period, err := domainpkg.NewPeriod(" 2024-01 ", initialDate, finalDate, inscriptionFinalDate, domainpkg.ActivePeriod)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -27,8 +26,8 @@ func TestNewPeriodSuccess(t *testing.T) {
 	if period.FinalDate != finalDate {
 		t.Fatalf("expected final date %v, got %v", finalDate, period.FinalDate)
 	}
-	if period.InscriptionFinalDate != inscriptionDate {
-		t.Fatalf("expected inscription date %v, got %v", inscriptionDate, period.InscriptionFinalDate)
+	if period.InscriptionFinalDate != inscriptionFinalDate {
+		t.Fatalf("expected inscription date %v, got %v", inscriptionFinalDate, period.InscriptionFinalDate)
 	}
 	if period.PeriodState != domainpkg.ActivePeriod {
 		t.Fatalf("expected state %q, got %q", domainpkg.ActivePeriod, period.PeriodState)
@@ -36,31 +35,31 @@ func TestNewPeriodSuccess(t *testing.T) {
 }
 
 func TestNewPeriodRejectsInvalidState(t *testing.T) {
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2024-01-01"
+	finalDate := "2024-06-30"
+	inscriptionFinalDate := "2024-01-15"
 
-	_, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domainpkg.PeriodState("invalid"))
+	_, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionFinalDate, domainpkg.PeriodState("invalid"))
 	if !errors.Is(err, domainpkg.ErrPeriodStateInvalid) {
 		t.Fatalf("expected ErrPeriodStateInvalid, got %v", err)
 	}
 }
 
 func TestUpdatePeriodNormalizesValues(t *testing.T) {
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2024-01-01"
+	finalDate := "2024-06-30"
+	inscriptionFinalDate := "2024-01-15"
 
-	period, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domainpkg.ActivePeriod)
+	period, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionFinalDate, domainpkg.ActivePeriod)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	newInitialDate := time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC)
-	newFinalDate := time.Date(2024, 7, 31, 0, 0, 0, 0, time.UTC)
-	newInscriptionDate := time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC)
+	newInitialDate := "2024-02-01"
+	newFinalDate := "2024-07-31"
+	newInscriptionFinalDate := "2024-02-15"
 
-	err = period.UpdatePeriod(" 2024-02 ", newInitialDate, newFinalDate, newInscriptionDate, domainpkg.ClosedPeriod)
+	err = period.UpdatePeriod(" 2024-02 ", newInitialDate, newFinalDate, newInscriptionFinalDate, domainpkg.ClosedPeriod)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -74,49 +73,60 @@ func TestUpdatePeriodNormalizesValues(t *testing.T) {
 }
 
 func TestNewPeriodRejectsShortName(t *testing.T) {
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2024-01-01"
+	finalDate := "2024-06-30"
+	inscriptionFinalDate := "2024-01-15"
 
-	_, err := domainpkg.NewPeriod("ab", initialDate, finalDate, inscriptionDate, domainpkg.ActivePeriod)
+	_, err := domainpkg.NewPeriod("ab", initialDate, finalDate, inscriptionFinalDate, domainpkg.ActivePeriod)
 	if !errors.Is(err, domainpkg.ErrPeriodNameWrongFormat) {
 		t.Fatalf("expected ErrPeriodNameWrongFormat, got %v", err)
 	}
 }
 
 func TestNewPeriodRejectsInvalidDateSequence(t *testing.T) {
-	initialDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2024-06-30"
+	finalDate := "2024-01-01"
+	inscriptionFinalDate := "2024-01-15"
 
-	_, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domainpkg.ActivePeriod)
+	_, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionFinalDate, domainpkg.ActivePeriod)
 	if !errors.Is(err, domainpkg.ErrPeriodDateSequenceInvalid) {
 		t.Fatalf("expected ErrPeriodDateSequenceInvalid, got %v", err)
 	}
 }
 
-func TestNewPeriodRejectsInscriptionDateBeforeInitial(t *testing.T) {
-	initialDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+func TestNewPeriodRejectsInscriptionFinalDateBeforeInitial(t *testing.T) {
+	initialDate := "2024-01-15"
+	finalDate := "2024-06-30"
+	inscriptionFinalDate := "2024-01-01"
 
-	_, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domainpkg.ActivePeriod)
+	_, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionFinalDate, domainpkg.ActivePeriod)
+	if !errors.Is(err, domainpkg.ErrPeriodDateSequenceInvalid) {
+		t.Fatalf("expected ErrPeriodDateSequenceInvalid, got %v", err)
+	}
+}
+
+func TestNewPeriodRejectsInscriptionFinalDateAfterFinal(t *testing.T) {
+	initialDate := "2024-01-01"
+	finalDate := "2024-06-30"
+	inscriptionFinalDate := "2024-07-01"
+
+	_, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionFinalDate, domainpkg.ActivePeriod)
 	if !errors.Is(err, domainpkg.ErrPeriodDateSequenceInvalid) {
 		t.Fatalf("expected ErrPeriodDateSequenceInvalid, got %v", err)
 	}
 }
 
 func TestUpdatePeriodRejectsInvalidState(t *testing.T) {
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2024-01-01"
+	finalDate := "2024-06-30"
+	inscriptionFinalDate := "2024-01-15"
 
-	period, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domainpkg.ActivePeriod)
+	period, err := domainpkg.NewPeriod("2024-01", initialDate, finalDate, inscriptionFinalDate, domainpkg.ActivePeriod)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	err = period.UpdatePeriod("2024-01", initialDate, finalDate, inscriptionDate, domainpkg.PeriodState("unknown"))
+	err = period.UpdatePeriod("2024-01", initialDate, finalDate, inscriptionFinalDate, domainpkg.PeriodState("unknown"))
 	if !errors.Is(err, domainpkg.ErrPeriodStateInvalid) {
 		t.Fatalf("expected ErrPeriodStateInvalid, got %v", err)
 	}
@@ -138,11 +148,11 @@ func TestValidatePeriodNameTooLong(t *testing.T) {
 }
 
 func TestValidatePeriodDateSequence(t *testing.T) {
-	initialDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2024-06-30"
+	finalDate := "2024-01-01"
+	inscriptionFinalDate := "2024-01-15"
 
-	err := domainpkg.ValidatePeriodDateSequence(initialDate, finalDate, inscriptionDate)
+	err := domainpkg.ValidatePeriodDateSequence(initialDate, finalDate, inscriptionFinalDate)
 	if !errors.Is(err, domainpkg.ErrPeriodDateSequenceInvalid) {
 		t.Fatalf("expected ErrPeriodDateSequenceInvalid, got %v", err)
 	}

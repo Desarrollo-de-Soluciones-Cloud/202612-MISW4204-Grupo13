@@ -7,15 +7,15 @@ import (
 type Period struct {
 	ID                   uint        `gorm:"primaryKey" json:"id"`
 	Name                 string      `gorm:"size:100;not null" json:"name"`
-	InitialDate          time.Time   `json:"initial_date"`
-	FinalDate            time.Time   `json:"final_date"`
-	InscriptionFinalDate time.Time   `json:"inscription_final_date"`
+	InitialDate          string      `gorm:"size:100;not null" json:"initial_date"`
+	FinalDate            string      `gorm:"size:100;not null" json:"final_date"`
+	InscriptionFinalDate string      `gorm:"size:100;not null" json:"inscription_final_date"`
 	PeriodState          PeriodState `gorm:"size:20;not null" json:"period_state"`
 	CreatedAt            time.Time   `json:"created_at"`
 	UpdatedAt            time.Time   `json:"updated_at"`
 }
 
-func NewPeriod(name string, initialDate, finalDate, inscriptionFinalDate time.Time, state PeriodState) (*Period, error) {
+func NewPeriod(name, initialDate, finalDate, inscriptionFinalDate string, state PeriodState) (*Period, error) {
 	normalizedName := NormalizePeriodName(name)
 
 	if err := ValidatePeriodName(normalizedName); err != nil {
@@ -46,7 +46,7 @@ func NewPeriod(name string, initialDate, finalDate, inscriptionFinalDate time.Ti
 	}, nil
 }
 
-func (p *Period) UpdatePeriod(name string, initialDate, finalDate, inscriptionFinalDate time.Time, state PeriodState) error {
+func (p *Period) UpdatePeriod(name, initialDate, finalDate, inscriptionFinalDate string, state PeriodState) error {
 	normalizedName := NormalizePeriodName(name)
 
 	if err := ValidatePeriodName(normalizedName); err != nil {

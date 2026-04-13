@@ -82,6 +82,42 @@ func TestUpdateProfileRejectsInvalidRole(t *testing.T) {
 	}
 }
 
+func TestUpdateProfileRejectsInvalidNameWithoutMutatingUser(t *testing.T) {
+	user, err := domainpkg.NewUser("John Doe", "john@example.com", "password123", domainpkg.RoleProfessor)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	err = user.UpdateProfile("  ", "jane@example.com", domainpkg.RoleAdmin)
+	if !errors.Is(err, domainpkg.ErrUserNameRequired) {
+		t.Fatalf("expected ErrUserNameRequired, got %v", err)
+	}
+	if user.Name != "John Doe" {
+		t.Fatalf("expected original name to remain unchanged, got %q", user.Name)
+	}
+	if user.Email != "john@example.com" {
+		t.Fatalf("expected original email to remain unchanged, got %q", user.Email)
+	}
+}
+
+func TestUpdateProfileRejectsInvalidEmailWithoutMutatingUser(t *testing.T) {
+	user, err := domainpkg.NewUser("John Doe", "john@example.com", "password123", domainpkg.RoleProfessor)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	err = user.UpdateProfile("Jane Doe", "invalid-email", domainpkg.RoleAdmin)
+	if !errors.Is(err, domainpkg.ErrUserEmailInvalid) {
+		t.Fatalf("expected ErrUserEmailInvalid, got %v", err)
+	}
+	if user.Name != "John Doe" {
+		t.Fatalf("expected original name to remain unchanged, got %q", user.Name)
+	}
+	if user.Email != "john@example.com" {
+		t.Fatalf("expected original email to remain unchanged, got %q", user.Email)
+	}
+}
+
 func TestNormalizeEmail(t *testing.T) {
 	normalized := domainpkg.NormalizeEmail(" John.Doe@Example.com ")
 	if normalized != "john.doe@example.com" {

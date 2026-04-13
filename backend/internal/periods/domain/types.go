@@ -15,3 +15,7 @@ func IsValidPeriodState(state PeriodState) bool {
 		return false
 	}
 }
+
+func ValidPeriodStatesString() string {
+	return string(ActivePeriod) + ", " + string(ClosedPeriod)
+}
