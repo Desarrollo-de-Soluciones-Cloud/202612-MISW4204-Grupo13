@@ -39,11 +39,14 @@ func ValidateWorkspaceUserID(userID uint) error {
 func ValidateWorkspaceType(workspaceType WorkspaceType) error {
 	trimmedType := strings.TrimSpace(string(workspaceType))
 
-	if trimmedType == "" {
+	switch {
+	case trimmedType == "":
 		return ErrWorkspaceTypeRequired
+	case !IsValidWorkspaceType(workspaceType):
+		return ErrWorkspaceTypeInvalid
+	default:
+		return nil
 	}
-	// Aquí puedes añadir más validaciones si hay tipos específicos válidos
-	return nil
 }
 
 func ValidateWorkspaceInitialDate(date string) error {
@@ -90,8 +93,10 @@ func ValidateWorkspaceDateSequence(initialDate, finalDate string) error {
 }
 
 func ValidateWorkspaceState(state WorkspaceState) error {
+	trimmedState := strings.TrimSpace(string(state))
+
 	switch {
-	case strings.TrimSpace(string(state)) == "":
+	case trimmedState == "":
 		return ErrWorkspaceStateRequired
 	case !IsValidWorkspaceState(state):
 		return ErrWorkspaceStateInvalid
