@@ -235,10 +235,6 @@ func (h *PeriodHandler) ClosePeriod(c *gin.Context) {
 	})
 }
 
-func (h *PeriodHandler) DeletePeriod(c *gin.Context) {
-	sharedHelpers.RespondWithError(c, http.StatusNotFound, errors.New("not found"))
-}
-
 func isPeriodValidationError(err error) bool {
 	return errors.Is(err, domain.ErrInvalidInput) ||
 		errors.Is(err, domain.ErrPeriodNameRequired) ||

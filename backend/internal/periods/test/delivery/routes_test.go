@@ -51,7 +51,7 @@ func TestRoutesIntegration(t *testing.T) {
 		periods.POST("", handler.CreatePeriod)
 		periods.GET("", handler.ListPeriods)
 		periods.GET("/:id", handler.GetPeriodByID)
-		periods.PUT("/:id", handler.UpdatePeriod)
+		periods.PATCH("/:id", handler.UpdatePeriod)
 	}
 
 	// Test POST /periods (Create)
@@ -262,8 +262,8 @@ func TestRoutesGetPeriodByID(t *testing.T) {
 	}
 }
 
-// TestRoutesPutUpdatePeriod tests the PUT route for updating periods
-func TestRoutesPutUpdatePeriod(t *testing.T) {
+// TestRoutesPatchUpdatePeriod tests the PATCH route for updating periods
+func TestRoutesPatchUpdatePeriod(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
@@ -282,7 +282,7 @@ func TestRoutesPutUpdatePeriod(t *testing.T) {
 	)
 
 	periods := router.Group("/periods")
-	periods.PUT("/:id", handler.UpdatePeriod)
+	periods.PATCH("/:id", handler.UpdatePeriod)
 
 	body := delivery.UpdatePeriodRequest{
 		Name: "2026-11",
@@ -290,18 +290,18 @@ func TestRoutesPutUpdatePeriod(t *testing.T) {
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("PUT", "/periods/1", bytes.NewBuffer(bodyJSON))
+	req, _ := http.NewRequest("PATCH", "/periods/1", bytes.NewBuffer(bodyJSON))
 	req.Header.Set("Content-Type", "application/json")
 
 	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("PUT /periods/1 status = %d, want %d", w.Code, http.StatusOK)
+		t.Errorf("PATCH /periods/1 status = %d, want %d", w.Code, http.StatusOK)
 	}
 
 	var resp delivery.PeriodResponse
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	if resp.Name != "2026-11" {
-		t.Errorf("PUT /periods/1 did not update correctly")
+		t.Errorf("PATCH /periods/1 did not update correctly")
 	}
 }

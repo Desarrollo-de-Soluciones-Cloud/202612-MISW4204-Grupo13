@@ -27,7 +27,7 @@ func SetupRoutes(r gin.IRouter) {
 		periods.POST("", handler.CreatePeriod)
 		periods.GET("", handler.ListPeriods)
 		periods.GET("/:id", handler.GetPeriodByID)
-		periods.PUT("/:id", handler.UpdatePeriod)
+		periods.PATCH("/:id", handler.UpdatePeriod)
 		periods.PATCH("/:id/close", handler.ClosePeriod)
 	}
 }
