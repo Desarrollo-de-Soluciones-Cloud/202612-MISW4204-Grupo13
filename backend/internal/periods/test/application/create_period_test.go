@@ -5,7 +5,6 @@ import (
 	"backend/internal/periods/domain"
 	"errors"
 	"testing"
-	"time"
 )
 
 type MockPeriodRepository struct {
@@ -92,9 +91,9 @@ func TestCreatePeriodSuccess(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
 
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2024-01-01"
+	finalDate := "2024-06-30"
+	inscriptionDate := "2024-01-15"
 
 	input := applicationpkg.CreatePeriodInput{
 		Name:                 "2024-01",
@@ -128,9 +127,9 @@ func TestCreatePeriodInvalidName(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
 
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2024-01-01"
+	finalDate := "2024-06-30"
+	inscriptionDate := "2024-01-15"
 
 	input := applicationpkg.CreatePeriodInput{
 		Name:                 "ab",
@@ -150,9 +149,9 @@ func TestCreatePeriodInvalidDateSequence(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
 
-	initialDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2024-06-30"
+	finalDate := "2024-01-01"
+	inscriptionDate := "2024-01-15"
 
 	input := applicationpkg.CreatePeriodInput{
 		Name:                 "2024-01",
@@ -172,9 +171,9 @@ func TestCreatePeriodInvalidState(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
 
-	initialDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	finalDate := time.Date(2024, 6, 30, 0, 0, 0, 0, time.UTC)
-	inscriptionDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+	initialDate := "2024-01-01"
+	finalDate := "2024-06-30"
+	inscriptionDate := "2024-01-15"
 
 	input := applicationpkg.CreatePeriodInput{
 		Name:                 "2024-01",
@@ -187,5 +186,94 @@ func TestCreatePeriodInvalidState(t *testing.T) {
 	_, err := createPeriod.Execute(input)
 	if !errors.Is(err, domain.ErrPeriodStateInvalid) {
 		t.Errorf("expected ErrPeriodStateInvalid, got %v", err)
+	}
+}
+
+func TestCreatePeriodNameAlreadyExists(t *testing.T) {
+	mockRepo := NewMockPeriodRepository()
+
+	initialDate := "2024-01-01"
+	finalDate := "2024-06-30"
+	inscriptionDate := "2024-01-15"
+
+	existingPeriod, _ := domain.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domain.ActivePeriod)
+	mockRepo.Create(existingPeriod)
+
+	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
+
+	input := applicationpkg.CreatePeriodInput{
+		Name:                 "2024-01",
+		InitialDate:          initialDate,
+		FinalDate:            finalDate,
+		InscriptionFinalDate: inscriptionDate,
+		PeriodState:          domain.ActivePeriod,
+	}
+
+	_, err := createPeriod.Execute(input)
+	if !errors.Is(err, domain.ErrPeriodNameAlreadyExists) {
+		t.Errorf("expected ErrPeriodNameAlreadyExists, got %v", err)
+	}
+}
+
+func TestCreatePeriodInvalidInitialDateFormat(t *testing.T) {
+	mockRepo := NewMockPeriodRepository()
+	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
+
+	finalDate := "2024-06-30"
+	inscriptionDate := "2024-01-15"
+
+	input := applicationpkg.CreatePeriodInput{
+		Name:                 "2024-01",
+		InitialDate:          "2024",
+		FinalDate:            finalDate,
+		InscriptionFinalDate: inscriptionDate,
+		PeriodState:          domain.ActivePeriod,
+	}
+
+	_, err := createPeriod.Execute(input)
+	if !errors.Is(err, domain.ErrPeriodInitialDateWrongFormat) {
+		t.Errorf("expected ErrPeriodInitialDateWrongFormat, got %v", err)
+	}
+}
+
+func TestCreatePeriodInvalidFinalDateFormat(t *testing.T) {
+	mockRepo := NewMockPeriodRepository()
+	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
+
+	initialDate := "2024-01-01"
+	inscriptionDate := "2024-01-15"
+
+	input := applicationpkg.CreatePeriodInput{
+		Name:                 "2024-01",
+		InitialDate:          initialDate,
+		FinalDate:            "2024",
+		InscriptionFinalDate: inscriptionDate,
+		PeriodState:          domain.ActivePeriod,
+	}
+
+	_, err := createPeriod.Execute(input)
+	if !errors.Is(err, domain.ErrPeriodFinalDateWrongFormat) {
+		t.Errorf("expected ErrPeriodFinalDateWrongFormat, got %v", err)
+	}
+}
+
+func TestCreatePeriodInvalidInscriptionDateFormat(t *testing.T) {
+	mockRepo := NewMockPeriodRepository()
+	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
+
+	initialDate := "2024-01-01"
+	finalDate := "2024-06-30"
+
+	input := applicationpkg.CreatePeriodInput{
+		Name:                 "2024-01",
+		InitialDate:          initialDate,
+		FinalDate:            finalDate,
+		InscriptionFinalDate: "2024",
+		PeriodState:          domain.ActivePeriod,
+	}
+
+	_, err := createPeriod.Execute(input)
+	if !errors.Is(err, domain.ErrPeriodInscriptionFinalDateWrongFormat) {
+		t.Errorf("expected ErrPeriodInscriptionFinalDateWrongFormat, got %v", err)
 	}
 }

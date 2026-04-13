@@ -228,11 +228,11 @@ func isPeriodValidationError(err error) bool {
 		errors.Is(err, domain.ErrPeriodNameRequired) ||
 		errors.Is(err, domain.ErrPeriodNameWrongFormat) ||
 		errors.Is(err, domain.ErrPeriodInitialDateRequired) ||
-		errors.Is(err, domain.ErrPeriodInitialDateInvalid) ||
+		errors.Is(err, domain.ErrPeriodInitialDateWrongFormat) ||
 		errors.Is(err, domain.ErrPeriodFinalDateRequired) ||
-		errors.Is(err, domain.ErrPeriodFinalDateInvalid) ||
+		errors.Is(err, domain.ErrPeriodFinalDateWrongFormat) ||
 		errors.Is(err, domain.ErrPeriodInscriptionFinalDateRequired) ||
-		errors.Is(err, domain.ErrPeriodInscriptionFinalDateInvalid) ||
+		errors.Is(err, domain.ErrPeriodInscriptionFinalDateWrongFormat) ||
 		errors.Is(err, domain.ErrPeriodDateSequenceInvalid) ||
 		errors.Is(err, domain.ErrPeriodStateRequired) ||
 		errors.Is(err, domain.ErrPeriodStateInvalid)
