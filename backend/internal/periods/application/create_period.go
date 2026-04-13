@@ -2,6 +2,7 @@ package application
 
 import (
 	"backend/internal/periods/domain"
+	weeksApplication "backend/internal/weeks/application"
 )
 
 type CreatePeriodInput struct {
@@ -23,10 +24,18 @@ type CreatePeriodOutput struct {
 
 type CreatePeriod struct {
 	repository domain.PeriodRepository
+	createWeeksForPeriod createWeeksForPeriodExecutor
 }
 
-func NewCreatePeriod(repo domain.PeriodRepository) *CreatePeriod {
-	return &CreatePeriod{repository: repo}
+type createWeeksForPeriodExecutor interface {
+	Execute(input weeksApplication.CreateWeeksForPeriodInput) (*weeksApplication.CreateWeeksForPeriodOutput, error)
+}
+
+func NewCreatePeriod(repo domain.PeriodRepository, createWeeksForPeriod createWeeksForPeriodExecutor) *CreatePeriod {
+	return &CreatePeriod{
+		repository: repo,
+		createWeeksForPeriod: createWeeksForPeriod,
+	}
 }
 
 func (uc *CreatePeriod) Execute(input CreatePeriodInput) (*CreatePeriodOutput, error) {
@@ -47,6 +56,17 @@ func (uc *CreatePeriod) Execute(input CreatePeriodInput) (*CreatePeriodOutput, e
 
 	if err := uc.repository.Create(period); err != nil {
 		return nil, err
+	}
+
+	if uc.createWeeksForPeriod != nil {
+		if _, err := uc.createWeeksForPeriod.Execute(weeksApplication.CreateWeeksForPeriodInput{
+			PeriodID:    period.ID,
+			InitialDate: period.InitialDate,
+			FinalDate:   period.FinalDate,
+			WeeksCount:  period.WeeksCount,
+		}); err != nil {
+			return nil, err
+		}
 	}
 
 	return &CreatePeriodOutput{

@@ -4,6 +4,7 @@ import (
 	"backend/internal/periods/application"
 	"backend/internal/periods/delivery"
 	"backend/internal/periods/domain"
+	weeksApplication "backend/internal/weeks/application"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -16,6 +17,12 @@ import (
 type MockPeriodRepository struct {
 	periods map[uint]*domain.Period
 	nextID  uint
+}
+
+type MockCreateWeeksForPeriod struct{}
+
+func (m *MockCreateWeeksForPeriod) Execute(input weeksApplication.CreateWeeksForPeriodInput) (*weeksApplication.CreateWeeksForPeriodOutput, error) {
+	return &weeksApplication.CreateWeeksForPeriodOutput{}, nil
 }
 
 func newMockPeriodRepository() *MockPeriodRepository {
@@ -87,8 +94,9 @@ func (m *MockPeriodRepository) AutoMigrate() error {
 }
 
 func setupTestHandler(repo domain.PeriodRepository) *delivery.PeriodHandler {
+	createWeeks := &MockCreateWeeksForPeriod{}
 	return delivery.NewPeriodHandler(
-		application.NewCreatePeriod(repo),
+		application.NewCreatePeriod(repo, createWeeks),
 		application.NewListPeriods(repo),
 		application.NewListPeriodsByState(repo),
 		application.NewGetPeriodByID(repo),
