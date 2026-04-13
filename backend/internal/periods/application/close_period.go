@@ -4,14 +4,11 @@ import (
 	"backend/internal/periods/domain"
 )
 
-type CreatePeriodInput struct {
-	Name        string
-	InitialDate string
-	WeeksCount  int
-	PeriodState domain.PeriodState
+type ClosePeriodInput struct {
+	ID uint
 }
 
-type CreatePeriodOutput struct {
+type ClosePeriodOutput struct {
 	ID                   uint                `json:"id"`
 	Name                 string              `json:"name"`
 	InitialDate          string              `json:"initial_date"`
@@ -21,35 +18,29 @@ type CreatePeriodOutput struct {
 	PeriodState          domain.PeriodState  `json:"period_state"`
 }
 
-type CreatePeriod struct {
+type ClosePeriod struct {
 	repository domain.PeriodRepository
 }
 
-func NewCreatePeriod(repo domain.PeriodRepository) *CreatePeriod {
-	return &CreatePeriod{repository: repo}
+func NewClosePeriod(repo domain.PeriodRepository) *ClosePeriod {
+	return &ClosePeriod{repository: repo}
 }
 
-func (uc *CreatePeriod) Execute(input CreatePeriodInput) (*CreatePeriodOutput, error) {
-	period, err := domain.NewPeriod(
-		input.Name,
-		input.InitialDate,
-		input.WeeksCount,
-		input.PeriodState,
-	)
+func (uc *ClosePeriod) Execute(input ClosePeriodInput) (*ClosePeriodOutput, error) {
+	period, err := uc.repository.FindByID(input.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	p, err := uc.repository.FindByName(period.Name)
-	if err == nil && p != nil {
-		return nil, domain.ErrPeriodNameAlreadyExists
-	}
-
-	if err := uc.repository.Create(period); err != nil {
+	if err := period.ClosePeriod(); err != nil {
 		return nil, err
 	}
 
-	return &CreatePeriodOutput{
+	if err := uc.repository.Update(period); err != nil {
+		return nil, err
+	}
+
+	return &ClosePeriodOutput{
 		ID:                   period.ID,
 		Name:                 period.Name,
 		InitialDate:          period.InitialDate,

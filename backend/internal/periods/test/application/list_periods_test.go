@@ -9,16 +9,14 @@ import (
 func TestListPeriodsSuccess(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
-	initialDate1 := "2024-01-01"
-	finalDate1 := "2024-06-30"
-	inscriptionDate1 := "2024-01-15"
+	initialDate1 := "2026-10-05"
+	weeksCount1 := 8
 
-    initialDate2 := "2024-07-01"
-	finalDate2 := "2024-12-31"
-	inscriptionDate2 := "2024-08-15"
+	initialDate2 := "2026-10-12"
+	weeksCount2 := 16
 
-	period1, _ := domain.NewPeriod("2024-01", initialDate1, finalDate1, inscriptionDate1, domain.ActivePeriod)
-	period2, _ := domain.NewPeriod("2024-02", initialDate2, finalDate2, inscriptionDate2, domain.ClosedPeriod)
+	period1, _ := domain.NewPeriod("2026-10", initialDate1, weeksCount1, domain.ActivePeriod)
+	period2, _ := domain.NewPeriod("2026-11", initialDate2, weeksCount2, domain.ClosedPeriod)
 
 	mockRepo.Create(period1)
 	mockRepo.Create(period2)
@@ -31,6 +29,9 @@ func TestListPeriodsSuccess(t *testing.T) {
 	}
 	if len(output.Periods) != 2 {
 		t.Errorf("expected 2 periods, got %d", len(output.Periods))
+	}
+	if output.Periods[0].WeeksCount != weeksCount1 {
+		t.Errorf("expected weeks count %d, got %d", weeksCount1, output.Periods[0].WeeksCount)
 	}
 }
 

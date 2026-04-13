@@ -10,11 +10,9 @@ import (
 func TestDeletePeriodSuccess(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
-	initialDate := "2024-01-01"
-	finalDate := "2024-06-30"
-	inscriptionDate := "2024-01-15"
+		initialDate := "2026-10-05"
 
-	period, _ := domain.NewPeriod("2024-01", initialDate, finalDate, inscriptionDate, domain.ActivePeriod)
+		period, _ := domain.NewPeriod("2026-10", initialDate, 16, domain.ActivePeriod)
 	mockRepo.Create(period)
 
 	deletePeriod := applicationpkg.NewDeletePeriod(mockRepo)
