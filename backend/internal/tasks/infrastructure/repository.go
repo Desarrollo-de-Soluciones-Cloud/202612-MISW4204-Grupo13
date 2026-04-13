@@ -1,0 +1,65 @@
+package infrastructure
+
+import (
+	"errors"
+
+	"backend/internal/shared/database"
+	"backend/internal/tasks/domain"
+
+	"gorm.io/gorm"
+)
+
+type TaskRepository struct{}
+
+var _ domain.TaskRepository = (*TaskRepository)(nil)
+
+func NewTaskRepository() *TaskRepository {
+	return &TaskRepository{}
+}
+
+func (r *TaskRepository) Create(task *domain.Task) error {
+	return database.DB.Create(task).Error
+}
+
+func (r *TaskRepository) FindByID(id uint) (*domain.Task, error) {
+	var task domain.Task
+	result := database.DB.First(&task, id)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrTaskNotFound
+		}
+		return nil, result.Error
+	}
+	return &task, nil
+}
+
+func (r *TaskRepository) FindAll() ([]domain.Task, error) {
+	var tasks []domain.Task
+	result := database.DB.Order("id asc").Find(&tasks)
+	return tasks, result.Error
+}
+
+func (r *TaskRepository) FindAllByUserID(userID uint) ([]domain.Task, error) {
+	var tasks []domain.Task
+	result := database.DB.Where("user_id = ?", userID).Order("id asc").Find(&tasks)
+	return tasks, result.Error
+}
+
+func (r *TaskRepository) Update(task *domain.Task) error {
+	return database.DB.Save(task).Error
+}
+
+func (r *TaskRepository) Delete(id uint) error {
+	result := database.DB.Delete(&domain.Task{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrTaskNotFound
+	}
+	return nil
+}
+
+func (r *TaskRepository) AutoMigrate() error {
+	return database.DB.AutoMigrate(&domain.Task{})
+}
