@@ -14,9 +14,9 @@ func SetupRoutes(r gin.IRouter) {
 	getWeekByPeriodAndNumber := application.NewGetWeekByPeriodAndNumber(repo)
 	handler := NewWeekHandler(listWeeksByPeriod, getWeekByPeriodAndNumber)
 
-	periods := r.Group("/periods/:periodId/weeks")
+	weeks := r.Group("/weeks")
 	{
-		periods.GET("", handler.ListWeeksByPeriod)
-		periods.GET("/:number", handler.GetWeekByPeriodAndNumber)
+		weeks.GET("/periods/:periodId", handler.ListWeeksByPeriod)
+		weeks.GET("/:number/periods/:periodId", handler.GetWeekByPeriodAndNumber)
 	}
 }

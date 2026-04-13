@@ -62,7 +62,7 @@ func TestListWeeksByPeriodSuccess(t *testing.T) {
 	handler := setupTestHandler(repo)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/periods/1/weeks", nil)
+	req, _ := http.NewRequest("GET", "/weeks/periods/1", nil)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Params = append(c.Params, gin.Param{Key: "periodId", Value: "1"})
@@ -92,7 +92,7 @@ func TestGetWeekByPeriodAndNumberSuccess(t *testing.T) {
 	handler := setupTestHandler(repo)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/periods/1/weeks/1", nil)
+	req, _ := http.NewRequest("GET", "/weeks/1/periods/1", nil)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Params = append(c.Params, gin.Param{Key: "periodId", Value: "1"})
@@ -119,7 +119,7 @@ func TestGetWeekByPeriodAndNumberNotFound(t *testing.T) {
 	handler := setupTestHandler(repo)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/periods/1/weeks/1", nil)
+	req, _ := http.NewRequest("GET", "/weeks/1/periods/1", nil)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Params = append(c.Params, gin.Param{Key: "periodId", Value: "1"})
@@ -129,5 +129,58 @@ func TestGetWeekByPeriodAndNumberNotFound(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func TestListWeeksByPeriodInvalidPeriodID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := setupTestHandler(&MockWeekRepository{})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/weeks/periods/invalid", nil)
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Params = append(c.Params, gin.Param{Key: "periodId", Value: "invalid"})
+
+	handler.ListWeeksByPeriod(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestGetWeekByPeriodAndNumberInvalidPeriodID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := setupTestHandler(&MockWeekRepository{})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/weeks/1/periods/invalid", nil)
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Params = append(c.Params, gin.Param{Key: "number", Value: "1"})
+	c.Params = append(c.Params, gin.Param{Key: "periodId", Value: "invalid"})
+
+	handler.GetWeekByPeriodAndNumber(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestGetWeekByPeriodAndNumberInvalidNumber(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := setupTestHandler(&MockWeekRepository{})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/weeks/invalid/periods/1", nil)
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Params = append(c.Params, gin.Param{Key: "number", Value: "invalid"})
+	c.Params = append(c.Params, gin.Param{Key: "periodId", Value: "1"})
+
+	handler.GetWeekByPeriodAndNumber(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
 	}
 }

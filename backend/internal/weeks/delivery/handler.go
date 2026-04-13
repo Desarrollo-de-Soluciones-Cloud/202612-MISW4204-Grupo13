@@ -7,7 +7,6 @@ import (
 	"backend/internal/weeks/domain"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -68,15 +67,15 @@ func (h *WeekHandler) GetWeekByPeriodAndNumber(c *gin.Context) {
 		return
 	}
 
-	number, err := strconv.Atoi(c.Param("number"))
+	numberID, err := sharedHelpers.ParseResourceID(c.Param("number"))
 	if err != nil {
-		sharedHelpers.RespondWithError(c, http.StatusBadRequest, domain.ErrWeekNumberInvalid)
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		return
 	}
 
 	output, err := h.getWeekByPeriodAndNumber.Execute(application.GetWeekByPeriodAndNumberInput{
 		PeriodID: periodID,
-		Number:   number,
+		Number:   int(numberID),
 	})
 	if err != nil {
 		switch {
