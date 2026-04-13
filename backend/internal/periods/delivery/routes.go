@@ -24,4 +24,3 @@ func SetupRoutes(r gin.IRouter) {
 		periods.PUT("/:id", handler.UpdatePeriod)
 	}
 }
-// merge a develop
