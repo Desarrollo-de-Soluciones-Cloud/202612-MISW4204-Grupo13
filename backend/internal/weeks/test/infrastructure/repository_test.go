@@ -55,4 +55,12 @@ func TestWeekRepositoryCreateManyAndFindByPeriodID(t *testing.T) {
 	if foundWeeks[0].Number != 1 || foundWeeks[1].Number != 2 {
 		t.Fatalf("expected ordered weeks, got %+v", foundWeeks)
 	}
+
+	foundWeek, err := repo.FindByPeriodIDAndNumber(1, 2)
+	if err != nil {
+		t.Fatalf("expected find by period and number, got %v", err)
+	}
+	if foundWeek.Number != 2 {
+		t.Fatalf("expected week number 2, got %d", foundWeek.Number)
+	}
 }
