@@ -3,6 +3,7 @@ package application
 import (
 	applicationpkg "backend/internal/periods/application"
 	"backend/internal/periods/domain"
+	weeksApplication "backend/internal/weeks/application"
 	"errors"
 	"testing"
 )
@@ -11,6 +12,15 @@ type MockPeriodRepository struct {
 	periods    map[uint]*domain.Period
 	periodsByName map[string]*domain.Period
 	nextID     uint
+}
+
+type MockCreateWeeksForPeriod struct {
+	lastInput *weeksApplication.CreateWeeksForPeriodInput
+}
+
+func (m *MockCreateWeeksForPeriod) Execute(input weeksApplication.CreateWeeksForPeriodInput) (*weeksApplication.CreateWeeksForPeriodOutput, error) {
+	m.lastInput = &input
+	return &weeksApplication.CreateWeeksForPeriodOutput{}, nil
 }
 
 func NewMockPeriodRepository() *MockPeriodRepository {
@@ -89,7 +99,8 @@ func (m *MockPeriodRepository) Delete(id uint) error {
 
 func TestCreatePeriodSuccess(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
-	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
+	mockCreateWeeks := &MockCreateWeeksForPeriod{}
+	createPeriod := applicationpkg.NewCreatePeriod(mockRepo, mockCreateWeeks)
 
 	initialDate := "2026-10-05"
 	weeksCount := 8
@@ -122,11 +133,20 @@ func TestCreatePeriodSuccess(t *testing.T) {
 	if storedPeriod.Name != "2026-10" {
 		t.Errorf("expected stored period name, got %q", storedPeriod.Name)
 	}
+	if mockCreateWeeks.lastInput == nil {
+		t.Fatal("expected weeks creation to be executed")
+	}
+	if mockCreateWeeks.lastInput.PeriodID != output.ID {
+		t.Errorf("expected weeks period id %d, got %d", output.ID, mockCreateWeeks.lastInput.PeriodID)
+	}
+	if mockCreateWeeks.lastInput.WeeksCount != weeksCount {
+		t.Errorf("expected weeks count %d, got %d", weeksCount, mockCreateWeeks.lastInput.WeeksCount)
+	}
 }
 
 func TestCreatePeriodInvalidName(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
-	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
+	createPeriod := applicationpkg.NewCreatePeriod(mockRepo, nil)
 
 	initialDate := "2026-10-05"
 	weeksCount := 8
@@ -146,7 +166,7 @@ func TestCreatePeriodInvalidName(t *testing.T) {
 
 func TestCreatePeriodInvalidState(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
-	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
+	createPeriod := applicationpkg.NewCreatePeriod(mockRepo, nil)
 
 	initialDate := "2026-10-05"
 	weeksCount := 8
@@ -173,7 +193,7 @@ func TestCreatePeriodNameAlreadyExists(t *testing.T) {
 	existingPeriod, _ := domain.NewPeriod("2026-10", initialDate, weeksCount, domain.ActivePeriod)
 	mockRepo.Create(existingPeriod)
 
-	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
+	createPeriod := applicationpkg.NewCreatePeriod(mockRepo, nil)
 
 	input := applicationpkg.CreatePeriodInput{
 		Name:        "2026-10",
@@ -190,7 +210,7 @@ func TestCreatePeriodNameAlreadyExists(t *testing.T) {
 
 func TestCreatePeriodInvalidInitialDateFormat(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
-	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
+	createPeriod := applicationpkg.NewCreatePeriod(mockRepo, nil)
 
 	weeksCount := 8
 
@@ -209,7 +229,7 @@ func TestCreatePeriodInvalidInitialDateFormat(t *testing.T) {
 
 func TestCreatePeriodInvalidWeeksCount(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
-	createPeriod := applicationpkg.NewCreatePeriod(mockRepo)
+	createPeriod := applicationpkg.NewCreatePeriod(mockRepo, nil)
 
 	initialDate := "2026-10-05"
 	weeksCount := 10

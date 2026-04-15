@@ -3,6 +3,8 @@ package delivery
 import (
 	"backend/internal/periods/application"
 	"backend/internal/periods/infrastructure"
+	weeksApplication "backend/internal/weeks/application"
+	weeksInfrastructure "backend/internal/weeks/infrastructure"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,7 +12,10 @@ import (
 func SetupRoutes(r gin.IRouter) {
 	repo := infrastructure.NewPeriodRepository()
 	repo.AutoMigrate()
-	createPeriod := application.NewCreatePeriod(repo)
+	weeksRepo := weeksInfrastructure.NewWeekRepository()
+	weeksRepo.AutoMigrate()
+	createWeeksForPeriod := weeksApplication.NewCreateWeeksForPeriod(weeksRepo)
+	createPeriod := application.NewCreatePeriod(repo, createWeeksForPeriod)
 	listPeriods := application.NewListPeriods(repo)
 	listPeriodsByState := application.NewListPeriodsByState(repo)
 	getPeriodByID := application.NewGetPeriodByID(repo)

@@ -10,9 +10,16 @@ import (
 	"backend/internal/periods/application"
 	"backend/internal/periods/delivery"
 	"backend/internal/periods/domain"
+	weeksApplication "backend/internal/weeks/application"
 
 	"github.com/gin-gonic/gin"
 )
+
+type mockCreateWeeksForPeriod struct{}
+
+func (m *mockCreateWeeksForPeriod) Execute(input weeksApplication.CreateWeeksForPeriodInput) (*weeksApplication.CreateWeeksForPeriodOutput, error) {
+	return &weeksApplication.CreateWeeksForPeriodOutput{}, nil
+}
 
 // TestSetupRoutesRegistersHandlers verifies that SetupRoutes registers all handlers correctly
 func TestSetupRoutesRegistersHandlers(t *testing.T) {
@@ -30,7 +37,7 @@ func TestRoutesIntegration(t *testing.T) {
 	repo := newMockPeriodRepository()
 
 	// Create handlers
-	createPeriod := application.NewCreatePeriod(repo)
+	createPeriod := application.NewCreatePeriod(repo, &mockCreateWeeksForPeriod{})
 	listPeriods := application.NewListPeriods(repo)
 	listPeriodsByState := application.NewListPeriodsByState(repo)
 	getPeriodByID := application.NewGetPeriodByID(repo)
@@ -95,7 +102,7 @@ func TestRoutesPostCreatePeriod(t *testing.T) {
 
 	repo := newMockPeriodRepository()
 	handler := delivery.NewPeriodHandler(
-		application.NewCreatePeriod(repo),
+		application.NewCreatePeriod(repo, &mockCreateWeeksForPeriod{}),
 		application.NewListPeriods(repo),
 		application.NewListPeriodsByState(repo),
 		application.NewGetPeriodByID(repo),
@@ -146,7 +153,7 @@ func TestRoutesGetPeriods(t *testing.T) {
 	repo.Create(period2)
 
 	handler := delivery.NewPeriodHandler(
-		application.NewCreatePeriod(repo),
+		application.NewCreatePeriod(repo, &mockCreateWeeksForPeriod{}),
 		application.NewListPeriods(repo),
 		application.NewListPeriodsByState(repo),
 		application.NewGetPeriodByID(repo),
@@ -187,7 +194,7 @@ func TestRoutesGetPeriodsWithStateFilter(t *testing.T) {
 	repo.Create(period2)
 
 	handler := delivery.NewPeriodHandler(
-		application.NewCreatePeriod(repo),
+		application.NewCreatePeriod(repo, &mockCreateWeeksForPeriod{}),
 		application.NewListPeriods(repo),
 		application.NewListPeriodsByState(repo),
 		application.NewGetPeriodByID(repo),
@@ -228,7 +235,7 @@ func TestRoutesGetPeriodByID(t *testing.T) {
 	repo.Create(period)
 
 	handler := delivery.NewPeriodHandler(
-		application.NewCreatePeriod(repo),
+		application.NewCreatePeriod(repo, &mockCreateWeeksForPeriod{}),
 		application.NewListPeriods(repo),
 		application.NewListPeriodsByState(repo),
 		application.NewGetPeriodByID(repo),
@@ -266,7 +273,7 @@ func TestRoutesPutUpdatePeriod(t *testing.T) {
 	repo.Create(period)
 
 	handler := delivery.NewPeriodHandler(
-		application.NewCreatePeriod(repo),
+		application.NewCreatePeriod(repo, &mockCreateWeeksForPeriod{}),
 		application.NewListPeriods(repo),
 		application.NewListPeriodsByState(repo),
 		application.NewGetPeriodByID(repo),
