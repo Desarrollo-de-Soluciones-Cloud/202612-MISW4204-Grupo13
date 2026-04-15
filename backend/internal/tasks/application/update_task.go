@@ -1,29 +1,37 @@
 package application
 
 import (
-	assignmentsDomain "backend/internal/assignments/domain"
 	"backend/internal/tasks/domain"
 	"time"
 )
 
 type UpdateTaskInput struct {
-	ID            uint
-	AssignmentID  uint
-	Title         string
-	Description   string
-	Status        domain.TaskStatus
-	SpentHours    int
-	Observations  string
-	WeekStartDate time.Time
+	ID           uint
+	AssignmentID uint
+	WeekID       uint
+	Title        string
+	Description  string
+	Status       domain.TaskStatus
+	SpentHours   int
+	Observations string
+	Attachments  []TaskAttachmentInput
 }
 
 type UpdateTask struct {
 	repository           domain.TaskRepository
 	assignmentRepository TaskAssignmentRepository
+	workspaceRepository  TaskWorkspaceRepository
+	weekRepository       TaskWeekRepository
 	now                  func() time.Time
 }
 
-func NewUpdateTask(repo domain.TaskRepository, assignmentRepo TaskAssignmentRepository, now func() time.Time) *UpdateTask {
+func NewUpdateTask(
+	repo domain.TaskRepository,
+	assignmentRepo TaskAssignmentRepository,
+	workspaceRepo TaskWorkspaceRepository,
+	weekRepo TaskWeekRepository,
+	now func() time.Time,
+) *UpdateTask {
 	if now == nil {
 		now = time.Now
 	}
@@ -31,6 +39,8 @@ func NewUpdateTask(repo domain.TaskRepository, assignmentRepo TaskAssignmentRepo
 	return &UpdateTask{
 		repository:           repo,
 		assignmentRepository: assignmentRepo,
+		workspaceRepository:  workspaceRepo,
+		weekRepository:       weekRepo,
 		now:                  now,
 	}
 }
@@ -40,36 +50,50 @@ func (uc *UpdateTask) Execute(input UpdateTaskInput) (*TaskOutput, error) {
 	if err != nil {
 		return nil, err
 	}
+	if task.AssignmentID != input.AssignmentID {
+		return nil, domain.ErrTaskAssignmentChangeForbidden
+	}
+	if task.WeekID != input.WeekID {
+		return nil, domain.ErrTaskWeekChangeForbidden
+	}
 
-	assignment, err := uc.assignmentRepository.FindByID(input.AssignmentID)
+	taskContext, err := loadTaskContext(
+		uc.assignmentRepository,
+		uc.workspaceRepository,
+		uc.weekRepository,
+		input.AssignmentID,
+		input.WeekID,
+	)
 	if err != nil {
-		if err == assignmentsDomain.ErrAssignmentNotFound {
-			return nil, domain.ErrTaskAssignmentNotFound
-		}
 		return nil, err
 	}
 	if task.Late {
 		return nil, domain.ErrTaskLateUpdateForbidden
 	}
-
-	normalizedWeekStartDate := domain.NormalizeWeekStartDate(input.WeekStartDate)
-	if domain.IsWeekClosed(normalizedWeekStartDate, uc.now()) {
+	if !isActiveWeek(taskContext.weekStartDate, taskContext.weekFinalDate, uc.now()) {
 		return nil, domain.ErrTaskLateUpdateForbidden
 	}
 
+	attachments := make([]domain.TaskAttachment, len(input.Attachments))
+	for i, attachment := range input.Attachments {
+		attachments[i] = domain.TaskAttachment{Path: attachment.Path}
+	}
+
 	if err := task.UpdateTask(
-		assignment.ID,
+		taskContext.assignment.ID,
+		taskContext.week.ID,
 		input.Title,
 		input.Description,
 		input.Status,
 		input.SpentHours,
 		input.Observations,
-		normalizedWeekStartDate,
-		false,
+		attachments,
+		taskContext.weekStartDate,
+		task.Late,
 	); err != nil {
 		return nil, err
 	}
-	task.UserID = assignment.UserID
+	task.UserID = taskContext.assignment.UserID
 
 	if err := uc.repository.Update(task); err != nil {
 		return nil, err

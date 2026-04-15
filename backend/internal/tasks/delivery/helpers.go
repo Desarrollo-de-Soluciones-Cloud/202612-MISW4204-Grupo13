@@ -4,7 +4,6 @@ import (
 	"backend/internal/tasks/domain"
 	"encoding/json"
 	"errors"
-	"time"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -20,6 +19,10 @@ func mapBindingErrors(err error) []error {
 			case "AssignmentID":
 				if validationError.Tag() == "required" {
 					result = append(result, domain.ErrTaskAssignmentIDRequired)
+				}
+			case "WeekID":
+				if validationError.Tag() == "required" {
+					result = append(result, domain.ErrTaskWeekIDRequired)
 				}
 			case "Title":
 				if validationError.Tag() == "required" {
@@ -37,10 +40,6 @@ func mapBindingErrors(err error) []error {
 				if validationError.Tag() == "required" {
 					result = append(result, domain.ErrTaskSpentHoursRequired)
 				}
-			case "WeekStartDate":
-				if validationError.Tag() == "required" {
-					result = append(result, domain.ErrTaskWeekStartDateRequired)
-				}
 			}
 		}
 
@@ -54,27 +53,14 @@ func mapBindingErrors(err error) []error {
 		switch unmarshalTypeError.Field {
 		case "assignment_id", "AssignmentID":
 			return []error{domain.ErrTaskAssignmentIDRequired}
+		case "week_id", "WeekID":
+			return []error{domain.ErrTaskWeekIDRequired}
 		case "spent_hours", "SpentHours":
 			return []error{domain.ErrTaskSpentHoursInvalid}
-		case "week_start_date", "WeekStartDate":
-			return []error{domain.ErrTaskWeekStartDateInvalid}
 		default:
 			return []error{domain.ErrInvalidInput}
 		}
 	}
 
 	return []error{domain.ErrInvalidInput}
-}
-
-func parseWeekStartDate(rawDate string) (time.Time, error) {
-	if rawDate == "" {
-		return time.Time{}, domain.ErrTaskWeekStartDateRequired
-	}
-
-	parsedDate, err := time.Parse(dateLayout, rawDate)
-	if err != nil {
-		return time.Time{}, domain.ErrTaskWeekStartDateInvalid
-	}
-
-	return parsedDate, nil
 }

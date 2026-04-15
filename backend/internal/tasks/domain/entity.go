@@ -3,29 +3,37 @@ package domain
 import "time"
 
 type Task struct {
-	ID            uint       `gorm:"primaryKey" json:"id"`
-	UserID        uint       `gorm:"not null;index" json:"user_id"`
-	AssignmentID  uint       `gorm:"not null;index" json:"assignment_id"`
-	WeekID        *uint      `gorm:"default:null" json:"week_id"`
-	Title         string     `gorm:"size:255;not null" json:"title"`
-	Description   string     `gorm:"type:text;not null" json:"description"`
-	Status        TaskStatus `gorm:"size:30;not null" json:"status"`
-	SpentHours    int        `gorm:"not null" json:"spent_hours"`
-	Observations  string     `gorm:"type:text;not null" json:"observations"`
-	WeekStartDate time.Time  `gorm:"type:date;not null" json:"week_start_date"`
-	Late          bool       `gorm:"not null;default:false" json:"late"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ID            uint             `gorm:"primaryKey" json:"id"`
+	UserID        uint             `gorm:"not null;index" json:"user_id"`
+	AssignmentID  uint             `gorm:"not null;index" json:"assignment_id"`
+	WeekID        uint             `gorm:"not null;index" json:"week_id"`
+	Title         string           `gorm:"size:255;not null" json:"title"`
+	Description   string           `gorm:"type:text;not null" json:"description"`
+	Status        TaskStatus       `gorm:"size:30;not null" json:"status"`
+	SpentHours    int              `gorm:"not null" json:"spent_hours"`
+	Observations  string           `gorm:"type:text;not null" json:"observations"`
+	WeekStartDate time.Time        `gorm:"type:date;not null" json:"week_start_date"`
+	Late          bool             `gorm:"not null;default:false" json:"late"`
+	Attachments   []TaskAttachment `gorm:"constraint:OnDelete:CASCADE;" json:"attachments"`
+	CreatedAt     time.Time        `json:"created_at"`
+	UpdatedAt     time.Time        `json:"updated_at"`
+}
+
+type TaskAttachment struct {
+	ID     uint   `gorm:"primaryKey" json:"id"`
+	TaskID uint   `gorm:"not null;index" json:"task_id"`
+	Path   string `gorm:"size:500;not null" json:"path"`
 }
 
 func NewTask(
 	userID uint,
 	assignmentID uint,
-	weekID *uint,
+	weekID uint,
 	title, description string,
 	status TaskStatus,
 	spentHours int,
 	observations string,
+	attachments []TaskAttachment,
 	weekStartDate time.Time,
 	late bool,
 ) (*Task, error) {
@@ -33,9 +41,12 @@ func NewTask(
 	normalizedDescription := NormalizeTaskDescription(description)
 	normalizedStatus := NormalizeTaskStatus(status)
 	normalizedObservations := NormalizeTaskObservations(observations)
-	normalizedWeekStartDate := NormalizeWeekStartDate(weekStartDate)
+	normalizedAttachments := NormalizeTaskAttachments(attachments)
 
 	if err := ValidateTaskAssignmentID(assignmentID); err != nil {
+		return nil, err
+	}
+	if err := ValidateTaskWeekID(weekID); err != nil {
 		return nil, err
 	}
 	if err := ValidateTaskTitle(normalizedTitle); err != nil {
@@ -50,7 +61,10 @@ func NewTask(
 	if err := ValidateTaskSpentHours(spentHours); err != nil {
 		return nil, err
 	}
-	if err := ValidateTaskWeekStartDate(normalizedWeekStartDate); err != nil {
+	if err := ValidateTaskWeekStartDate(weekStartDate); err != nil {
+		return nil, err
+	}
+	if err := ValidateTaskAttachments(normalizedAttachments); err != nil {
 		return nil, err
 	}
 
@@ -63,17 +77,20 @@ func NewTask(
 		Status:        normalizedStatus,
 		SpentHours:    spentHours,
 		Observations:  normalizedObservations,
-		WeekStartDate: normalizedWeekStartDate,
+		WeekStartDate: normalizeDateOnly(weekStartDate),
 		Late:          late,
+		Attachments:   normalizedAttachments,
 	}, nil
 }
 
 func (t *Task) UpdateTask(
 	assignmentID uint,
+	weekID uint,
 	title, description string,
 	status TaskStatus,
 	spentHours int,
 	observations string,
+	attachments []TaskAttachment,
 	weekStartDate time.Time,
 	late bool,
 ) error {
@@ -85,9 +102,12 @@ func (t *Task) UpdateTask(
 	normalizedDescription := NormalizeTaskDescription(description)
 	normalizedStatus := NormalizeTaskStatus(status)
 	normalizedObservations := NormalizeTaskObservations(observations)
-	normalizedWeekStartDate := NormalizeWeekStartDate(weekStartDate)
+	normalizedAttachments := NormalizeTaskAttachments(attachments)
 
 	if err := ValidateTaskAssignmentID(assignmentID); err != nil {
+		return err
+	}
+	if err := ValidateTaskWeekID(weekID); err != nil {
 		return err
 	}
 	if err := ValidateTaskTitle(normalizedTitle); err != nil {
@@ -102,24 +122,29 @@ func (t *Task) UpdateTask(
 	if err := ValidateTaskSpentHours(spentHours); err != nil {
 		return err
 	}
-	if err := ValidateTaskWeekStartDate(normalizedWeekStartDate); err != nil {
+	if err := ValidateTaskWeekStartDate(weekStartDate); err != nil {
+		return err
+	}
+	if err := ValidateTaskAttachments(normalizedAttachments); err != nil {
 		return err
 	}
 
 	t.AssignmentID = assignmentID
+	t.WeekID = weekID
 	t.Title = normalizedTitle
 	t.Description = normalizedDescription
 	t.Status = normalizedStatus
 	t.SpentHours = spentHours
 	t.Observations = normalizedObservations
-	t.WeekStartDate = normalizedWeekStartDate
+	t.Attachments = normalizedAttachments
+	t.WeekStartDate = normalizeDateOnly(weekStartDate)
 	t.Late = late
 
 	return nil
 }
 
-func (t *Task) CanDelete(now time.Time) error {
-	if !IsWeekActive(t.WeekStartDate, now) {
+func (t *Task) CanDelete(isWeekActive bool) error {
+	if !isWeekActive {
 		return ErrTaskDeleteForbidden
 	}
 	return nil

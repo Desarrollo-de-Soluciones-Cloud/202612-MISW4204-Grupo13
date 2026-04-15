@@ -12,6 +12,13 @@ func ValidateTaskAssignmentID(assignmentID uint) error {
 	return nil
 }
 
+func ValidateTaskWeekID(weekID uint) error {
+	if weekID == 0 {
+		return ErrTaskWeekIDRequired
+	}
+	return nil
+}
+
 func NormalizeTaskTitle(title string) string {
 	return strings.TrimSpace(title)
 }
@@ -26,6 +33,23 @@ func NormalizeTaskStatus(status TaskStatus) TaskStatus {
 
 func NormalizeTaskObservations(observations string) string {
 	return strings.TrimSpace(observations)
+}
+
+func NormalizeTaskAttachments(attachments []TaskAttachment) []TaskAttachment {
+	if attachments == nil {
+		return []TaskAttachment{}
+	}
+
+	normalized := make([]TaskAttachment, len(attachments))
+	for i, attachment := range attachments {
+		normalized[i] = TaskAttachment{
+			ID:     attachment.ID,
+			TaskID: attachment.TaskID,
+			Path:   strings.TrimSpace(attachment.Path),
+		}
+	}
+
+	return normalized
 }
 
 func ValidateTaskTitle(title string) error {
@@ -69,6 +93,15 @@ func ValidateTaskSpentHours(spentHours int) error {
 func ValidateTaskWeekStartDate(weekStartDate time.Time) error {
 	if weekStartDate.IsZero() {
 		return ErrTaskWeekStartDateRequired
+	}
+	return nil
+}
+
+func ValidateTaskAttachments(attachments []TaskAttachment) error {
+	for _, attachment := range attachments {
+		if strings.TrimSpace(attachment.Path) == "" {
+			return ErrTaskAttachmentPathRequired
+		}
 	}
 	return nil
 }

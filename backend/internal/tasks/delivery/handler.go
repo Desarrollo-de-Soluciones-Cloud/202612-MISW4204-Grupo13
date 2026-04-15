@@ -42,24 +42,21 @@ func (h *TaskHandler) CreateTask(c *gin.Context) {
 		return
 	}
 
-	weekStartDate, err := parseWeekStartDate(req.WeekStartDate)
-	if err != nil {
-		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-		return
-	}
-
 	output, err := h.createTask.Execute(application.CreateTaskInput{
-		AssignmentID:  req.AssignmentID,
-		Title:         req.Title,
-		Description:   req.Description,
-		Status:        domain.TaskStatus(req.Status),
-		SpentHours:    req.SpentHours,
-		Observations:  req.Observations,
-		WeekStartDate: weekStartDate,
+		AssignmentID: req.AssignmentID,
+		WeekID:       req.WeekID,
+		Title:        req.Title,
+		Description:  req.Description,
+		Status:       domain.TaskStatus(req.Status),
+		SpentHours:   req.SpentHours,
+		Observations: req.Observations,
+		Attachments:  toAttachmentInputs(req.Attachments),
 	})
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrTaskAssignmentNotFound),
+			errors.Is(err, domain.ErrTaskWorkspaceNotFound),
+			errors.Is(err, domain.ErrTaskWeekNotFound),
 			errors.Is(err, domain.ErrTaskNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
 		case isTaskValidationError(err):
@@ -123,25 +120,22 @@ func (h *TaskHandler) UpdateTask(c *gin.Context) {
 		return
 	}
 
-	weekStartDate, err := parseWeekStartDate(req.WeekStartDate)
-	if err != nil {
-		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-		return
-	}
-
 	output, err := h.updateTask.Execute(application.UpdateTaskInput{
-		ID:            id,
-		AssignmentID:  req.AssignmentID,
-		Title:         req.Title,
-		Description:   req.Description,
-		Status:        domain.TaskStatus(req.Status),
-		SpentHours:    req.SpentHours,
-		Observations:  req.Observations,
-		WeekStartDate: weekStartDate,
+		ID:           id,
+		AssignmentID: req.AssignmentID,
+		WeekID:       req.WeekID,
+		Title:        req.Title,
+		Description:  req.Description,
+		Status:       domain.TaskStatus(req.Status),
+		SpentHours:   req.SpentHours,
+		Observations: req.Observations,
+		Attachments:  toAttachmentInputs(req.Attachments),
 	})
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrTaskNotFound),
+			errors.Is(err, domain.ErrTaskWorkspaceNotFound),
+			errors.Is(err, domain.ErrTaskWeekNotFound),
 			errors.Is(err, domain.ErrTaskAssignmentNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
 		case isTaskValidationError(err):
@@ -168,6 +162,7 @@ func (h *TaskHandler) DeleteTask(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrTaskNotFound),
+			errors.Is(err, domain.ErrTaskWeekNotFound),
 			errors.Is(err, domain.ErrTaskAssignmentNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
 		case errors.Is(err, domain.ErrTaskDeleteForbidden):
@@ -184,17 +179,30 @@ func (h *TaskHandler) DeleteTask(c *gin.Context) {
 func isTaskValidationError(err error) bool {
 	return errors.Is(err, domain.ErrInvalidInput) ||
 		errors.Is(err, domain.ErrTaskAssignmentIDRequired) ||
+		errors.Is(err, domain.ErrTaskAssignmentChangeForbidden) ||
+		errors.Is(err, domain.ErrTaskWeekIDRequired) ||
+		errors.Is(err, domain.ErrTaskWeekChangeForbidden) ||
 		errors.Is(err, domain.ErrTaskTitleRequired) ||
 		errors.Is(err, domain.ErrTaskDescriptionRequired) ||
 		errors.Is(err, domain.ErrTaskStatusRequired) ||
 		errors.Is(err, domain.ErrTaskStatusInvalid) ||
 		errors.Is(err, domain.ErrTaskSpentHoursRequired) ||
 		errors.Is(err, domain.ErrTaskSpentHoursInvalid) ||
+		errors.Is(err, domain.ErrTaskWeekPeriodMismatch) ||
+		errors.Is(err, domain.ErrTaskAttachmentPathRequired) ||
 		errors.Is(err, domain.ErrTaskWeekStartDateRequired) ||
 		errors.Is(err, domain.ErrTaskWeekStartDateInvalid)
 }
 
 func toTaskResponse(task *application.TaskOutput) TaskResponse {
+	attachments := make([]TaskAttachmentResponse, len(task.Attachments))
+	for i, attachment := range task.Attachments {
+		attachments[i] = TaskAttachmentResponse{
+			ID:   attachment.ID,
+			Path: attachment.Path,
+		}
+	}
+
 	return TaskResponse{
 		ID:            task.ID,
 		UserID:        task.UserID,
@@ -207,5 +215,14 @@ func toTaskResponse(task *application.TaskOutput) TaskResponse {
 		Observations:  task.Observations,
 		WeekStartDate: task.WeekStartDate.Format(dateLayout),
 		Late:          task.Late,
+		Attachments:   attachments,
 	}
+}
+
+func toAttachmentInputs(attachments []TaskAttachmentRequest) []application.TaskAttachmentInput {
+	result := make([]application.TaskAttachmentInput, len(attachments))
+	for i, attachment := range attachments {
+		result[i] = application.TaskAttachmentInput{Path: attachment.Path}
+	}
+	return result
 }
