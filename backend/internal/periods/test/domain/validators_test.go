@@ -73,317 +73,227 @@ func TestValidatePeriodName(t *testing.T) {
 	}
 }
 
-func TestValidatePeriodInitialDate(t *testing.T) {
+func TestValidatePeriodInitialDateIsMonday(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
 		wantErr bool
-		errType error
 	}{
 		{
-			name:    "valid date",
-			input:   "2026-10-01",
+			name:    "valid Monday date",
+			input:   "2026-10-05",
 			wantErr: false,
 		},
 		{
-			name:    "valid date",
-			input:   "2026-10-01",
+			name:    "invalid Tuesday date",
+			input:   "2026-10-06",
+			wantErr: true,
+		},
+		{
+			name:    "invalid Wednesday date",
+			input:   "2026-10-07",
+			wantErr: true,
+		},
+		{
+			name:    "invalid Thursday date",
+			input:   "2026-10-08",
+			wantErr: true,
+		},
+		{
+			name:    "invalid Friday date",
+			input:   "2026-10-09",
+			wantErr: true,
+		},
+		{
+			name:    "invalid Saturday date",
+			input:   "2026-10-10",
+			wantErr: true,
+		},
+		{
+			name:    "invalid Sunday date",
+			input:   "2026-10-11",
+			wantErr: true,
+		},
+		{
+			name:    "another valid Monday",
+			input:   "2026-10-12",
 			wantErr: false,
-		},
-		{
-			name:    "empty date",
-			input:   "",
-			wantErr: true,
-			errType: domain.ErrPeriodInitialDateWrongFormat,
-		},
-		{
-			name:    "wrong format - no dashes",
-			input:   "20261001",
-			wantErr: true,
-			errType: domain.ErrPeriodInitialDateWrongFormat,
-		},
-		{
-			name:    "wrong format - incomplete date",
-			input:   "2026-10",
-			wantErr: true,
-			errType: domain.ErrPeriodInitialDateWrongFormat,
-		},
-		{
-			name:    "wrong format - invalid month",
-			input:   "2026-13-01",
-			wantErr: true,
-			errType: domain.ErrPeriodInitialDateWrongFormat,
-		},
-		{
-			name:    "wrong format - invalid day",
-			input:   "2026-10-32",
-			wantErr: true,
-			errType: domain.ErrPeriodInitialDateWrongFormat,
-		},
-		{
-			name:    "wrong format - inverse order",
-			input:   "01-10-2026",
-			wantErr: true,
-			errType: domain.ErrPeriodInitialDateWrongFormat,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := domain.ValidatePeriodInitialDate(tt.input)
+			err := domain.ValidatePeriodInitialDateIsMonday(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidatePeriodInitialDate() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidatePeriodInitialDateIsMonday() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if tt.wantErr && err != tt.errType {
-				t.Errorf("ValidatePeriodInitialDate() error = %v, want %v", err, tt.errType)
+			if tt.wantErr && err != domain.ErrPeriodInitialDateMustBeMonday {
+				t.Errorf("ValidatePeriodInitialDateIsMonday() error = %v, want %v", err, domain.ErrPeriodInitialDateMustBeMonday)
 			}
 		})
 	}
 }
 
-func TestValidatePeriodFinalDate(t *testing.T) {
+func TestValidatePeriodInitialDateIsFuture(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
 		wantErr bool
-		errType error
 	}{
 		{
-			name:    "valid date",
-			input:   "2026-12-31",
+			name:    "valid future date",
+			input:   "2026-10-05",
 			wantErr: false,
 		},
 		{
-			name:    "empty date",
-			input:   "",
+			name:    "invalid past date",
+			input:   "2020-10-05",
 			wantErr: true,
-			errType: domain.ErrPeriodFinalDateWrongFormat,
-		},
-		{
-			name:    "wrong format - no dashes",
-			input:   "20261231",
-			wantErr: true,
-			errType: domain.ErrPeriodFinalDateWrongFormat,
-		},
-		{
-			name:    "wrong format - invalid month",
-			input:   "2026-13-01",
-			wantErr: true,
-			errType: domain.ErrPeriodFinalDateWrongFormat,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := domain.ValidatePeriodFinalDate(tt.input)
+			err := domain.ValidatePeriodInitialDateIsFuture(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidatePeriodFinalDate() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidatePeriodInitialDateIsFuture() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if tt.wantErr && err != tt.errType {
-				t.Errorf("ValidatePeriodFinalDate() error = %v, want %v", err, tt.errType)
+			if tt.wantErr && err != domain.ErrPeriodInitialDateMustBeFuture {
+				t.Errorf("ValidatePeriodInitialDateIsFuture() error = %v, want %v", err, domain.ErrPeriodInitialDateMustBeFuture)
 			}
 		})
 	}
 }
 
-func TestValidatePeriodInscriptionFinalDate(t *testing.T) {
+func TestValidatePeriodWeeksCount(t *testing.T) {
 	tests := []struct {
 		name    string
-		input   string
+		input   int
 		wantErr bool
-		errType error
 	}{
 		{
-			name:    "valid date",
-			input:   "2026-11-15",
+			name:    "valid 8 weeks",
+			input:   8,
 			wantErr: false,
 		},
 		{
-			name:    "empty date",
-			input:   "",
-			wantErr: true,
-			errType: domain.ErrPeriodInscriptionFinalDateWrongFormat,
+			name:    "valid 16 weeks",
+			input:   16,
+			wantErr: false,
 		},
 		{
-			name:    "wrong format - no dashes",
-			input:   "20261115",
+			name:    "invalid 4 weeks",
+			input:   4,
 			wantErr: true,
-			errType: domain.ErrPeriodInscriptionFinalDateWrongFormat,
 		},
 		{
-			name:    "wrong format - invalid day",
-			input:   "2026-11-32",
+			name:    "invalid 10 weeks",
+			input:   10,
 			wantErr: true,
-			errType: domain.ErrPeriodInscriptionFinalDateWrongFormat,
+		},
+		{
+			name:    "invalid 32 weeks",
+			input:   32,
+			wantErr: true,
+		},
+		{
+			name:    "invalid 0 weeks",
+			input:   0,
+			wantErr: true,
+		},
+		{
+			name:    "invalid negative weeks",
+			input:   -8,
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := domain.ValidatePeriodInscriptionFinalDate(tt.input)
+			err := domain.ValidatePeriodWeeksCount(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidatePeriodInscriptionFinalDate() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidatePeriodWeeksCount() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if tt.wantErr && err != tt.errType {
-				t.Errorf("ValidatePeriodInscriptionFinalDate() error = %v, want %v", err, tt.errType)
+			if tt.wantErr && err != domain.ErrPeriodWeeksCountInvalid {
+				t.Errorf("ValidatePeriodWeeksCount() error = %v, want %v", err, domain.ErrPeriodWeeksCountInvalid)
 			}
 		})
 	}
 }
 
-func TestValidatorsValidatePeriodDateSequence(t *testing.T) {
+func TestCalculatePeriodFinalDate(t *testing.T) {
 	tests := []struct {
-		name                  string
-		initialDate           string
-		finalDate             string
-		inscriptionFinalDate  string
-		wantErr               bool
+		name           string
+		initialDate    string
+		weeksCount     int
+		expectedResult string
+		wantErr        bool
 	}{
 		{
-			name:                 "valid sequence",
-			initialDate:           "2026-10-01",
-			finalDate:             "2026-12-31",
-			inscriptionFinalDate:  "2026-11-15",
-			wantErr:               false,
+			name:           "calculate final date for 8 weeks",
+			initialDate:    "2026-10-05",
+			weeksCount:     8,
+			expectedResult: "2026-11-29",
+			wantErr:        false,
 		},
 		{
-			name:                 "valid sequence - same dates",
-			initialDate:           "2026-10-01",
-			finalDate:             "2026-10-01",
-			inscriptionFinalDate:  "2026-10-01",
-			wantErr:               false,
+			name:           "calculate final date for 16 weeks",
+			initialDate:    "2026-10-05",
+			weeksCount:     16,
+			expectedResult: "2027-01-24",
+			wantErr:        false,
 		},
 		{
-			name:                 "invalid - initialDate after finalDate",
-			initialDate:           "2026-12-31",
-			finalDate:             "2026-10-01",
-			inscriptionFinalDate:  "2026-11-15",
-			wantErr:               true,
-		},
-		{
-			name:                 "invalid - initialDate after inscriptionFinalDate",
-			initialDate:           "2026-12-01",
-			finalDate:             "2026-12-31",
-			inscriptionFinalDate:  "2026-10-01",
-			wantErr:               true,
-		},
-		{
-			name:                 "invalid - inscriptionFinalDate after finalDate",
-			initialDate:           "2026-10-01",
-			finalDate:             "2026-11-30",
-			inscriptionFinalDate:  "2026-12-31",
-			wantErr:               true,
-		},
-		{
-			name:                 "invalid - all out of sequence",
-			initialDate:           "2026-12-31",
-			finalDate:             "2026-10-01",
-			inscriptionFinalDate:  "2026-11-01",
-			wantErr:               true,
+			name:           "calculate final date starting from different date",
+			initialDate:    "2026-10-12",
+			weeksCount:     8,
+			expectedResult: "2026-12-06",
+			wantErr:        false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := domain.ValidatePeriodDateSequence(tt.initialDate, tt.finalDate, tt.inscriptionFinalDate)
+			result, err := domain.CalculatePeriodFinalDate(tt.initialDate, tt.weeksCount)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidatePeriodDateSequence() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("CalculatePeriodFinalDate() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if tt.wantErr && err != domain.ErrPeriodDateSequenceInvalid {
-				t.Errorf("ValidatePeriodDateSequence() error = %v, want %v", err, domain.ErrPeriodDateSequenceInvalid)
+			if !tt.wantErr && result != tt.expectedResult {
+				t.Errorf("CalculatePeriodFinalDate() result = %v, want %v", result, tt.expectedResult)
 			}
 		})
 	}
 }
 
-func TestValidatePeriodState(t *testing.T) {
+func TestCalculatePeriodInscriptionFinalDate(t *testing.T) {
 	tests := []struct {
-		name    string
-		input   domain.PeriodState
-		wantErr bool
-		errType error
+		name           string
+		initialDate    string
+		expectedResult string
+		wantErr        bool
 	}{
 		{
-			name:    "valid state - active",
-			input:   domain.ActivePeriod,
-			wantErr: false,
+			name:           "calculate inscription date one day before",
+			initialDate:    "2026-10-05",
+			expectedResult: "2026-10-04",
+			wantErr:        false,
 		},
 		{
-			name:    "valid state - closed",
-			input:   domain.ClosedPeriod,
-			wantErr: false,
-		},
-		{
-			name:    "invalid state - empty",
-			input:   domain.PeriodState(""),
-			wantErr: true,
-			errType: domain.ErrPeriodStateRequired,
-		},
-		{
-			name:    "invalid state - unknown",
-			input:   domain.PeriodState("invalid"),
-			wantErr: true,
-			errType: domain.ErrPeriodStateInvalid,
-		},
-		{
-			name:    "invalid state - misspelled",
-			input:   domain.PeriodState("Active"),
-			wantErr: true,
-			errType: domain.ErrPeriodStateInvalid,
+			name:           "calculate inscription date for another date",
+			initialDate:    "2026-10-12",
+			expectedResult: "2026-10-11",
+			wantErr:        false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := domain.ValidatePeriodState(tt.input)
+			result, err := domain.CalculatePeriodInscriptionFinalDate(tt.initialDate)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidatePeriodState() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("CalculatePeriodInscriptionFinalDate() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if tt.wantErr && err != tt.errType {
-				t.Errorf("ValidatePeriodState() error = %v, want %v", err, tt.errType)
-			}
-		})
-	}
-}
-
-func TestValidatorsNormalizePeriodName(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "no spaces",
-			input:    "2026-10",
-			expected: "2026-10",
-		},
-		{
-			name:     "leading spaces",
-			input:    "  2026-10",
-			expected: "2026-10",
-		},
-		{
-			name:     "trailing spaces",
-			input:    "2026-10  ",
-			expected: "2026-10",
-		},
-		{
-			name:     "leading and trailing spaces",
-			input:    "  2026-10  ",
-			expected: "2026-10",
-		},
-		{
-			name:     "multiple spaces",
-			input:    "   2026-10   ",
-			expected: "2026-10",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := domain.NormalizePeriodName(tt.input)
-			if result != tt.expected {
-				t.Errorf("NormalizePeriodName() = %v, want %v", result, tt.expected)
+			if !tt.wantErr && result != tt.expectedResult {
+				t.Errorf("CalculatePeriodInscriptionFinalDate() result = %v, want %v", result, tt.expectedResult)
 			}
 		})
 	}

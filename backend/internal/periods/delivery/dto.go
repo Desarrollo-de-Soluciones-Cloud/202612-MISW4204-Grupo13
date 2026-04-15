@@ -1,11 +1,10 @@
 package delivery
 
 type CreatePeriodRequest struct {
-	Name                 string `json:"name" binding:"required"`
-	InitialDate          string `json:"initial_date" binding:"required"`
-	FinalDate            string `json:"final_date" binding:"required"`
-	InscriptionFinalDate string `json:"inscription_final_date" binding:"required"`
-	PeriodState          string `json:"period_state" binding:"required"`
+	Name        string `json:"name" binding:"required"`
+	InitialDate string `json:"initial_date" binding:"required"`
+	WeeksCount  *int   `json:"weeks_count" binding:"required"`
+	PeriodState string `json:"period_state" binding:"required"`
 }
 
 type CreatePeriodResponse struct {
@@ -14,15 +13,16 @@ type CreatePeriodResponse struct {
 	InitialDate          string `json:"initial_date"`
 	FinalDate            string `json:"final_date"`
 	InscriptionFinalDate string `json:"inscription_final_date"`
+	WeeksCount           int    `json:"weeks_count"`
 	PeriodState          string `json:"period_state"`
 }
 
 type UpdatePeriodRequest struct {
-	Name                 string `json:"name" binding:"required"`
-	InitialDate          string `json:"initial_date" binding:"required"`
-	FinalDate            string `json:"final_date" binding:"required"`
-	InscriptionFinalDate string `json:"inscription_final_date" binding:"required"`
-	PeriodState          string `json:"period_state" binding:"required"`
+	Name string `json:"name" binding:"required"`
+}
+
+type ClosePeriodRequest struct {
+	// No body needed - ID comes from URL parameter
 }
 
 type ListPeriodsResponse struct {
@@ -35,5 +35,6 @@ type PeriodResponse struct {
 	InitialDate          string `json:"initial_date"`
 	FinalDate            string `json:"final_date"`
 	InscriptionFinalDate string `json:"inscription_final_date"`
+	WeeksCount           int    `json:"weeks_count"`
 	PeriodState          string `json:"period_state"`
 }
