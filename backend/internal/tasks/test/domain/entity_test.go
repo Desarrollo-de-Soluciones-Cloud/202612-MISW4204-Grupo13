@@ -16,7 +16,7 @@ func TestNewTaskSuccess(t *testing.T) {
 		nil,
 		" Prepare class ",
 		" Review slides ",
-		domainpkg.TaskStatusOpen,
+		domainpkg.TaskStatusAbierto,
 		2,
 		" bring examples ",
 		weekDate,
@@ -51,7 +51,7 @@ func TestNewTaskRejectsMissingAssignmentID(t *testing.T) {
 		nil,
 		"Prepare class",
 		"Review slides",
-		domainpkg.TaskStatusOpen,
+		domainpkg.TaskStatusAbierto,
 		2,
 		"",
 		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
@@ -62,14 +62,43 @@ func TestNewTaskRejectsMissingAssignmentID(t *testing.T) {
 	}
 }
 
-func TestNewTaskRejectsInvalidStatus(t *testing.T) {
+func TestNewTaskAcceptsOfficialStatuses(t *testing.T) {
+	validStatuses := []domainpkg.TaskStatus{
+		domainpkg.TaskStatusAbierto,
+		domainpkg.TaskStatusEnDesarrollo,
+		domainpkg.TaskStatusFinalizado,
+	}
+
+	for _, status := range validStatuses {
+		task, err := domainpkg.NewTask(
+			1,
+			10,
+			nil,
+			"Prepare class",
+			"Review slides",
+			status,
+			2,
+			"",
+			time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+			false,
+		)
+		if err != nil {
+			t.Fatalf("expected status %q to be valid, got %v", status, err)
+		}
+		if task.Status != status {
+			t.Fatalf("expected task status %q, got %q", status, task.Status)
+		}
+	}
+}
+
+func TestNewTaskRejectsLegacyStatus(t *testing.T) {
 	_, err := domainpkg.NewTask(
 		1,
 		10,
 		nil,
 		"Prepare class",
 		"Review slides",
-		domainpkg.TaskStatus("invalid"),
+		domainpkg.TaskStatus("open"),
 		2,
 		"",
 		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
@@ -87,7 +116,7 @@ func TestNewTaskRejectsSpentHoursBelowOne(t *testing.T) {
 		nil,
 		"Prepare class",
 		"Review slides",
-		domainpkg.TaskStatusOpen,
+		domainpkg.TaskStatusAbierto,
 		-1,
 		"",
 		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
@@ -125,7 +154,7 @@ func TestUpdateTaskRejectsLateTask(t *testing.T) {
 		nil,
 		"Prepare class",
 		"Review slides",
-		domainpkg.TaskStatusOpen,
+		domainpkg.TaskStatusAbierto,
 		2,
 		"",
 		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
@@ -139,7 +168,7 @@ func TestUpdateTaskRejectsLateTask(t *testing.T) {
 		10,
 		"Prepare class 2",
 		"Review slides",
-		domainpkg.TaskStatusFinished,
+		domainpkg.TaskStatusFinalizado,
 		2,
 		"",
 		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
@@ -157,7 +186,7 @@ func TestCanDeleteRejectsInactiveWeek(t *testing.T) {
 		nil,
 		"Prepare class",
 		"Review slides",
-		domainpkg.TaskStatusOpen,
+		domainpkg.TaskStatusAbierto,
 		2,
 		"",
 		time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC),
@@ -170,5 +199,40 @@ func TestCanDeleteRejectsInactiveWeek(t *testing.T) {
 	err = task.CanDelete(time.Date(2026, 4, 13, 9, 0, 0, 0, time.UTC))
 	if !errors.Is(err, domainpkg.ErrTaskDeleteForbidden) {
 		t.Fatalf("expected ErrTaskDeleteForbidden, got %v", err)
+	}
+}
+
+func TestUpdateTaskAllowsOfficialStatusChange(t *testing.T) {
+	task, err := domainpkg.NewTask(
+		1,
+		10,
+		nil,
+		"Prepare class",
+		"Review slides",
+		domainpkg.TaskStatusAbierto,
+		2,
+		"",
+		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+		false,
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	err = task.UpdateTask(
+		10,
+		"Prepare class",
+		"Review slides",
+		domainpkg.TaskStatusEnDesarrollo,
+		2,
+		"",
+		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+		false,
+	)
+	if err != nil {
+		t.Fatalf("expected status update to succeed, got %v", err)
+	}
+	if task.Status != domainpkg.TaskStatusEnDesarrollo {
+		t.Fatalf("expected updated status %q, got %q", domainpkg.TaskStatusEnDesarrollo, task.Status)
 	}
 }

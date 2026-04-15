@@ -31,6 +31,7 @@ func NewTask(
 ) (*Task, error) {
 	normalizedTitle := NormalizeTaskTitle(title)
 	normalizedDescription := NormalizeTaskDescription(description)
+	normalizedStatus := NormalizeTaskStatus(status)
 	normalizedObservations := NormalizeTaskObservations(observations)
 	normalizedWeekStartDate := NormalizeWeekStartDate(weekStartDate)
 
@@ -43,7 +44,7 @@ func NewTask(
 	if err := ValidateTaskDescription(normalizedDescription); err != nil {
 		return nil, err
 	}
-	if err := ValidateTaskStatus(status); err != nil {
+	if err := ValidateTaskStatus(normalizedStatus); err != nil {
 		return nil, err
 	}
 	if err := ValidateTaskSpentHours(spentHours); err != nil {
@@ -59,7 +60,7 @@ func NewTask(
 		WeekID:        weekID,
 		Title:         normalizedTitle,
 		Description:   normalizedDescription,
-		Status:        status,
+		Status:        normalizedStatus,
 		SpentHours:    spentHours,
 		Observations:  normalizedObservations,
 		WeekStartDate: normalizedWeekStartDate,
@@ -82,6 +83,7 @@ func (t *Task) UpdateTask(
 
 	normalizedTitle := NormalizeTaskTitle(title)
 	normalizedDescription := NormalizeTaskDescription(description)
+	normalizedStatus := NormalizeTaskStatus(status)
 	normalizedObservations := NormalizeTaskObservations(observations)
 	normalizedWeekStartDate := NormalizeWeekStartDate(weekStartDate)
 
@@ -94,7 +96,7 @@ func (t *Task) UpdateTask(
 	if err := ValidateTaskDescription(normalizedDescription); err != nil {
 		return err
 	}
-	if err := ValidateTaskStatus(status); err != nil {
+	if err := ValidateTaskStatus(normalizedStatus); err != nil {
 		return err
 	}
 	if err := ValidateTaskSpentHours(spentHours); err != nil {
@@ -107,7 +109,7 @@ func (t *Task) UpdateTask(
 	t.AssignmentID = assignmentID
 	t.Title = normalizedTitle
 	t.Description = normalizedDescription
-	t.Status = status
+	t.Status = normalizedStatus
 	t.SpentHours = spentHours
 	t.Observations = normalizedObservations
 	t.WeekStartDate = normalizedWeekStartDate
