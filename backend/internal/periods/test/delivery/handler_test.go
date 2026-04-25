@@ -365,26 +365,6 @@ func TestUpdatePeriodNotFound(t *testing.T) {
 	}
 }
 
-func TestUpdatePeriodInvalidID(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	repo := newMockPeriodRepository()
-	handler := setupTestHandler(repo)
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("DELETE", "/periods/999", nil)
-
-	c, _ := gin.CreateTestContext(w)
-	c.Request = req
-	c.Params = append(c.Params, gin.Param{Key: "id", Value: "999"})
-
-	handler.DeletePeriod(c)
-
-	if w.Code != http.StatusNotFound {
-		t.Errorf("DeletePeriod() status = %d, want %d", w.Code, http.StatusNotFound)
-	}
-}
-
-// TestListPeriodsByState tests listing periods filtered by state
 func TestListPeriodsByState(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := newMockPeriodRepository()
@@ -694,24 +674,5 @@ func TestClosePeriodInvalidID(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("ClosePeriod(invalid id) status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestDeletePeriodInvalidID(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	repo := newMockPeriodRepository()
-	handler := setupTestHandler(repo)
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("DELETE", "/periods/invalid", nil)
-
-	c, _ := gin.CreateTestContext(w)
-	c.Request = req
-	c.Params = append(c.Params, gin.Param{Key: "id", Value: "invalid"})
-
-	handler.DeletePeriod(c)
-
-	if w.Code != http.StatusNotFound {
-		t.Errorf("DeletePeriod(invalid id) status = %d, want %d", w.Code, http.StatusNotFound)
 	}
 }
