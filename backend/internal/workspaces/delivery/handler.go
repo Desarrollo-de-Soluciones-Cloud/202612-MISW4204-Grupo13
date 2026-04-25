@@ -21,6 +21,7 @@ type WorkspaceHandler struct {
 	getWorkspaceByID        *application.GetWorkspaceByID
 	updateWorkspace         *application.UpdateWorkspace
 	deleteWorkspace         *application.DeleteWorkspace
+	closeWorkspace          *application.CloseWorkspace
 }
 
 func NewWorkspaceHandler(
@@ -30,6 +31,7 @@ func NewWorkspaceHandler(
 	getWorkspaceByID *application.GetWorkspaceByID,
 	updateWorkspace *application.UpdateWorkspace,
 	deleteWorkspace *application.DeleteWorkspace,
+	closeWorkspace *application.CloseWorkspace,
 ) *WorkspaceHandler {
 	return &WorkspaceHandler{
 		createWorkspace:        createWorkspace,
@@ -38,6 +40,7 @@ func NewWorkspaceHandler(
 		getWorkspaceByID:       getWorkspaceByID,
 		updateWorkspace:        updateWorkspace,
 		deleteWorkspace:        deleteWorkspace,
+		closeWorkspace:         closeWorkspace,
 	}
 }
 
@@ -336,6 +339,62 @@ func (h *WorkspaceHandler) DeleteWorkspace(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusNoContent, nil)
+}
+
+func (h *WorkspaceHandler) CloseWorkspace(c *gin.Context) {
+	currentUser, ok := authDelivery.GetCurrentUser(c)
+	if !ok {
+		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
+		return
+	}
+
+	id, err := sharedHelpers.ParseResourceID(c.Param("id"))
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+		return
+	}
+
+	// Get workspace to verify access
+	existing, err := h.getWorkspaceByID.Execute(application.GetWorkspaceByIDInput{ID: id})
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrWorkspaceNotFound):
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		default:
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		}
+		return
+	}
+
+	if !canAccessWorkspace(currentUser.GlobalRole, currentUser.ID, existing.UserID) {
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+		return
+	}
+
+	output, err := h.closeWorkspace.Execute(application.CloseWorkspaceInput{ID: id})
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrWorkspaceNotFound):
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		case errors.Is(err, domain.ErrWorkspaceUserNotFound), errors.Is(err, domain.ErrWorkspaceUserNotProfessor):
+			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+		default:
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, CloseWorkspaceResponse{
+		ID:           output.ID,
+		PeriodID:     output.PeriodID,
+		UserID:       output.UserID,
+		Name:         output.Name,
+		Type:         output.Type,
+		InitialDate:  output.InitialDate,
+		FinalDate:    output.FinalDate,
+		Observations: output.Observations,
+		State:        output.State,
+	})
 }
 
 func canAccessWorkspace(role usersDomain.UserRole, currentUserID, workspaceUserID uint) bool {

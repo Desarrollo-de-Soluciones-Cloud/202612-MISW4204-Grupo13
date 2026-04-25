@@ -48,3 +48,15 @@ type WorkspaceResponse struct {
 	Observations string `json:"observations"`
 	State        string `json:"state"`
 }
+
+type CloseWorkspaceResponse struct {
+	ID           uint   `json:"id"`
+	PeriodID     uint   `json:"period_id"`
+	UserID       uint   `json:"user_id"`
+	Name         string `json:"name"`
+	Type         string `json:"type"`
+	InitialDate  string `json:"initial_date"`
+	FinalDate    string `json:"final_date"`
+	Observations string `json:"observations"`
+	State        string `json:"state"`
+}
