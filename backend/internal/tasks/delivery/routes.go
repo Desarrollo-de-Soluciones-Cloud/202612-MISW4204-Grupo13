@@ -5,6 +5,7 @@ import (
 	"backend/internal/tasks/application"
 	"backend/internal/tasks/infrastructure"
 	usersDomain "backend/internal/users/domain"
+	workspacesInfrastructure "backend/internal/workspaces/infrastructure"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,13 +24,14 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 		panic(err)
 	}
 	assignmentRepo := assignmentsInfrastructure.NewAssignmentRepository()
+	workspaceRepo := workspacesInfrastructure.NewWorkspaceRepository()
 
 	createTask := application.NewCreateTask(repo, assignmentRepo, nil)
 	listTasks := application.NewListTasks(repo)
 	getTaskByID := application.NewGetTaskByID(repo)
 	updateTask := application.NewUpdateTask(repo, assignmentRepo, nil)
 	deleteTask := application.NewDeleteTask(repo, nil)
-	handler := NewTaskHandler(createTask, listTasks, getTaskByID, updateTask, deleteTask)
+	handler := NewTaskHandler(createTask, listTasks, getTaskByID, updateTask, deleteTask, assignmentRepo, workspaceRepo)
 
 	tasks := r.Group("/tasks")
 	{

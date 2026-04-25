@@ -2,9 +2,12 @@ package delivery
 
 import (
 	assignmentsDomain "backend/internal/assignments/domain"
+	authDomain "backend/internal/auth/domain"
 	tasksApplication "backend/internal/tasks/application"
 	tasksDelivery "backend/internal/tasks/delivery"
 	tasksDomain "backend/internal/tasks/domain"
+	usersDomain "backend/internal/users/domain"
+	workspacesDomain "backend/internal/workspaces/domain"
 	"bytes"
 	"errors"
 	"net/http"
@@ -112,6 +115,12 @@ func seedAssignment(repo *mockAssignmentRepository, id, userID uint) {
 	}
 }
 
+type mockWorkspaceRepository struct{}
+
+func (m *mockWorkspaceRepository) FindByID(_ uint) (*workspacesDomain.Workspace, error) {
+	return &workspacesDomain.Workspace{ID: 7, UserID: 0}, nil
+}
+
 func newTaskHandler(repo *mockTaskRepository, assignmentRepo *mockAssignmentRepository, now func() time.Time) *tasksDelivery.TaskHandler {
 	return tasksDelivery.NewTaskHandler(
 		tasksApplication.NewCreateTask(repo, assignmentRepo, now),
@@ -119,6 +128,8 @@ func newTaskHandler(repo *mockTaskRepository, assignmentRepo *mockAssignmentRepo
 		tasksApplication.NewGetTaskByID(repo),
 		tasksApplication.NewUpdateTask(repo, assignmentRepo, now),
 		tasksApplication.NewDeleteTask(repo, now),
+		assignmentRepo,
+		&mockWorkspaceRepository{},
 	)
 }
 
@@ -157,6 +168,7 @@ func TestCreateTaskSuccess(t *testing.T) {
 	})
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
+	context.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin})
 	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"Prepare class","description":"Review slides","status":"abierto","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
 	request, _ := http.NewRequest(http.MethodPost, "/tasks", requestBody)
 	request.Header.Set("Content-Type", "application/json")
@@ -175,6 +187,7 @@ func TestCreateTaskBindingError(t *testing.T) {
 	handler := newTaskHandler(newMockTaskRepository(), newMockAssignmentRepository(), time.Now)
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
+	context.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin})
 	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"","description":"Review slides","status":"abierto","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
 	request, _ := http.NewRequest(http.MethodPost, "/tasks", requestBody)
 	request.Header.Set("Content-Type", "application/json")
@@ -193,6 +206,7 @@ func TestCreateTaskReturnsNotFoundForMissingAssignment(t *testing.T) {
 	handler := newTaskHandler(newMockTaskRepository(), newMockAssignmentRepository(), time.Now)
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
+	context.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin})
 	requestBody := bytes.NewBufferString(`{"assignment_id":999,"title":"Prepare class","description":"Review slides","status":"abierto","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
 	request, _ := http.NewRequest(http.MethodPost, "/tasks", requestBody)
 	request.Header.Set("Content-Type", "application/json")
@@ -214,6 +228,7 @@ func TestGetTaskByIDSuccess(t *testing.T) {
 	handler := newTaskHandler(taskRepo, assignmentRepo, time.Now)
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
+	context.Set("current_user", authDomain.AuthenticatedUser{ID: 2, GlobalRole: usersDomain.RoleAdmin})
 	request, _ := http.NewRequest(http.MethodGet, "/tasks/1", nil)
 	context.Request = request
 	context.Params = gin.Params{{Key: "id", Value: "1"}}
@@ -240,6 +255,7 @@ func TestUpdateTaskRejectsLateTask(t *testing.T) {
 	})
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
+	context.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin})
 	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"Prepare class","description":"Review slides","status":"finalizado","spent_hours":3,"observations":"","week_start_date":"2026-04-06"}`)
 	request, _ := http.NewRequest(http.MethodPut, "/tasks/1", requestBody)
 	request.Header.Set("Content-Type", "application/json")
@@ -262,6 +278,7 @@ func TestCreateTaskRejectsLegacyEnglishStatus(t *testing.T) {
 	handler := newTaskHandler(taskRepo, assignmentRepo, time.Now)
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
+	context.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin})
 	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"Prepare class","description":"Review slides","status":"open","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
 	request, _ := http.NewRequest(http.MethodPost, "/tasks", requestBody)
 	request.Header.Set("Content-Type", "application/json")
@@ -284,6 +301,7 @@ func TestCreateTaskInternalError(t *testing.T) {
 	handler := newTaskHandler(taskRepo, assignmentRepo, time.Now)
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
+	context.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin})
 	requestBody := bytes.NewBufferString(`{"assignment_id":10,"title":"Prepare class","description":"Review slides","status":"abierto","spent_hours":2,"observations":"","week_start_date":"2026-04-08"}`)
 	request, _ := http.NewRequest(http.MethodPost, "/tasks", requestBody)
 	request.Header.Set("Content-Type", "application/json")
