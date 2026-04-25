@@ -1,8 +1,11 @@
 package delivery
 
 import (
+	authDelivery "backend/internal/auth/delivery"
+	authDomain "backend/internal/auth/domain"
 	sharedErrors "backend/internal/shared/errors"
 	sharedHelpers "backend/internal/shared/helpers"
+	usersDomain "backend/internal/users/domain"
 	"backend/internal/workspaces/application"
 	"backend/internal/workspaces/domain"
 	"errors"
@@ -39,9 +42,28 @@ func NewWorkspaceHandler(
 }
 
 func (h *WorkspaceHandler) CreateWorkspace(c *gin.Context) {
+	currentUser, ok := authDelivery.GetCurrentUser(c)
+	if !ok {
+		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
+		return
+	}
+
 	var req CreateWorkspaceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		sharedHelpers.RespondWithErrors(c, http.StatusBadRequest, mapBindingErrors(err))
+		return
+	}
+
+	switch currentUser.GlobalRole {
+	case usersDomain.RoleAdmin:
+		// Admin can create workspaces for any professor.
+	case usersDomain.RoleProfessor:
+		if req.UserID != currentUser.ID {
+			sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+			return
+		}
+	default:
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
 		return
 	}
 
@@ -59,6 +81,10 @@ func (h *WorkspaceHandler) CreateWorkspace(c *gin.Context) {
 	output, err := h.createWorkspace.Execute(input)
 	if err != nil {
 		switch {
+		case errors.Is(err, domain.ErrWorkspacePeriodNotFound), errors.Is(err, domain.ErrWorkspaceUserNotFound):
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		case errors.Is(err, domain.ErrWorkspacePeriodClosed), errors.Is(err, domain.ErrWorkspaceInscriptionClosed):
+			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
 		case isWorkspaceValidationError(err):
 			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		default:
@@ -81,9 +107,15 @@ func (h *WorkspaceHandler) CreateWorkspace(c *gin.Context) {
 }
 
 func (h *WorkspaceHandler) ListWorkspaces(c *gin.Context) {
+	currentUser, ok := authDelivery.GetCurrentUser(c)
+	if !ok {
+		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
+		return
+	}
+
 	periodID := c.Query("period_id")
 	if periodID != "" {
-		h.listWorkspacesByPeriodHandler(c, periodID)
+		h.listWorkspacesByPeriodHandler(c, currentUser, periodID)
 		return
 	}
 
@@ -93,9 +125,13 @@ func (h *WorkspaceHandler) ListWorkspaces(c *gin.Context) {
 		return
 	}
 
-	workspaces := make([]WorkspaceResponse, len(output.Workspaces))
-	for i, w := range output.Workspaces {
-		workspaces[i] = WorkspaceResponse{
+	workspaces := make([]WorkspaceResponse, 0, len(output.Workspaces))
+	for _, w := range output.Workspaces {
+		if !canAccessWorkspace(currentUser.GlobalRole, currentUser.ID, w.UserID) {
+			continue
+		}
+
+		workspaces = append(workspaces, WorkspaceResponse{
 			ID:           w.ID,
 			PeriodID:     w.PeriodID,
 			UserID:       w.UserID,
@@ -105,13 +141,13 @@ func (h *WorkspaceHandler) ListWorkspaces(c *gin.Context) {
 			FinalDate:    w.FinalDate,
 			Observations: w.Observations,
 			State:        w.State,
-		}
+		})
 	}
 
 	c.JSON(http.StatusOK, ListWorkspacesResponse{Workspaces: workspaces})
 }
 
-func (h *WorkspaceHandler) listWorkspacesByPeriodHandler(c *gin.Context, rawPeriodID string) {
+func (h *WorkspaceHandler) listWorkspacesByPeriodHandler(c *gin.Context, currentUser authDomain.AuthenticatedUser, rawPeriodID string) {
 	periodID, err := sharedHelpers.ParseResourceID(rawPeriodID)
 	if err != nil {
 		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
@@ -126,9 +162,13 @@ func (h *WorkspaceHandler) listWorkspacesByPeriodHandler(c *gin.Context, rawPeri
 		return
 	}
 
-	workspaces := make([]WorkspaceResponse, len(output.Workspaces))
-	for i, w := range output.Workspaces {
-		workspaces[i] = WorkspaceResponse{
+	workspaces := make([]WorkspaceResponse, 0, len(output.Workspaces))
+	for _, w := range output.Workspaces {
+		if !canAccessWorkspace(currentUser.GlobalRole, currentUser.ID, w.UserID) {
+			continue
+		}
+
+		workspaces = append(workspaces, WorkspaceResponse{
 			ID:           w.ID,
 			PeriodID:     w.PeriodID,
 			UserID:       w.UserID,
@@ -138,13 +178,19 @@ func (h *WorkspaceHandler) listWorkspacesByPeriodHandler(c *gin.Context, rawPeri
 			FinalDate:    w.FinalDate,
 			Observations: w.Observations,
 			State:        w.State,
-		}
+		})
 	}
 
 	c.JSON(http.StatusOK, ListWorkspacesResponse{Workspaces: workspaces})
 }
 
 func (h *WorkspaceHandler) GetWorkspaceByID(c *gin.Context) {
+	currentUser, ok := authDelivery.GetCurrentUser(c)
+	if !ok {
+		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
+		return
+	}
+
 	id, err := sharedHelpers.ParseResourceID(c.Param("id"))
 	if err != nil {
 		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
@@ -159,6 +205,10 @@ func (h *WorkspaceHandler) GetWorkspaceByID(c *gin.Context) {
 		default:
 			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
 		}
+		return
+	}
+	if !canAccessWorkspace(currentUser.GlobalRole, currentUser.ID, output.UserID) {
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
 		return
 	}
 
@@ -176,9 +226,30 @@ func (h *WorkspaceHandler) GetWorkspaceByID(c *gin.Context) {
 }
 
 func (h *WorkspaceHandler) UpdateWorkspace(c *gin.Context) {
+	currentUser, ok := authDelivery.GetCurrentUser(c)
+	if !ok {
+		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
+		return
+	}
+
 	id, err := sharedHelpers.ParseResourceID(c.Param("id"))
 	if err != nil {
 		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+		return
+	}
+
+	existing, err := h.getWorkspaceByID.Execute(application.GetWorkspaceByIDInput{ID: id})
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrWorkspaceNotFound):
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		default:
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		}
+		return
+	}
+	if !canAccessWorkspace(currentUser.GlobalRole, currentUser.ID, existing.UserID) {
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
 		return
 	}
 
@@ -200,8 +271,10 @@ func (h *WorkspaceHandler) UpdateWorkspace(c *gin.Context) {
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, errors.New("workspace not found")):
+		case errors.Is(err, domain.ErrWorkspaceNotFound), errors.Is(err, domain.ErrWorkspacePeriodNotFound), errors.Is(err, domain.ErrWorkspaceUserNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		case errors.Is(err, domain.ErrWorkspaceClosedUpdateForbidden):
+			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
 		case isWorkspaceValidationError(err):
 			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		default:
@@ -224,16 +297,37 @@ func (h *WorkspaceHandler) UpdateWorkspace(c *gin.Context) {
 }
 
 func (h *WorkspaceHandler) DeleteWorkspace(c *gin.Context) {
+	currentUser, ok := authDelivery.GetCurrentUser(c)
+	if !ok {
+		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
+		return
+	}
+
 	id, err := sharedHelpers.ParseResourceID(c.Param("id"))
 	if err != nil {
 		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		return
 	}
 
+	existing, err := h.getWorkspaceByID.Execute(application.GetWorkspaceByIDInput{ID: id})
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrWorkspaceNotFound):
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		default:
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		}
+		return
+	}
+	if !canAccessWorkspace(currentUser.GlobalRole, currentUser.ID, existing.UserID) {
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+		return
+	}
+
 	err = h.deleteWorkspace.Execute(application.DeleteWorkspaceInput{ID: id})
 	if err != nil {
 		switch {
-		case errors.Is(err, errors.New("workspace not found")):
+		case errors.Is(err, domain.ErrWorkspaceNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
 		default:
 			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
@@ -242,4 +336,15 @@ func (h *WorkspaceHandler) DeleteWorkspace(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusNoContent, nil)
+}
+
+func canAccessWorkspace(role usersDomain.UserRole, currentUserID, workspaceUserID uint) bool {
+	switch role {
+	case usersDomain.RoleAdmin:
+		return true
+	case usersDomain.RoleProfessor:
+		return currentUserID == workspaceUserID
+	default:
+		return false
+	}
 }

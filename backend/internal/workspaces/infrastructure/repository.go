@@ -27,7 +27,7 @@ func (r *WorkspaceRepository) FindByID(id uint) (*domain.Workspace, error) {
 	result := database.DB.First(&workspace, id)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, errors.New("workspace not found")
+			return nil, domain.ErrWorkspaceNotFound
 		}
 		return nil, result.Error
 	}
@@ -56,7 +56,7 @@ func (r *WorkspaceRepository) Delete(id uint) error {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return errors.New("workspace not found")
+		return domain.ErrWorkspaceNotFound
 	}
 	return nil
 }

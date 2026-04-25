@@ -69,8 +69,11 @@ func mapBindingErrors(err error) []error {
 func isWorkspaceValidationError(err error) bool {
 	return errors.Is(err, domain.ErrInvalidInput) ||
 		errors.Is(err, domain.ErrWorkspacePeriodNotFound) ||
+		errors.Is(err, domain.ErrWorkspacePeriodClosed) ||
+		errors.Is(err, domain.ErrWorkspaceInscriptionClosed) ||
 		errors.Is(err, domain.ErrWorkspaceUserNotFound) ||
 		errors.Is(err, domain.ErrWorkspaceUserNotProfessor) ||
+		errors.Is(err, domain.ErrWorkspaceClosedUpdateForbidden) ||
 		errors.Is(err, domain.ErrWorkspaceNameRequired) ||
 		errors.Is(err, domain.ErrWorkspaceNameTooLong) ||
 		errors.Is(err, domain.ErrWorkspacePeriodIDRequired) ||
