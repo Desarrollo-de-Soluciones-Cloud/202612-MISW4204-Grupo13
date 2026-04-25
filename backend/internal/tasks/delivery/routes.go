@@ -26,7 +26,7 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 	assignmentRepo := assignmentsInfrastructure.NewAssignmentRepository()
 	workspaceRepo := workspacesInfrastructure.NewWorkspaceRepository()
 
-	createTask := application.NewCreateTask(repo, assignmentRepo, nil)
+	createTask := application.NewCreateTask(repo, assignmentRepo, workspaceRepo, nil)
 	listTasks := application.NewListTasks(repo)
 	getTaskByID := application.NewGetTaskByID(repo)
 	updateTask := application.NewUpdateTask(repo, assignmentRepo, nil)

@@ -93,8 +93,12 @@ func (h *TaskHandler) CreateTask(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrTaskAssignmentNotFound),
-			errors.Is(err, domain.ErrTaskNotFound):
+			errors.Is(err, domain.ErrTaskNotFound),
+			errors.Is(err, domain.ErrTaskWorkspaceNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		case errors.Is(err, domain.ErrTaskWorkspaceClosed),
+			errors.Is(err, domain.ErrTaskWeekInactive):
+			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
 		case isTaskValidationError(err):
 			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		default:

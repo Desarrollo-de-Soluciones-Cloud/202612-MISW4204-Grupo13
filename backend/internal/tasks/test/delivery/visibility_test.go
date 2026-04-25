@@ -58,7 +58,7 @@ func setupTaskHandlerForVisibilityTests(t *testing.T) *tasksDelivery.TaskHandler
 
 	seedTaskVisibilityData(t, userRepo, workspaceRepo, assignmentRepo, taskRepo)
 
-	createTask := application.NewCreateTask(taskRepo, assignmentRepo, nil)
+	createTask := application.NewCreateTask(taskRepo, assignmentRepo, workspaceRepo, nil)
 	listTasks := application.NewListTasks(taskRepo)
 	getTaskByID := application.NewGetTaskByID(taskRepo)
 	updateTask := application.NewUpdateTask(taskRepo, assignmentRepo, nil)

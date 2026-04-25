@@ -122,14 +122,15 @@ func (m *mockWorkspaceRepository) FindByID(_ uint) (*workspacesDomain.Workspace,
 }
 
 func newTaskHandler(repo *mockTaskRepository, assignmentRepo *mockAssignmentRepository, now func() time.Time) *tasksDelivery.TaskHandler {
+	workspaceRepo := &mockWorkspaceRepository{}
 	return tasksDelivery.NewTaskHandler(
-		tasksApplication.NewCreateTask(repo, assignmentRepo, now),
+		tasksApplication.NewCreateTask(repo, assignmentRepo, workspaceRepo, now),
 		tasksApplication.NewListTasks(repo),
 		tasksApplication.NewGetTaskByID(repo),
 		tasksApplication.NewUpdateTask(repo, assignmentRepo, now),
 		tasksApplication.NewDeleteTask(repo, now),
 		assignmentRepo,
-		&mockWorkspaceRepository{},
+		workspaceRepo,
 	)
 }
 
@@ -275,7 +276,9 @@ func TestCreateTaskRejectsLegacyEnglishStatus(t *testing.T) {
 	taskRepo := newMockTaskRepository()
 	assignmentRepo := newMockAssignmentRepository()
 	seedAssignment(assignmentRepo, 10, 1)
-	handler := newTaskHandler(taskRepo, assignmentRepo, time.Now)
+	handler := newTaskHandler(taskRepo, assignmentRepo, func() time.Time {
+		return time.Date(2026, 4, 9, 9, 0, 0, 0, time.UTC)
+	})
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
 	context.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin})
@@ -298,7 +301,9 @@ func TestCreateTaskInternalError(t *testing.T) {
 	taskRepo.createErr = errors.New("db error")
 	assignmentRepo := newMockAssignmentRepository()
 	seedAssignment(assignmentRepo, 10, 1)
-	handler := newTaskHandler(taskRepo, assignmentRepo, time.Now)
+	handler := newTaskHandler(taskRepo, assignmentRepo, func() time.Time {
+		return time.Date(2026, 4, 9, 9, 0, 0, 0, time.UTC)
+	})
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
 	context.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin})

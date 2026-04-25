@@ -3,6 +3,7 @@ package application
 import (
 	assignmentsDomain "backend/internal/assignments/domain"
 	"backend/internal/tasks/domain"
+	workspacesDomain "backend/internal/workspaces/domain"
 	"time"
 )
 
@@ -20,10 +21,11 @@ type CreateTaskInput struct {
 type CreateTask struct {
 	repository           domain.TaskRepository
 	assignmentRepository TaskAssignmentRepository
+	workspaceRepository  TaskWorkspaceRepository
 	now                  func() time.Time
 }
 
-func NewCreateTask(repo domain.TaskRepository, assignmentRepo TaskAssignmentRepository, now func() time.Time) *CreateTask {
+func NewCreateTask(repo domain.TaskRepository, assignmentRepo TaskAssignmentRepository, workspaceRepo TaskWorkspaceRepository, now func() time.Time) *CreateTask {
 	if now == nil {
 		now = time.Now
 	}
@@ -31,6 +33,7 @@ func NewCreateTask(repo domain.TaskRepository, assignmentRepo TaskAssignmentRepo
 	return &CreateTask{
 		repository:           repo,
 		assignmentRepository: assignmentRepo,
+		workspaceRepository:  workspaceRepo,
 		now:                  now,
 	}
 }
@@ -44,7 +47,21 @@ func (uc *CreateTask) Execute(input CreateTaskInput) (*TaskOutput, error) {
 		return nil, err
 	}
 
+	workspace, err := uc.workspaceRepository.FindByID(assignment.WorkspaceID)
+	if err != nil {
+		if err == workspacesDomain.ErrWorkspaceNotFound {
+			return nil, domain.ErrTaskWorkspaceNotFound
+		}
+		return nil, err
+	}
+	if workspace.State == workspacesDomain.ClosedState {
+		return nil, domain.ErrTaskWorkspaceClosed
+	}
+
 	normalizedWeekStartDate := domain.NormalizeWeekStartDate(input.WeekStartDate)
+	if !domain.IsWeekActive(normalizedWeekStartDate, uc.now()) {
+		return nil, domain.ErrTaskWeekInactive
+	}
 	late := domain.IsWeekClosed(normalizedWeekStartDate, uc.now())
 
 	task, err := domain.NewTask(
