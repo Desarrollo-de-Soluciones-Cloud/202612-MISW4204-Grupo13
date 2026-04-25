@@ -27,6 +27,18 @@ services:
     depends_on:
       - seneprojects_backend
 
+  frontend:
+    build:
+      context: ./frontend
+    container_name: seneprojects_frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=/api
+      - VITE_PROXY_TARGET=http://seneprojects_nginx:80
+    depends_on:
+      - seneprojects_nginx
+
   seneprojects_db:
     image: postgres:15
     container_name: seneprojects_db
