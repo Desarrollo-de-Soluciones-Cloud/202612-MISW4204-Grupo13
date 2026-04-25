@@ -4,6 +4,7 @@ import (
 	assignmentsDelivery "backend/internal/assignments/delivery"
 	authDelivery "backend/internal/auth/delivery"
 	periodDelivery "backend/internal/periods/delivery"
+	reportsDelivery "backend/internal/reports/delivery"
 	"backend/internal/shared/config"
 	"backend/internal/shared/database"
 	tasksDelivery "backend/internal/tasks/delivery"
@@ -45,6 +46,7 @@ func main() {
 	workspacesDelivery.SetupRoutes(api, authHandler)
 	assignmentsDelivery.SetupRoutes(api, authHandler)
 	tasksDelivery.SetupRoutes(api, authHandler)
+	reportsDelivery.SetupRoutes(api, authHandler)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
