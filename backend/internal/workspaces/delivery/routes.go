@@ -2,6 +2,7 @@ package delivery
 
 import (
 	periodInfra "backend/internal/periods/infrastructure"
+	usersDomain "backend/internal/users/domain"
 	usersInfra "backend/internal/users/infrastructure"
 	workspacesApp "backend/internal/workspaces/application"
 	"backend/internal/workspaces/infrastructure"
@@ -9,7 +10,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(r gin.IRouter) {
+type RouteAuthorizer interface {
+	RequireAuthentication() gin.HandlerFunc
+	RequireRoles(...usersDomain.UserRole) gin.HandlerFunc
+}
+
+func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 	// Initialize workspace repository
 	workspaceRepo := infrastructure.NewWorkspaceRepository()
 	workspaceRepo.AutoMigrate()
@@ -29,10 +35,14 @@ func SetupRoutes(r gin.IRouter) {
 	handler := NewWorkspaceHandler(createWorkspace, listWorkspaces, listWorkspacesByPeriod, getWorkspaceByID, updateWorkspace, deleteWorkspace)
 	workspaces := r.Group("/workspaces")
 	{
-		workspaces.POST("", handler.CreateWorkspace)
-		workspaces.GET("", handler.ListWorkspaces)
-		workspaces.GET("/:id", handler.GetWorkspaceByID)
-		workspaces.PUT("/:id", handler.UpdateWorkspace)
-		workspaces.DELETE("/:id", handler.DeleteWorkspace)
+		workspaces.Use(authorizer.RequireAuthentication())
+
+		adminAndProfessorWorkspaces := workspaces.Group("")
+		adminAndProfessorWorkspaces.Use(authorizer.RequireRoles(usersDomain.RoleAdmin, usersDomain.RoleProfessor))
+		adminAndProfessorWorkspaces.POST("", handler.CreateWorkspace)
+		adminAndProfessorWorkspaces.GET("", handler.ListWorkspaces)
+		adminAndProfessorWorkspaces.GET("/:id", handler.GetWorkspaceByID)
+		adminAndProfessorWorkspaces.PUT("/:id", handler.UpdateWorkspace)
+		adminAndProfessorWorkspaces.DELETE("/:id", handler.DeleteWorkspace)
 	}
 }

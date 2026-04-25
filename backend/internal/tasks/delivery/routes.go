@@ -4,11 +4,17 @@ import (
 	assignmentsInfrastructure "backend/internal/assignments/infrastructure"
 	"backend/internal/tasks/application"
 	"backend/internal/tasks/infrastructure"
+	usersDomain "backend/internal/users/domain"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(r gin.IRouter) {
+type RouteAuthorizer interface {
+	RequireAuthentication() gin.HandlerFunc
+	RequireRoles(...usersDomain.UserRole) gin.HandlerFunc
+}
+
+func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 	repo := infrastructure.NewTaskRepository()
 	if err := repo.AutoMigrate(); err != nil {
 		panic(err)
@@ -27,10 +33,14 @@ func SetupRoutes(r gin.IRouter) {
 
 	tasks := r.Group("/tasks")
 	{
-		tasks.POST("", handler.CreateTask)
-		tasks.GET("", handler.ListTasks)
-		tasks.GET("/:id", handler.GetTaskByID)
-		tasks.PUT("/:id", handler.UpdateTask)
-		tasks.DELETE("/:id", handler.DeleteTask)
+		tasks.Use(authorizer.RequireAuthentication())
+
+		taskOperators := tasks.Group("")
+		taskOperators.Use(authorizer.RequireRoles(usersDomain.RoleMonitor, usersDomain.RoleAssistant, usersDomain.RoleProfessor, usersDomain.RoleAdmin))
+		taskOperators.POST("", handler.CreateTask)
+		taskOperators.GET("", handler.ListTasks)
+		taskOperators.GET("/:id", handler.GetTaskByID)
+		taskOperators.PUT("/:id", handler.UpdateTask)
+		taskOperators.DELETE("/:id", handler.DeleteTask)
 	}
 }

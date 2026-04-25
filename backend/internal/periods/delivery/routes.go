@@ -3,13 +3,19 @@ package delivery
 import (
 	"backend/internal/periods/application"
 	"backend/internal/periods/infrastructure"
+	usersDomain "backend/internal/users/domain"
 	weeksApplication "backend/internal/weeks/application"
 	weeksInfrastructure "backend/internal/weeks/infrastructure"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(r gin.IRouter) {
+type RouteAuthorizer interface {
+	RequireAuthentication() gin.HandlerFunc
+	RequireRoles(...usersDomain.UserRole) gin.HandlerFunc
+}
+
+func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 	repo := infrastructure.NewPeriodRepository()
 	repo.AutoMigrate()
 	weeksRepo := weeksInfrastructure.NewWeekRepository()
@@ -24,11 +30,15 @@ func SetupRoutes(r gin.IRouter) {
 	handler := NewPeriodHandler(createPeriod, listPeriods, listPeriodsByState, getPeriodByID, updatePeriod, closePeriod)
 	periods := r.Group("/periods")
 	{
-		periods.POST("", handler.CreatePeriod)
-		periods.GET("", handler.ListPeriods)
-		periods.GET("/:id", handler.GetPeriodByID)
-		periods.PUT("/:id", handler.UpdatePeriod)
-		periods.PATCH("/:id/close", handler.ClosePeriod)
+		periods.Use(authorizer.RequireAuthentication())
+
+		adminPeriods := periods.Group("")
+		adminPeriods.Use(authorizer.RequireRoles(usersDomain.RoleAdmin))
+		adminPeriods.POST("", handler.CreatePeriod)
+		adminPeriods.GET("", handler.ListPeriods)
+		adminPeriods.GET("/:id", handler.GetPeriodByID)
+		adminPeriods.PUT("/:id", handler.UpdatePeriod)
+		adminPeriods.PATCH("/:id/close", handler.ClosePeriod)
 	}
 }
 // merge a develop
