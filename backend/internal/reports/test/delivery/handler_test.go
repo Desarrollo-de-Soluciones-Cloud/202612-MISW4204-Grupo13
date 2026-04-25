@@ -8,6 +8,7 @@ import (
 	periodsInfrastructure "backend/internal/periods/infrastructure"
 	reportsApplication "backend/internal/reports/application"
 	reportsDelivery "backend/internal/reports/delivery"
+	reportsDomain "backend/internal/reports/domain"
 	reportsInfrastructure "backend/internal/reports/infrastructure"
 	"backend/internal/shared/database"
 	tasksDomain "backend/internal/tasks/domain"
@@ -20,6 +21,7 @@ import (
 	workspacesInfrastructure "backend/internal/workspaces/infrastructure"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -35,6 +37,9 @@ const (
 	workspaceInitialDate      = "2027-01-04"
 	workspaceFinalDate        = "2027-04-25"
 	reportsWeeklyPath         = "/reports/weekly"
+	reportsListPath           = "/reports"
+	reportsDownloadRoutePath  = "/reports/:id/download"
+	reportsDownloadPathFormat = "/reports/%d/download"
 	contentTypeHeader         = "Content-Type"
 	applicationJSON           = "application/json"
 	expectedStatusErrorFormat = "expected status %d, got %d (body: %s)"
@@ -249,7 +254,7 @@ func TestDownloadNonExistentReportReturnsNotFound(t *testing.T) {
 
 	router := gin.New()
 	router.Use(withReportCurrentUser(authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin}))
-	router.GET("/reports/:id/download", handler.DownloadReport)
+	router.GET(reportsDownloadRoutePath, handler.DownloadReport)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/reports/999/download", nil)
@@ -258,4 +263,110 @@ func TestDownloadNonExistentReportReturnsNotFound(t *testing.T) {
 	if w.Code != http.StatusNotFound {
 		t.Fatalf(expectedStatusErrorFormat, http.StatusNotFound, w.Code, w.Body.String())
 	}
+}
+
+func TestListReportsFiltersByWorkspaceAndWeek(t *testing.T) {
+	handler := setupReportHandlerForDeliveryTests(t)
+
+	router := gin.New()
+	router.Use(withReportCurrentUser(authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin}))
+	router.POST(reportsWeeklyPath, handler.GenerateWeeklyReports)
+	router.GET(reportsListPath, handler.ListReports)
+
+	generatedReportID := generateWeeklyReportAndGetFirstReportID(t, router, 1, 1)
+
+	manualReport, err := reportsDomain.NewWeeklyReport(2, 2, 2, 100, "otro resumen", filepath.Join(t.TempDir(), "manual-report.pdf"))
+	if err != nil {
+		t.Fatalf("expected manual report entity, got %v", err)
+	}
+	reportRepo := reportsInfrastructure.NewReportRepository()
+	if err := reportRepo.Create(manualReport); err != nil {
+		t.Fatalf("expected manual report save, got %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/reports?workspace_id=1&week_id=1", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf(expectedStatusErrorFormat, http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var response reportsDelivery.ListReportsResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("expected list response json, got %v", err)
+	}
+	if len(response.Reports) != 1 {
+		t.Fatalf("expected 1 filtered report, got %d", len(response.Reports))
+	}
+	if response.Reports[0].ID != generatedReportID {
+		t.Fatalf("expected report id %d, got %d", generatedReportID, response.Reports[0].ID)
+	}
+}
+
+func TestDownloadExistingReportReturnsOK(t *testing.T) {
+	handler := setupReportHandlerForDeliveryTests(t)
+
+	router := gin.New()
+	router.Use(withReportCurrentUser(authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin}))
+	router.POST(reportsWeeklyPath, handler.GenerateWeeklyReports)
+	router.GET(reportsDownloadRoutePath, handler.DownloadReport)
+
+	reportID := generateWeeklyReportAndGetFirstReportID(t, router, 1, 1)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf(reportsDownloadPathFormat, reportID), nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf(expectedStatusErrorFormat, http.StatusOK, w.Code, w.Body.String())
+	}
+}
+
+func TestProfessorCannotDownloadReportFromForeignWorkspace(t *testing.T) {
+	handler := setupReportHandlerForDeliveryTests(t)
+
+	adminRouter := gin.New()
+	adminRouter.Use(withReportCurrentUser(authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin}))
+	adminRouter.POST(reportsWeeklyPath, handler.GenerateWeeklyReports)
+
+	reportID := generateWeeklyReportAndGetFirstReportID(t, adminRouter, 1, 1)
+
+	professorRouter := gin.New()
+	professorRouter.Use(withReportCurrentUser(authDomain.AuthenticatedUser{ID: 11, GlobalRole: usersDomain.RoleProfessor}))
+	professorRouter.GET(reportsDownloadRoutePath, handler.DownloadReport)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf(reportsDownloadPathFormat, reportID), nil)
+	professorRouter.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf(expectedStatusErrorFormat, http.StatusForbidden, w.Code, w.Body.String())
+	}
+}
+
+func generateWeeklyReportAndGetFirstReportID(t *testing.T, router *gin.Engine, workspaceID, weekID uint) uint {
+	t.Helper()
+
+	body := map[string]any{"workspace_id": workspaceID, "week_id": weekID}
+	bodyJSON, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, reportsWeeklyPath, bytes.NewBuffer(bodyJSON))
+	req.Header.Set(contentTypeHeader, applicationJSON)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf(expectedStatusErrorFormat, http.StatusCreated, w.Code, w.Body.String())
+	}
+
+	var response reportsDelivery.GenerateWeeklyReportsResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("expected generate response json, got %v", err)
+	}
+	if len(response.Reports) == 0 {
+		t.Fatal("expected at least one generated report")
+	}
+
+	return response.Reports[0].ID
 }
