@@ -45,6 +45,5 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 		adminAndProfessorWorkspaces.GET("/:id", handler.GetWorkspaceByID)
 		adminAndProfessorWorkspaces.PUT("/:id", handler.UpdateWorkspace)
 		adminAndProfessorWorkspaces.PATCH("/:id/close", handler.CloseWorkspace)
-		adminAndProfessorWorkspaces.DELETE("/:id", handler.DeleteWorkspace)
 	}
 }

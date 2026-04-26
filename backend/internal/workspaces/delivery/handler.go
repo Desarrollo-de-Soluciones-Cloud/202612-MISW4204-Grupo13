@@ -116,9 +116,31 @@ func (h *WorkspaceHandler) ListWorkspaces(c *gin.Context) {
 		return
 	}
 
+	// Check for user_id filter
+	userIDQuery := c.Query("user_id")
+	if userIDQuery != "" {
+		// Professors cannot filter by a different user_id
+		if currentUser.GlobalRole == usersDomain.RoleProfessor {
+			requestedUserID, err := sharedHelpers.ParseResourceID(userIDQuery)
+			if err != nil {
+				sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+				return
+			}
+			if requestedUserID != currentUser.ID {
+				sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+				return
+			}
+		}
+		// Admin can filter by any user_id - this will be handled in filtering below
+	}
+
+	// Get type and state filters
+	typeFilter := c.Query("type")
+	stateFilter := c.Query("state")
+
 	periodID := c.Query("period_id")
 	if periodID != "" {
-		h.listWorkspacesByPeriodHandler(c, currentUser, periodID)
+		h.listWorkspacesByPeriodHandler(c, currentUser, periodID, userIDQuery, typeFilter, stateFilter)
 		return
 	}
 
@@ -128,9 +150,41 @@ func (h *WorkspaceHandler) ListWorkspaces(c *gin.Context) {
 		return
 	}
 
+	var requestedUserID uint
+	if userIDQuery != "" {
+		var err error
+		requestedUserID, err = sharedHelpers.ParseResourceID(userIDQuery)
+		if err != nil {
+			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+			return
+		}
+	}
+
 	workspaces := make([]WorkspaceResponse, 0, len(output.Workspaces))
 	for _, w := range output.Workspaces {
 		if !canAccessWorkspace(currentUser.GlobalRole, currentUser.ID, w.UserID) {
+			continue
+		}
+
+		// Apply user_id filter if provided
+		if requestedUserID > 0 && w.UserID != requestedUserID {
+			continue
+		}
+
+		// For professors without explicit user_id filter, only show their own workspaces
+		if currentUser.GlobalRole == usersDomain.RoleProfessor && requestedUserID == 0 {
+			if w.UserID != currentUser.ID {
+				continue
+			}
+		}
+
+		// Apply type filter if provided
+		if typeFilter != "" && w.Type != typeFilter {
+			continue
+		}
+
+		// Apply state filter if provided
+		if stateFilter != "" && w.State != stateFilter {
 			continue
 		}
 
@@ -150,7 +204,7 @@ func (h *WorkspaceHandler) ListWorkspaces(c *gin.Context) {
 	c.JSON(http.StatusOK, ListWorkspacesResponse{Workspaces: workspaces})
 }
 
-func (h *WorkspaceHandler) listWorkspacesByPeriodHandler(c *gin.Context, currentUser authDomain.AuthenticatedUser, rawPeriodID string) {
+func (h *WorkspaceHandler) listWorkspacesByPeriodHandler(c *gin.Context, currentUser authDomain.AuthenticatedUser, rawPeriodID string, userIDQuery string, typeFilter string, stateFilter string) {
 	periodID, err := sharedHelpers.ParseResourceID(rawPeriodID)
 	if err != nil {
 		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
@@ -165,9 +219,41 @@ func (h *WorkspaceHandler) listWorkspacesByPeriodHandler(c *gin.Context, current
 		return
 	}
 
+	var requestedUserID uint
+	if userIDQuery != "" {
+		var err error
+		requestedUserID, err = sharedHelpers.ParseResourceID(userIDQuery)
+		if err != nil {
+			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+			return
+		}
+	}
+
 	workspaces := make([]WorkspaceResponse, 0, len(output.Workspaces))
 	for _, w := range output.Workspaces {
 		if !canAccessWorkspace(currentUser.GlobalRole, currentUser.ID, w.UserID) {
+			continue
+		}
+
+		// Apply user_id filter if provided
+		if requestedUserID > 0 && w.UserID != requestedUserID {
+			continue
+		}
+
+		// For professors without explicit user_id filter, only show their own workspaces
+		if currentUser.GlobalRole == usersDomain.RoleProfessor && requestedUserID == 0 {
+			if w.UserID != currentUser.ID {
+				continue
+			}
+		}
+
+		// Apply type filter if provided
+		if typeFilter != "" && w.Type != typeFilter {
+			continue
+		}
+
+		// Apply state filter if provided
+		if stateFilter != "" && w.State != stateFilter {
 			continue
 		}
 

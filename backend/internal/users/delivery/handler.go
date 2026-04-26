@@ -65,10 +65,9 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, CreateUserResponse{
-		ID:         output.ID,
-		Name:       output.Name,
-		Email:      output.Email,
-		GlobalRole: string(output.GlobalRole),
+		ID:    output.ID,
+		Name:  output.Name,
+		Email: output.Email,
 	})
 }
 
@@ -103,10 +102,9 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	users := make([]UserResponse, len(output.Users))
 	for i, u := range output.Users {
 		users[i] = UserResponse{
-			ID:         u.ID,
-			Name:       u.Name,
-			Email:      u.Email,
-			GlobalRole: string(u.GlobalRole),
+			ID:    u.ID,
+			Name:  u.Name,
+			Email: u.Email,
 		}
 	}
 	c.JSON(http.StatusOK, ListUsersResponse{Users: users})
@@ -129,10 +127,9 @@ func (h *UserHandler) ListUsersByRole(c *gin.Context, rawRole string) {
 	users := make([]UserResponse, len(output.Users))
 	for i, u := range output.Users {
 		users[i] = UserResponse{
-			ID:         u.ID,
-			Name:       u.Name,
-			Email:      u.Email,
-			GlobalRole: string(u.GlobalRole),
+			ID:    u.ID,
+			Name:  u.Name,
+			Email: u.Email,
 		}
 	}
 
@@ -158,10 +155,9 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, UserResponse{
-		ID:         output.ID,
-		Name:       output.Name,
-		Email:      output.Email,
-		GlobalRole: string(output.GlobalRole),
+		ID:    output.ID,
+		Name:  output.Name,
+		Email: output.Email,
 	})
 }
 
@@ -199,10 +195,9 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, UserResponse{
-		ID:         output.ID,
-		Name:       output.Name,
-		Email:      output.Email,
-		GlobalRole: string(output.GlobalRole),
+		ID:    output.ID,
+		Name:  output.Name,
+		Email: output.Email,
 	})
 }
 
@@ -236,10 +231,9 @@ func (h *UserHandler) ChangeUserRole(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, UserResponse{
-		ID:         output.ID,
-		Name:       output.Name,
-		Email:      output.Email,
-		GlobalRole: string(output.GlobalRole),
+		ID:    output.ID,
+		Name:  output.Name,
+		Email: output.Email,
 	})
 }
 
