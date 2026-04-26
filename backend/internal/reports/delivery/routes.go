@@ -46,6 +46,7 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer, cfg *sharedConfig.Co
 		weekRepo,
 		assignmentReader,
 		taskReader,
+		userRepo,
 		pdfGenerator,
 		aiReportGenerator,
 		nil,

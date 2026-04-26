@@ -6,6 +6,7 @@ import (
 	assignmentsDomain "backend/internal/assignments/domain"
 	reportsDomain "backend/internal/reports/domain"
 	tasksDomain "backend/internal/tasks/domain"
+	usersDomain "backend/internal/users/domain"
 	weeksDomain "backend/internal/weeks/domain"
 	workspacesDomain "backend/internal/workspaces/domain"
 )
@@ -16,6 +17,10 @@ type WorkspaceReader interface {
 
 type WeekReader interface {
 	FindByID(id uint) (*weeksDomain.Week, error)
+}
+
+type UserReader interface {
+	FindByID(id uint) (*usersDomain.User, error)
 }
 
 type AssignmentReader interface {
@@ -35,16 +40,18 @@ type AIReportGenerator interface {
 }
 
 type AIWeeklyReportInput struct {
-	WorkspaceID  uint
-	WeekID       uint
-	WeekNumber   int
-	InitialDate  string
-	FinalDate    string
-	AssignmentID uint
-	UserID       uint
-	Role         string
-	TotalHours   int
-	Tasks        []AIWeeklyReportTask
+	WorkspaceID   uint
+	WorkspaceName string
+	WeekID        uint
+	WeekNumber    int
+	InitialDate   string
+	FinalDate     string
+	AssignmentID  uint
+	UserID        uint
+	UserName      string
+	Role          string
+	TotalHours    int
+	Tasks         []AIWeeklyReportTask
 }
 
 type AIWeeklyReportTask struct {

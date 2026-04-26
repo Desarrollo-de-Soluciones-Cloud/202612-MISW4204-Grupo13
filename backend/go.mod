@@ -5,6 +5,7 @@ go 1.26.2
 require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-playground/validator/v10 v10.30.1
+	github.com/jung-kurt/gofpdf v1.16.2
 	golang.org/x/crypto v0.48.0
 	google.golang.org/genai v1.54.0
 	gorm.io/driver/postgres v1.6.0

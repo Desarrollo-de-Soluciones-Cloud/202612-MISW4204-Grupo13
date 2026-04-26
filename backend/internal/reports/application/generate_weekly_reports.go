@@ -4,7 +4,9 @@ import (
 	assignmentsDomain "backend/internal/assignments/domain"
 	reportsDomain "backend/internal/reports/domain"
 	tasksDomain "backend/internal/tasks/domain"
+	usersDomain "backend/internal/users/domain"
 	weeksDomain "backend/internal/weeks/domain"
+	workspacesDomain "backend/internal/workspaces/domain"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,6 +20,7 @@ type GenerateWeeklyReports struct {
 	weekReader        WeekReader
 	assignmentReader  AssignmentReader
 	taskReader        TaskReader
+	userReader        UserReader
 	pdfGenerator      PDFGenerator
 	aiReportGenerator AIReportGenerator
 	reportsStorageDir string
@@ -44,6 +47,7 @@ func NewGenerateWeeklyReports(
 	weekReader WeekReader,
 	assignmentReader AssignmentReader,
 	taskReader TaskReader,
+	userReader UserReader,
 	pdfGenerator PDFGenerator,
 	aiReportGenerator AIReportGenerator,
 	options *GenerateWeeklyReportsOptions,
@@ -70,6 +74,7 @@ func NewGenerateWeeklyReports(
 		weekReader:        weekReader,
 		assignmentReader:  assignmentReader,
 		taskReader:        taskReader,
+		userReader:        userReader,
 		pdfGenerator:      pdfGenerator,
 		aiReportGenerator: aiReportGenerator,
 		reportsStorageDir: reportsStorageDir,
@@ -82,12 +87,12 @@ func (uc *GenerateWeeklyReports) Execute(input GenerateWeeklyReportsInput) (*Gen
 		return nil, err
 	}
 
-	week, err := uc.resolveGenerationReferences(input)
+	workspace, week, err := uc.resolveGenerationReferences(input)
 	if err != nil {
 		return nil, err
 	}
 
-	outputs, err := uc.generateReportsForAssignments(input, week)
+	outputs, err := uc.generateReportsForAssignments(input, workspace, week)
 	if err != nil {
 		return nil, err
 	}
@@ -107,20 +112,27 @@ func validateGenerateWeeklyReportsInput(input GenerateWeeklyReportsInput) error 
 	return nil
 }
 
-func (uc *GenerateWeeklyReports) resolveGenerationReferences(input GenerateWeeklyReportsInput) (*weeksDomain.Week, error) {
-	if _, err := uc.workspaceReader.FindByID(input.WorkspaceID); err != nil {
-		return nil, reportsDomain.ErrReportWorkspaceNotFound
+func (uc *GenerateWeeklyReports) resolveGenerationReferences(
+	input GenerateWeeklyReportsInput,
+) (*workspacesDomain.Workspace, *weeksDomain.Week, error) {
+	workspace, err := uc.workspaceReader.FindByID(input.WorkspaceID)
+	if err != nil {
+		return nil, nil, reportsDomain.ErrReportWorkspaceNotFound
 	}
 
 	week, err := uc.weekReader.FindByID(input.WeekID)
 	if err != nil {
-		return nil, reportsDomain.ErrReportWeekNotFound
+		return nil, nil, reportsDomain.ErrReportWeekNotFound
 	}
 
-	return week, nil
+	return workspace, week, nil
 }
 
-func (uc *GenerateWeeklyReports) generateReportsForAssignments(input GenerateWeeklyReportsInput, week *weeksDomain.Week) ([]ReportOutput, error) {
+func (uc *GenerateWeeklyReports) generateReportsForAssignments(
+	input GenerateWeeklyReportsInput,
+	workspace *workspacesDomain.Workspace,
+	week *weeksDomain.Week,
+) ([]ReportOutput, error) {
 	assignments, err := uc.assignmentReader.FindAllByWorkspaceID(input.WorkspaceID)
 	if err != nil {
 		return nil, err
@@ -152,7 +164,14 @@ func (uc *GenerateWeeklyReports) generateReportsForAssignments(input GenerateWee
 			continue
 		}
 
-		output, err := uc.generateReportForAssignment(input, week, assignment, filteredTasks, totalHours)
+		output, err := uc.generateReportForAssignment(
+			input,
+			workspace,
+			week,
+			assignment,
+			filteredTasks,
+			totalHours,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -185,22 +204,28 @@ func isReportableAssignmentRole(role assignmentsDomain.AssignmentRole) bool {
 
 func (uc *GenerateWeeklyReports) generateReportForAssignment(
 	input GenerateWeeklyReportsInput,
+	workspace *workspacesDomain.Workspace,
 	week *weeksDomain.Week,
 	assignment assignmentsDomain.Assignment,
 	filteredTasks []tasksDomain.Task,
 	totalHours int,
 ) (ReportOutput, error) {
+	user, err := uc.userReader.FindByID(assignment.UserID)
+	if err != nil {
+		return ReportOutput{}, reportsDomain.ErrReportUserNotFound
+	}
+
 	aiReport, err := uc.aiReportGenerator.GenerateWeeklyReport(
-		buildAIWeeklyReportInput(input, week, assignment, filteredTasks, totalHours),
+		buildAIWeeklyReportInput(input, workspace, week, assignment, user, filteredTasks, totalHours),
 	)
 	if err != nil || strings.TrimSpace(aiReport) == "" {
 		return ReportOutput{}, reportsDomain.ErrReportAIGenerationFailed
 	}
 
-	filePath := uc.buildFilePath(input.WorkspaceID, input.WeekID, assignment.ID, assignment.UserID)
+	filePath := uc.buildFilePath(input.WorkspaceID, input.WeekID, assignment.ID)
 
-	title := fmt.Sprintf("Reporte semanal IA - Workspace %d - Semana %d", input.WorkspaceID, week.Number)
-	lines := buildPDFLines(assignment, week, filteredTasks, totalHours, aiReport)
+	title := "Reporte generado por IA"
+	lines := buildPDFLines(workspace, user, assignment, week, filteredTasks, totalHours, aiReport)
 
 	if err := uc.pdfGenerator.Generate(filePath, title, lines); err != nil {
 		return ReportOutput{}, reportsDomain.ErrReportPDFGenerationFailed
@@ -220,8 +245,10 @@ func (uc *GenerateWeeklyReports) generateReportForAssignment(
 
 func buildAIWeeklyReportInput(
 	input GenerateWeeklyReportsInput,
+	workspace *workspacesDomain.Workspace,
 	week *weeksDomain.Week,
 	assignment assignmentsDomain.Assignment,
+	user *usersDomain.User,
 	tasks []tasksDomain.Task,
 	totalHours int,
 ) AIWeeklyReportInput {
@@ -239,27 +266,27 @@ func buildAIWeeklyReportInput(
 	}
 
 	return AIWeeklyReportInput{
-		WorkspaceID:  input.WorkspaceID,
-		WeekID:       input.WeekID,
-		WeekNumber:   week.Number,
-		InitialDate:  week.InitialDate,
-		FinalDate:    week.FinalDate,
-		AssignmentID: assignment.ID,
-		UserID:       assignment.UserID,
-		Role:         string(assignment.Role),
-		TotalHours:   totalHours,
-		Tasks:        aiTasks,
+		WorkspaceID:   input.WorkspaceID,
+		WorkspaceName: workspace.Name,
+		WeekID:        input.WeekID,
+		WeekNumber:    week.Number,
+		InitialDate:   week.InitialDate,
+		FinalDate:     week.FinalDate,
+		AssignmentID:  assignment.ID,
+		UserID:        assignment.UserID,
+		UserName:      user.Name,
+		Role:          string(assignment.Role),
+		TotalHours:    totalHours,
+		Tasks:         aiTasks,
 	}
 }
 
-func (uc *GenerateWeeklyReports) buildFilePath(workspaceID, weekID, assignmentID, userID uint) string {
+func (uc *GenerateWeeklyReports) buildFilePath(workspaceID, weekID, assignmentID uint) string {
 	fileName := fmt.Sprintf(
-		"workspace_%d_week_%d_assignment_%d_user_%d_%d.pdf",
+		"workspace_%d_week_%d_assignment_%d.pdf",
 		workspaceID,
 		weekID,
 		assignmentID,
-		userID,
-		uc.now().UnixNano(),
 	)
 
 	return filepath.Join(uc.reportsStorageDir, fileName)
@@ -285,6 +312,8 @@ func collectTasksForAssignment(
 }
 
 func buildPDFLines(
+	workspace *workspacesDomain.Workspace,
+	user *usersDomain.User,
 	assignment assignmentsDomain.Assignment,
 	week *weeksDomain.Week,
 	tasks []tasksDomain.Task,
@@ -292,29 +321,30 @@ func buildPDFLines(
 	aiReport string,
 ) []string {
 	lines := []string{
-		fmt.Sprintf("Usuario asignado: %d", assignment.UserID),
+		fmt.Sprintf("Workspace: %s", workspace.Name),
+		fmt.Sprintf("Monitor/Asistente: %s", user.Name),
 		fmt.Sprintf("Rol: %s", assignment.Role),
 		fmt.Sprintf("Semana: %d (%s a %s)", week.Number, week.InitialDate, week.FinalDate),
 		fmt.Sprintf("Horas reportadas: %d", totalHours),
 		"",
-		"Reporte generado por IA:",
+		"Síntesis generada por IA:",
 	}
 
 	lines = append(lines, splitTextIntoPDFLines(aiReport)...)
 
 	lines = append(lines,
 		"",
-		"Detalle de tareas usadas como insumo:",
+		"Tareas reportadas:",
 	)
 
 	for _, task := range tasks {
 		lines = append(lines,
 			fmt.Sprintf("- %s | estado=%s | horas=%d", task.Title, task.Status, task.SpentHours),
-			fmt.Sprintf("  descripcion: %s", task.Description),
+			fmt.Sprintf("descripcion: %s", task.Description),
 		)
 
 		if strings.TrimSpace(task.Observations) != "" {
-			lines = append(lines, fmt.Sprintf("  observaciones: %s", task.Observations))
+			lines = append(lines, fmt.Sprintf("observaciones: %s", task.Observations))
 		}
 	}
 

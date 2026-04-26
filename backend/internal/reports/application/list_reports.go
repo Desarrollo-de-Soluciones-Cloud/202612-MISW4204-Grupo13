@@ -1,16 +1,9 @@
 package application
 
-import (
-	reportsDomain "backend/internal/reports/domain"
-	usersDomain "backend/internal/users/domain"
-)
-
-type UserReader interface {
-	FindByID(id uint) (*usersDomain.User, error)
-}
+import reportsDomain "backend/internal/reports/domain"
 
 type ListReports struct {
-	reportRepo      reportsDomain.ReportRepository
+	reportRepo       reportsDomain.ReportRepository
 	workspaceReader WorkspaceReader
 	weekReader      WeekReader
 	userReader      UserReader

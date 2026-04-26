@@ -1,7 +1,5 @@
 package delivery
 
-import "time"
-
 type GenerateWeeklyReportsRequest struct {
 	WorkspaceID uint `json:"workspace_id" binding:"required"`
 	WeekID      uint `json:"week_id" binding:"required"`

@@ -63,8 +63,8 @@ func (g *VertexAIReportGenerator) GenerateWeeklyReport(input reportsApplication.
 		g.model,
 		genai.Text(prompt),
 		&genai.GenerateContentConfig{
-			Temperature:     genai.Ptr(float32(0.2)),
-			MaxOutputTokens: 180,
+			Temperature:     genai.Ptr(float32(0.25)),
+			MaxOutputTokens: 220,
 		},
 	)
 	if err != nil {
@@ -81,21 +81,26 @@ func (g *VertexAIReportGenerator) GenerateWeeklyReport(input reportsApplication.
 
 func buildWeeklyReportPrompt(inputJSON string) string {
 	return fmt.Sprintf(`
-Eres un asistente académico que genera reportes semanales breves para profesores.
+Eres un asistente académico que redacta reportes semanales breves para profesores universitarios.
+
+A partir del JSON, redacta una síntesis clara, natural y útil. No copies literalmente cada campo; transforma la información en un reporte ejecutivo breve.
 
 Reglas:
 - Usa únicamente la información del JSON.
-- No inventes nombres, tareas, fechas, horas ni observaciones.
-- No califiques el desempeño.
-- Escribe en español.
-- Máximo 120 palabras.
-- Entrega solo el texto final del reporte.
+- No inventes nombres, fechas, tareas, horas ni resultados.
+- No califiques el desempeño con juicios exagerados.
+- No uses Markdown, asteriscos, listas, encabezados ni títulos.
+- Escribe en español formal y natural.
+- Máximo 130 palabras.
+- Entrega solo el cuerpo del reporte.
 
-Incluye:
-1. Actividades realizadas.
-2. Horas reportadas.
-3. Observaciones relevantes.
-4. Recomendación breve de seguimiento.
+El texto debe mencionar de forma natural:
+- El monitor o asistente.
+- El workspace.
+- El tipo de actividades realizadas.
+- Las horas reportadas.
+- Observaciones o pendientes relevantes.
+- Una recomendación breve de seguimiento para el profesor.
 
 JSON:
 %s
