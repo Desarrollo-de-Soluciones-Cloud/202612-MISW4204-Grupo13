@@ -4,11 +4,11 @@ type CreateWorkspaceRequest struct {
 	PeriodID     uint   `json:"period_id" binding:"required"`
 	UserID       uint   `json:"user_id" binding:"required"`
 	Name         string `json:"name" binding:"required"`
-	Type         string `json:"type" binding:"required"`
+	Type         string `json:"type" binding:"required,oneof=course project"`
 	InitialDate  string `json:"initial_date" binding:"required"`
 	FinalDate    string `json:"final_date" binding:"required"`
 	Observations string `json:"observations" binding:"required"`
-	State        string `json:"state" binding:"required"`
+	State        string `json:"state" binding:"required,oneof=active closed"`
 }
 
 type CreateWorkspaceResponse struct {
@@ -25,12 +25,13 @@ type CreateWorkspaceResponse struct {
 
 type UpdateWorkspaceRequest struct {
 	PeriodID     uint   `json:"period_id"`
+	UserID       uint   `json:"user_id"`
 	Name         string `json:"name" binding:"required"`
-	Type         string `json:"type" binding:"required"`
+	Type         string `json:"type" binding:"required,oneof=course project"`
 	InitialDate  string `json:"initial_date" binding:"required"`
 	FinalDate    string `json:"final_date" binding:"required"`
 	Observations string `json:"observations" binding:"required"`
-	State        string `json:"state" binding:"required"`
+	State        string `json:"state" binding:"required,oneof=active closed"`
 }
 
 type ListWorkspacesResponse struct {

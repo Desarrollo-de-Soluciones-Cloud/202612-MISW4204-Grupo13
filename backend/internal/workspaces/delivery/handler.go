@@ -86,7 +86,7 @@ func (h *WorkspaceHandler) CreateWorkspace(c *gin.Context) {
 		switch {
 		case errors.Is(err, domain.ErrWorkspacePeriodNotFound), errors.Is(err, domain.ErrWorkspaceUserNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
-		case errors.Is(err, domain.ErrWorkspacePeriodClosed), errors.Is(err, domain.ErrWorkspaceInscriptionClosed):
+		case errors.Is(err, domain.ErrWorkspacePeriodClosed), errors.Is(err, domain.ErrWorkspaceInscriptionClosed), errors.Is(err, domain.ErrWorkspaceInitialDateOutOfRange), errors.Is(err, domain.ErrWorkspaceFinalDateOutOfRange):
 			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
 		case isWorkspaceValidationError(err):
 			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
@@ -265,6 +265,7 @@ func (h *WorkspaceHandler) UpdateWorkspace(c *gin.Context) {
 	output, err := h.updateWorkspace.Execute(application.UpdateWorkspaceInput{
 		ID:           id,
 		PeriodID:     req.PeriodID,
+		UserID:       req.UserID,
 		Name:         req.Name,
 		Type:         req.Type,
 		InitialDate:  req.InitialDate,
@@ -276,7 +277,7 @@ func (h *WorkspaceHandler) UpdateWorkspace(c *gin.Context) {
 		switch {
 		case errors.Is(err, domain.ErrWorkspaceNotFound), errors.Is(err, domain.ErrWorkspacePeriodNotFound), errors.Is(err, domain.ErrWorkspaceUserNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
-		case errors.Is(err, domain.ErrWorkspaceClosedUpdateForbidden):
+		case errors.Is(err, domain.ErrWorkspaceClosedUpdateForbidden), errors.Is(err, domain.ErrWorkspacePeriodClosed), errors.Is(err, domain.ErrWorkspaceInitialDateOutOfRange), errors.Is(err, domain.ErrWorkspaceFinalDateOutOfRange), errors.Is(err, domain.ErrWorkspaceUserIDChangeNotAllowed):
 			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
 		case isWorkspaceValidationError(err):
 			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
