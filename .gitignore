@@ -2,6 +2,12 @@
 .env
 .env.admin
 
+# Google Cloud credentials
+credentials/
+
+# Generated local files
+storage/
+
 # Go build
 bin/
 pkg/

@@ -13,6 +13,12 @@ func NewAssignmentReader() *AssignmentReader {
 
 func (r *AssignmentReader) FindAllByWorkspaceID(workspaceID uint) ([]assignmentsDomain.Assignment, error) {
 	var assignments []assignmentsDomain.Assignment
-	err := database.DB.Where("workspace_id = ?", workspaceID).Order("id asc").Find(&assignments).Error
+
+	err := database.DB.
+		Where("workspace_id = ?", workspaceID).
+		Order("id asc").
+		Find(&assignments).
+		Error
+
 	return assignments, err
 }

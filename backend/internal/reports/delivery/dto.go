@@ -6,14 +6,12 @@ type GenerateWeeklyReportsRequest struct {
 }
 
 type ReportResponse struct {
-	ID           uint   `json:"id"`
-	WorkspaceID  uint   `json:"workspace_id"`
-	WeekID       uint   `json:"week_id"`
-	AssignmentID uint   `json:"assignment_id"`
-	UserID       uint   `json:"user_id"`
-	Type         string `json:"type"`
-	Summary      string `json:"summary"`
-	FilePath     string `json:"file_path"`
+	ID           uint      `json:"id"`
+	WorkspaceID  uint      `json:"workspace_id"`
+	WeekID       uint      `json:"week_id"`
+	AssignmentID uint      `json:"assignment_id"`
+	UserID       uint      `json:"user_id"`
+	FilePath     string    `json:"file_path"`
 }
 
 type GenerateWeeklyReportsResponse struct {

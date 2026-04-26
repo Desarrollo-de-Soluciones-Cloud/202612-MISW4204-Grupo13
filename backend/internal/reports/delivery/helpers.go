@@ -2,9 +2,9 @@ package delivery
 
 import (
 	reportsDomain "backend/internal/reports/domain"
+	sharedHelpers "backend/internal/shared/helpers"
 	"encoding/json"
 	"errors"
-	"strconv"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -25,6 +25,7 @@ func mapValidationBindingErrors(err error) []error {
 	var validationErrors validator.ValidationErrors
 	if errors.As(err, &validationErrors) {
 		result := make([]error, 0, len(validationErrors))
+
 		errorByFieldAndTag := map[string]error{
 			"WorkspaceID:required": reportsDomain.ErrReportWorkspaceIDRequired,
 			"WeekID:required":      reportsDomain.ErrReportWeekIDRequired,
@@ -36,6 +37,7 @@ func mapValidationBindingErrors(err error) []error {
 				result = append(result, mapped)
 			}
 		}
+
 		if len(result) > 0 {
 			return result
 		}
@@ -47,27 +49,29 @@ func mapValidationBindingErrors(err error) []error {
 func mapUnmarshalBindingError(err error) []error {
 	var unmarshalTypeError *json.UnmarshalTypeError
 	if errors.As(err, &unmarshalTypeError) {
-		switch unmarshalTypeError.Field {
-		case "workspace_id", "WorkspaceID":
-			return []error{reportsDomain.ErrReportWorkspaceIDRequired}
-		case "week_id", "WeekID":
-			return []error{reportsDomain.ErrReportWeekIDRequired}
-		default:
-			return []error{reportsDomain.ErrReportInvalidInput}
-		}
+		return []error{reportsDomain.ErrReportInvalidInput}
 	}
 
 	return nil
 }
 
-func parseOptionalUint(value string) (*uint, error) {
-	if value == "" {
+func parseRequiredWorkspaceID(raw string) (uint, error) {
+	if raw == "" {
+		return 0, reportsDomain.ErrReportWorkspaceFilterRequired
+	}
+
+	return sharedHelpers.ParseResourceID(raw)
+}
+
+func parseOptionalResourceID(raw string) (*uint, error) {
+	if raw == "" {
 		return nil, nil
 	}
-	parsed, err := strconv.ParseUint(value, 10, 64)
+
+	id, err := sharedHelpers.ParseResourceID(raw)
 	if err != nil {
 		return nil, err
 	}
-	v := uint(parsed)
-	return &v, nil
+
+	return &id, nil
 }
