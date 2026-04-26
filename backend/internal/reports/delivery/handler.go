@@ -55,16 +55,6 @@ func (h *ReportHandler) GenerateWeeklyReports(c *gin.Context) {
 		return
 	}
 
-	if req.WorkspaceID == 0 {
-		sharedHelpers.RespondWithError(c, http.StatusBadRequest, reportsDomain.ErrReportWorkspaceIDRequired)
-		return
-	}
-
-	if req.WeekID == 0 {
-		sharedHelpers.RespondWithError(c, http.StatusBadRequest, reportsDomain.ErrReportWeekIDRequired)
-		return
-	}
-
 	workspace, err := h.workspaceReader.FindByID(req.WorkspaceID)
 	if err != nil {
 		sharedHelpers.RespondWithError(c, http.StatusNotFound, reportsDomain.ErrReportWorkspaceNotFound)
@@ -189,9 +179,7 @@ func (h *ReportHandler) DownloadReport(c *gin.Context) {
 
 func handleGenerateReportsError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, reportsDomain.ErrReportWorkspaceIDRequired),
-		errors.Is(err, reportsDomain.ErrReportWeekIDRequired),
-		errors.Is(err, reportsDomain.ErrReportInvalidInput),
+	case isReportValidationError(err),
 		errors.Is(err, reportsDomain.ErrReportNoAssignmentsFound),
 		errors.Is(err, reportsDomain.ErrReportNoTasksFoundForWeek):
 		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)

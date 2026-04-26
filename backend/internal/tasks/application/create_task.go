@@ -59,9 +59,7 @@ func (uc *CreateTask) Execute(input CreateTaskInput) (*TaskOutput, error) {
 	}
 
 	normalizedWeekStartDate := domain.NormalizeWeekStartDate(input.WeekStartDate)
-	if !domain.IsWeekActive(normalizedWeekStartDate, uc.now()) {
-		return nil, domain.ErrTaskWeekInactive
-	}
+
 	late := domain.IsWeekClosed(normalizedWeekStartDate, uc.now())
 
 	task, err := domain.NewTask(
