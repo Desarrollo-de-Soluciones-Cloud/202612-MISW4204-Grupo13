@@ -145,6 +145,7 @@ func (h *AssignmentHandler) CreateAssignment(c *gin.Context) {
 			errors.Is(err, domain.ErrAssignmentWorkspaceNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
 		case errors.Is(err, domain.ErrAssignmentWorkspaceClosed),
+			errors.Is(err, domain.ErrAssignmentPeriodClosed),
 			errors.Is(err, domain.ErrAssignmentAlreadyExists):
 			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
 		case isAssignmentValidationError(err):
@@ -271,6 +272,7 @@ func (h *AssignmentHandler) UpdateAssignment(c *gin.Context) {
 		case errors.Is(err, domain.ErrAssignmentNotFound):
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
 		case errors.Is(err, domain.ErrAssignmentWorkspaceClosed),
+			errors.Is(err, domain.ErrAssignmentPeriodClosed),
 			errors.Is(err, domain.ErrAssignmentAlreadyExists):
 			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
 		case isAssignmentValidationError(err):

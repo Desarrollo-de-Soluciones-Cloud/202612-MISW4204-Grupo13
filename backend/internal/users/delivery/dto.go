@@ -8,9 +8,10 @@ type CreateUserRequest struct {
 }
 
 type CreateUserResponse struct {
-	ID    uint   `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID         uint   `json:"id"`
+	Name       string `json:"name"`
+	Email      string `json:"email"`
+	GlobalRole string `json:"global_role"`
 }
 
 type UpdateUserRequest struct {
@@ -28,7 +29,8 @@ type ListUsersResponse struct {
 }
 
 type UserResponse struct {
-	ID    uint   `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID         uint   `json:"id"`
+	Name       string `json:"name"`
+	Email      string `json:"email"`
+	GlobalRole string `json:"global_role"`
 }
