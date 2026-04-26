@@ -14,8 +14,6 @@ type ReportResponse struct {
 	AssignmentID uint      `json:"assignment_id"`
 	UserID       uint      `json:"user_id"`
 	FilePath     string    `json:"file_path"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type GenerateWeeklyReportsResponse struct {

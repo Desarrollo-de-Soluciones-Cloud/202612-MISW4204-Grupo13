@@ -267,7 +267,5 @@ func toReportResponse(report reportsApplication.ReportOutput) ReportResponse {
 		AssignmentID: report.AssignmentID,
 		UserID:       report.UserID,
 		FilePath:     report.FilePath,
-		CreatedAt:    report.CreatedAt,
-		UpdatedAt:    report.UpdatedAt,
 	}
 }
