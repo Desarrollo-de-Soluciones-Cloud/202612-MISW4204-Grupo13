@@ -14,6 +14,10 @@ var (
 	ErrAssignmentUserNotFound         = errors.New("assignment user not found")
 	ErrAssignmentWorkspaceNotFound    = errors.New("assignment workspace not found")
 	ErrAssignmentWorkspaceClosed      = errors.New("assignment workspace is closed")
+	ErrAssignmentUserInvalidRole      = errors.New("assignment can only be created for users with role monitor or assistant")
+	ErrAssignmentRoleNotAllowedForUser = errors.New("assignment role is not allowed for this user global role")
+	ErrAssignmentProfessorCannotChangeWeeklyHours = errors.New("professor cannot change assignment weekly hours")
+	ErrAssignmentProfessorCannotUpdate = errors.New("professor can only update assignments in their own workspaces")
 
 	ErrAssignmentAssistantHoursLimitExceeded = errors.New("assistant weekly hours cannot exceed 22")
 	ErrAssignmentMonitorCountLimitExceeded   = errors.New("monitor assignments cannot exceed 3")

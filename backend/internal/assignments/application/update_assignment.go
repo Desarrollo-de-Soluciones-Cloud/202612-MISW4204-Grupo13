@@ -1,6 +1,10 @@
 package application
 
-import "backend/internal/assignments/domain"
+import (
+	"backend/internal/assignments/domain"
+	workspacesDomain "backend/internal/workspaces/domain"
+	"errors"
+)
 
 type UpdateAssignmentInput struct {
 	ID          uint
@@ -17,11 +21,37 @@ type UpdateAssignmentOutput struct {
 }
 
 type UpdateAssignment struct {
-	repository domain.AssignmentRepository
+	repository          domain.AssignmentRepository
+	workspaceRepository UpdateAssignmentWorkspaceRepository
+}
+
+type UpdateAssignmentWorkspaceRepository interface {
+	FindByID(id uint) (*workspacesDomain.Workspace, error)
 }
 
 func NewUpdateAssignment(repo domain.AssignmentRepository) *UpdateAssignment {
 	return &UpdateAssignment{repository: repo}
+}
+
+func (uc *UpdateAssignment) WithWorkspaceRepository(workspaceRepo UpdateAssignmentWorkspaceRepository) *UpdateAssignment {
+	uc.workspaceRepository = workspaceRepo
+	return uc
+}
+
+func (uc *UpdateAssignment) validateWorkspaceNotClosed(workspaceID uint) error {
+	if uc.workspaceRepository != nil {
+		workspace, err := uc.workspaceRepository.FindByID(workspaceID)
+		if err != nil {
+			if errors.Is(err, workspacesDomain.ErrWorkspaceNotFound) {
+				return domain.ErrAssignmentWorkspaceNotFound
+			}
+			return err
+		}
+		if workspace.State == workspacesDomain.ClosedState {
+			return domain.ErrAssignmentWorkspaceClosed
+		}
+	}
+	return nil
 }
 
 func (uc *UpdateAssignment) Execute(input UpdateAssignmentInput) (*UpdateAssignmentOutput, error) {
@@ -29,6 +59,11 @@ func (uc *UpdateAssignment) Execute(input UpdateAssignmentInput) (*UpdateAssignm
 	// TODO RF05: Revisar aplicacion de RF05 en futuras operaciones administrativas adicionales fuera de create/update.
 	assignment, err := uc.repository.FindByID(input.ID)
 	if err != nil {
+		return nil, err
+	}
+
+	// Validate workspace is not closed
+	if err := uc.validateWorkspaceNotClosed(assignment.WorkspaceID); err != nil {
 		return nil, err
 	}
 
