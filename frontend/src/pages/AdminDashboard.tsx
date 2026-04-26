@@ -5,6 +5,7 @@ import {
   createUser,
   createWorkspace,
   getMe,
+  listAssignmentsByUser,
   listPeriods,
   listReports,
   listTasks,
@@ -12,10 +13,13 @@ import {
   listWorkspaces,
   toErrorMessage,
 } from "../api/client";
-import type { GlobalRole, Period, Report, Task, User, Workspace } from "../api/types";
-import ErrorMessage from "../components/ErrorMessage";
+import type { Assignment, GlobalRole, Period, Report, Task, User, Workspace } from "../api/types";
+import EmptyState from "../components/EmptyState";
+import HelpText from "../components/HelpText";
 import Layout from "../components/Layout";
 import Loading from "../components/Loading";
+import Toast from "../components/Toast";
+import useToast from "../components/useToast";
 
 interface AdminDashboardProps {
   user: User;
@@ -27,11 +31,11 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
   const [users, setUsers] = useState<User[]>([]);
   const [periods, setPeriods] = useState<Period[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const { toast, showToast, clearToast } = useToast();
 
   const [userForm, setUserForm] = useState({
     name: "",
@@ -66,13 +70,14 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     () => users.filter((item) => item.global_role === "professor"),
     [users],
   );
-  const workerUsers = useMemo(() => {
-    return users.filter((item) => item.global_role === assignmentForm.role);
-  }, [users, assignmentForm.role]);
+
+  const assignableUsers = useMemo(
+    () => users.filter((item) => item.global_role === assignmentForm.role),
+    [users, assignmentForm.role],
+  );
 
   const loadAll = async () => {
     setLoading(true);
-    setError(null);
 
     try {
       const [meResult, usersResult, periodsResult, workspacesResult, tasksResult, reportsResult] =
@@ -85,24 +90,40 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
           listReports(),
         ]);
 
+      const usersForAssignments = usersResult.users.filter(
+        (item) => item.global_role === "monitor" || item.global_role === "assistant",
+      );
+      const assignmentResponses = await Promise.all(
+        usersForAssignments.map((item) => listAssignmentsByUser(item.id)),
+      );
+
+      const uniqueAssignments = new Map<number, Assignment>();
+      assignmentResponses
+        .flatMap((item) => item.assignments)
+        .forEach((item) => uniqueAssignments.set(item.id, item));
+
+      const localProfessorUsers = usersResult.users.filter((item) => item.global_role === "professor");
+
       setMe(meResult);
       setUsers(usersResult.users);
       setPeriods(periodsResult.periods);
       setWorkspaces(workspacesResult.workspaces);
+      setAssignments(Array.from(uniqueAssignments.values()));
       setTasks(tasksResult.tasks);
       setReports(reportsResult.reports);
 
       setWorkspaceForm((previous) => ({
         ...previous,
         period_id: previous.period_id || String(periodsResult.periods[0]?.id ?? ""),
-        user_id: previous.user_id || String(professorUsers[0]?.id ?? usersResult.users.find((u) => u.global_role === "professor")?.id ?? ""),
+        user_id: previous.user_id || String(localProfessorUsers[0]?.id ?? ""),
       }));
+
       setAssignmentForm((previous) => ({
         ...previous,
         workspace_id: previous.workspace_id || String(workspacesResult.workspaces[0]?.id ?? ""),
       }));
     } catch (err) {
-      setError(toErrorMessage(err));
+      showToast(toErrorMessage(err), "error");
     } finally {
       setLoading(false);
     }
@@ -115,26 +136,24 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
   useEffect(() => {
     setWorkspaceForm((previous) => ({
       ...previous,
-      user_id:
-        previous.user_id || String(professorUsers[0]?.id ?? ""),
+      user_id: previous.user_id || String(professorUsers[0]?.id ?? ""),
     }));
   }, [professorUsers]);
 
   useEffect(() => {
     setAssignmentForm((previous) => ({
       ...previous,
-      user_id: String(workerUsers[0]?.id ?? ""),
+      user_id: String(assignableUsers[0]?.id ?? ""),
     }));
-  }, [workerUsers]);
+  }, [assignableUsers]);
 
   const handleCreateUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
-    setSuccess(null);
+    clearToast();
 
     try {
       await createUser(userForm);
-      setSuccess("Usuario creado correctamente.");
+      showToast("Usuario registrado correctamente.", "success");
       setUserForm({
         name: "",
         email: "",
@@ -143,14 +162,13 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       });
       await loadAll();
     } catch (err) {
-      setError(toErrorMessage(err));
+      showToast(toErrorMessage(err), "error");
     }
   };
 
   const handleCreatePeriod = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
-    setSuccess(null);
+    clearToast();
 
     try {
       await createPeriod({
@@ -159,7 +177,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         weeks_count: Number(periodForm.weeks_count) as 8 | 16,
         period_state: periodForm.period_state,
       });
-      setSuccess("Periodo creado correctamente.");
+      showToast("Periodo académico creado correctamente.", "success");
       setPeriodForm({
         name: "",
         initial_date: "",
@@ -168,14 +186,13 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       });
       await loadAll();
     } catch (err) {
-      setError(toErrorMessage(err));
+      showToast(toErrorMessage(err), "error");
     }
   };
 
   const handleCreateWorkspace = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
-    setSuccess(null);
+    clearToast();
 
     try {
       await createWorkspace({
@@ -188,7 +205,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         observations: workspaceForm.observations,
         state: workspaceForm.state,
       });
-      setSuccess("Workspace creado correctamente.");
+      showToast("Curso o proyecto creado correctamente.", "success");
       setWorkspaceForm((previous) => ({
         ...previous,
         name: "",
@@ -198,14 +215,13 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       }));
       await loadAll();
     } catch (err) {
-      setError(toErrorMessage(err));
+      showToast(toErrorMessage(err), "error");
     }
   };
 
   const handleCreateAssignment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
-    setSuccess(null);
+    clearToast();
 
     try {
       await createAssignment({
@@ -214,370 +230,441 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         role: assignmentForm.role,
         weekly_hours: Number(assignmentForm.weekly_hours),
       });
-      setSuccess("Assignment creado correctamente.");
+      showToast("Vinculación creada correctamente.", "success");
       setAssignmentForm((previous) => ({
         ...previous,
         weekly_hours: "1",
       }));
       await loadAll();
     } catch (err) {
-      setError(toErrorMessage(err));
+      showToast(toErrorMessage(err), "error");
     }
   };
 
   return (
-    <Layout title="Admin Dashboard" user={user} onLogout={onLogout}>
+    <Layout
+      title="Panel de administración"
+      description="Gestiona usuarios, periodos académicos, cursos/proyectos y vinculaciones."
+      user={user}
+      onLogout={onLogout}
+    >
       <div className="actions-row">
         <button onClick={() => void loadAll()} disabled={loading}>
           Recargar datos
         </button>
       </div>
 
-      {loading && <Loading label="Cargando dashboard..." />}
-      <ErrorMessage message={error} />
-      {success && <div className="success-box">{success}</div>}
+      {loading && <Loading label="Actualizando información..." />}
+      {toast ? <Toast type={toast.type} message={toast.message} onClose={clearToast} /> : null}
 
       <section className="card">
-        <h2>POST /users</h2>
-        <form className="grid-form" onSubmit={handleCreateUser}>
-          <label>
-            name
-            <input
-              value={userForm.name}
-              onChange={(event) =>
-                setUserForm((previous) => ({ ...previous, name: event.target.value }))
-              }
-              required
-            />
-          </label>
+        <h2>Registrar usuario</h2>
+        <p className="section-desc">Crea una cuenta nueva para un profesor, monitor o asistente graduado.</p>
+        <form className="form-grid" onSubmit={handleCreateUser}>
+          <div className="form-field">
+            <label>
+              Nombre completo
+              <input
+                value={userForm.name}
+                onChange={(event) =>
+                  setUserForm((previous) => ({ ...previous, name: event.target.value }))
+                }
+                required
+              />
+            </label>
+          </div>
 
-          <label>
-            email
-            <input
-              type="email"
-              value={userForm.email}
-              onChange={(event) =>
-                setUserForm((previous) => ({ ...previous, email: event.target.value }))
-              }
-              required
-            />
-          </label>
+          <div className="form-field">
+            <label>
+              Correo electrónico
+              <input
+                type="email"
+                value={userForm.email}
+                onChange={(event) =>
+                  setUserForm((previous) => ({ ...previous, email: event.target.value }))
+                }
+                required
+              />
+            </label>
+          </div>
 
-          <label>
-            password
-            <input
-              type="password"
-              value={userForm.password}
-              onChange={(event) =>
-                setUserForm((previous) => ({ ...previous, password: event.target.value }))
-              }
-              required
-              minLength={8}
-            />
-          </label>
+          <div className="form-field">
+            <label>
+              Contraseña
+              <input
+                type="password"
+                value={userForm.password}
+                onChange={(event) =>
+                  setUserForm((previous) => ({ ...previous, password: event.target.value }))
+                }
+                required
+                minLength={8}
+              />
+            </label>
+            <HelpText>Debe tener entre 8 y 72 caracteres.</HelpText>
+          </div>
 
-          <label>
-            global_role
-            <select
-              value={userForm.global_role}
-              onChange={(event) =>
-                setUserForm((previous) => ({
-                  ...previous,
-                  global_role: event.target.value as GlobalRole,
-                }))
-              }
-            >
-              <option value="admin">admin</option>
-              <option value="professor">professor</option>
-              <option value="monitor">monitor</option>
-              <option value="assistant">assistant</option>
-            </select>
-          </label>
+          <div className="form-field">
+            <label>
+              Rol global
+              <select
+                value={userForm.global_role}
+                onChange={(event) =>
+                  setUserForm((previous) => ({
+                    ...previous,
+                    global_role: event.target.value as GlobalRole,
+                  }))
+                }
+              >
+                <option value="admin">Administrador</option>
+                <option value="professor">Profesor</option>
+                <option value="monitor">Monitor</option>
+                <option value="assistant">Asistente graduado</option>
+              </select>
+            </label>
+            <HelpText>
+              El rol define qué información podrá consultar y modificar el usuario.
+            </HelpText>
+          </div>
 
-          <button type="submit">Crear usuario</button>
+          <div className="form-actions">
+            <button type="submit">Registrar usuario</button>
+          </div>
         </form>
       </section>
 
       <section className="card">
-        <h2>POST /periods</h2>
-        <form className="grid-form" onSubmit={handleCreatePeriod}>
-          <label>
-            name
-            <input
-              placeholder="2026-20"
-              value={periodForm.name}
-              onChange={(event) =>
-                setPeriodForm((previous) => ({ ...previous, name: event.target.value }))
-              }
-              required
-            />
-          </label>
+        <h2>Crear periodo académico</h2>
+        <p className="section-desc">Define el rango de fechas y número de semanas del periodo lectivo.</p>
+        <form className="form-grid" onSubmit={handleCreatePeriod}>
+          <div className="form-field">
+            <label>
+              Nombre del periodo
+              <input
+                placeholder="2026-20"
+                value={periodForm.name}
+                onChange={(event) =>
+                  setPeriodForm((previous) => ({ ...previous, name: event.target.value }))
+                }
+                required
+              />
+            </label>
+          </div>
 
-          <label>
-            initial_date
-            <input
-              type="date"
-              value={periodForm.initial_date}
-              onChange={(event) =>
-                setPeriodForm((previous) => ({ ...previous, initial_date: event.target.value }))
-              }
-              required
-            />
-          </label>
+          <div className="form-field">
+            <label>
+              Fecha inicial
+              <input
+                type="date"
+                value={periodForm.initial_date}
+                onChange={(event) =>
+                  setPeriodForm((previous) => ({ ...previous, initial_date: event.target.value }))
+                }
+                required
+              />
+            </label>
+            <HelpText>La fecha inicial debe ser un lunes y debe ser futura.</HelpText>
+          </div>
 
-          <label>
-            weeks_count
-            <select
-              value={periodForm.weeks_count}
-              onChange={(event) =>
-                setPeriodForm((previous) => ({ ...previous, weeks_count: event.target.value }))
-              }
-            >
-              <option value="8">8</option>
-              <option value="16">16</option>
-            </select>
-          </label>
+          <div className="form-field">
+            <label>
+              Número de semanas
+              <select
+                value={periodForm.weeks_count}
+                onChange={(event) =>
+                  setPeriodForm((previous) => ({ ...previous, weeks_count: event.target.value }))
+                }
+              >
+                <option value="8">8</option>
+                <option value="16">16</option>
+              </select>
+            </label>
+            <HelpText>Solo se permiten periodos de 8 o 16 semanas.</HelpText>
+          </div>
 
-          <label>
-            period_state
-            <select
-              value={periodForm.period_state}
-              onChange={(event) =>
-                setPeriodForm((previous) => ({
-                  ...previous,
-                  period_state: event.target.value as "active" | "closed",
-                }))
-              }
-            >
-              <option value="active">active</option>
-              <option value="closed">closed</option>
-            </select>
-          </label>
+          <div className="form-field">
+            <label>
+              Estado del periodo
+              <select
+                value={periodForm.period_state}
+                onChange={(event) =>
+                  setPeriodForm((previous) => ({
+                    ...previous,
+                    period_state: event.target.value as "active" | "closed",
+                  }))
+                }
+              >
+                <option value="active">Activo</option>
+                <option value="closed">Cerrado</option>
+              </select>
+            </label>
+            <HelpText>Un periodo cerrado no permite nuevas inscripciones.</HelpText>
+          </div>
 
-          <button type="submit">Crear periodo</button>
+          <div className="form-actions">
+            <button type="submit">Crear periodo académico</button>
+          </div>
         </form>
       </section>
 
       <section className="card">
-        <h2>POST /workspaces</h2>
-        <form className="grid-form" onSubmit={handleCreateWorkspace}>
-          <label>
-            period_id
-            <select
-              value={workspaceForm.period_id}
-              onChange={(event) =>
-                setWorkspaceForm((previous) => ({ ...previous, period_id: event.target.value }))
-              }
-              required
-            >
-              <option value="" disabled>
-                Seleccione periodo
-              </option>
-              {periods.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.id} - {item.name}
+        <h2>Crear curso o proyecto</h2>
+        <p className="section-desc">Asocia un curso o proyecto al periodo académico y al profesor responsable.</p>
+        <form className="form-grid" onSubmit={handleCreateWorkspace}>
+          <div className="form-field">
+            <label>
+              Periodo
+              <select
+                value={workspaceForm.period_id}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({ ...previous, period_id: event.target.value }))
+                }
+                required
+              >
+                <option value="" disabled>
+                  Selecciona un periodo
                 </option>
-              ))}
-            </select>
-          </label>
+                {periods.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.id} - {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <HelpText>
+              Solo se pueden crear cursos/proyectos en periodos con inscripción abierta.
+            </HelpText>
+          </div>
 
-          <label>
-            user_id (professor)
-            <select
-              value={workspaceForm.user_id}
-              onChange={(event) =>
-                setWorkspaceForm((previous) => ({ ...previous, user_id: event.target.value }))
-              }
-              required
-            >
-              <option value="" disabled>
-                Seleccione professor
-              </option>
-              {professorUsers.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.id} - {item.name}
+          <div className="form-field">
+            <label>
+              Profesor responsable
+              <select
+                value={workspaceForm.user_id}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({ ...previous, user_id: event.target.value }))
+                }
+                required
+              >
+                <option value="" disabled>
+                  Selecciona un profesor
                 </option>
-              ))}
-            </select>
-          </label>
+                {professorUsers.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.id} - {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <HelpText>El usuario seleccionado debe tener rol Profesor.</HelpText>
+          </div>
 
-          <label>
-            name
-            <input
-              value={workspaceForm.name}
-              onChange={(event) =>
-                setWorkspaceForm((previous) => ({ ...previous, name: event.target.value }))
-              }
-              required
-            />
-          </label>
+          <div className="form-field">
+            <label>
+              Nombre del curso o proyecto
+              <input
+                value={workspaceForm.name}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({ ...previous, name: event.target.value }))
+                }
+                required
+              />
+            </label>
+          </div>
 
-          <label>
-            type
-            <select
-              value={workspaceForm.type}
-              onChange={(event) =>
-                setWorkspaceForm((previous) => ({
-                  ...previous,
-                  type: event.target.value as "course" | "project",
-                }))
-              }
-            >
-              <option value="course">course</option>
-              <option value="project">project</option>
-            </select>
-          </label>
+          <div className="form-field">
+            <label>
+              Tipo
+              <select
+                value={workspaceForm.type}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({
+                    ...previous,
+                    type: event.target.value as "course" | "project",
+                  }))
+                }
+              >
+                <option value="course">Curso</option>
+                <option value="project">Proyecto</option>
+              </select>
+            </label>
+          </div>
 
-          <label>
-            initial_date
-            <input
-              type="date"
-              value={workspaceForm.initial_date}
-              onChange={(event) =>
-                setWorkspaceForm((previous) => ({
-                  ...previous,
-                  initial_date: event.target.value,
-                }))
-              }
-              required
-            />
-          </label>
+          <div className="form-field">
+            <label>
+              Fecha inicial
+              <input
+                type="date"
+                value={workspaceForm.initial_date}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({ ...previous, initial_date: event.target.value }))
+                }
+                required
+              />
+            </label>
+          </div>
 
-          <label>
-            final_date
-            <input
-              type="date"
-              value={workspaceForm.final_date}
-              onChange={(event) =>
-                setWorkspaceForm((previous) => ({ ...previous, final_date: event.target.value }))
-              }
-              required
-            />
-          </label>
+          <div className="form-field">
+            <label>
+              Fecha final
+              <input
+                type="date"
+                value={workspaceForm.final_date}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({ ...previous, final_date: event.target.value }))
+                }
+                required
+              />
+            </label>
+            <HelpText>La fecha inicial debe ser anterior a la fecha final.</HelpText>
+          </div>
 
-          <label>
-            observations
-            <input
-              value={workspaceForm.observations}
-              onChange={(event) =>
-                setWorkspaceForm((previous) => ({
-                  ...previous,
-                  observations: event.target.value,
-                }))
-              }
-              required
-            />
-          </label>
+          <div className="form-field">
+            <label>
+              Observaciones
+              <input
+                value={workspaceForm.observations}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({
+                    ...previous,
+                    observations: event.target.value,
+                  }))
+                }
+                required
+              />
+            </label>
+            <HelpText>Incluye información breve sobre el curso o proyecto.</HelpText>
+          </div>
 
-          <label>
-            state
-            <select
-              value={workspaceForm.state}
-              onChange={(event) =>
-                setWorkspaceForm((previous) => ({
-                  ...previous,
-                  state: event.target.value as "active" | "closed",
-                }))
-              }
-            >
-              <option value="active">active</option>
-              <option value="closed">closed</option>
-            </select>
-          </label>
+          <div className="form-field">
+            <label>
+              Estado
+              <select
+                value={workspaceForm.state}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({
+                    ...previous,
+                    state: event.target.value as "active" | "closed",
+                  }))
+                }
+              >
+                <option value="active">Activo</option>
+                <option value="closed">Cerrado</option>
+              </select>
+            </label>
+          </div>
 
-          <button type="submit">Crear workspace</button>
+          <div className="form-actions">
+            <button type="submit">Crear curso o proyecto</button>
+          </div>
         </form>
       </section>
 
       <section className="card">
-        <h2>POST /assignments</h2>
-        <form className="grid-form" onSubmit={handleCreateAssignment}>
-          <label>
-            role
-            <select
-              value={assignmentForm.role}
-              onChange={(event) =>
-                setAssignmentForm((previous) => ({
-                  ...previous,
-                  role: event.target.value as "monitor" | "assistant",
-                }))
-              }
-            >
-              <option value="monitor">monitor</option>
-              <option value="assistant">assistant</option>
-            </select>
-          </label>
+        <h2>Crear vinculación</h2>
+        <p className="section-desc">Asigna un monitor o asistente a un curso o proyecto con sus horas semanales.</p>
+        <form className="form-grid" onSubmit={handleCreateAssignment}>
+          <div className="form-field">
+            <label>
+              Rol de vinculación
+              <select
+                value={assignmentForm.role}
+                onChange={(event) =>
+                  setAssignmentForm((previous) => ({
+                    ...previous,
+                    role: event.target.value as "monitor" | "assistant",
+                  }))
+                }
+              >
+                <option value="monitor">Monitor</option>
+                <option value="assistant">Asistente graduado</option>
+              </select>
+            </label>
+            <HelpText>Solo se pueden vincular monitores o asistentes graduados.</HelpText>
+          </div>
 
-          <label>
-            user_id
-            <select
-              value={assignmentForm.user_id}
-              onChange={(event) =>
-                setAssignmentForm((previous) => ({ ...previous, user_id: event.target.value }))
-              }
-              required
-            >
-              <option value="" disabled>
-                Seleccione usuario
-              </option>
-              {workerUsers.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.id} - {item.name}
+          <div className="form-field">
+            <label>
+              Usuario
+              <select
+                value={assignmentForm.user_id}
+                onChange={(event) =>
+                  setAssignmentForm((previous) => ({ ...previous, user_id: event.target.value }))
+                }
+                required
+              >
+                <option value="" disabled>
+                  Selecciona un usuario
                 </option>
-              ))}
-            </select>
-          </label>
+                {assignableUsers.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.id} - {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
-          <label>
-            workspace_id
-            <select
-              value={assignmentForm.workspace_id}
-              onChange={(event) =>
-                setAssignmentForm((previous) => ({
-                  ...previous,
-                  workspace_id: event.target.value,
-                }))
-              }
-              required
-            >
-              <option value="" disabled>
-                Seleccione workspace
-              </option>
-              {workspaces.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.id} - {item.name}
+          <div className="form-field">
+            <label>
+              Curso o proyecto
+              <select
+                value={assignmentForm.workspace_id}
+                onChange={(event) =>
+                  setAssignmentForm((previous) => ({
+                    ...previous,
+                    workspace_id: event.target.value,
+                  }))
+                }
+                required
+              >
+                <option value="" disabled>
+                  Selecciona un curso/proyecto
                 </option>
-              ))}
-            </select>
-          </label>
+                {workspaces.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.id} - {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
-          <label>
-            weekly_hours
-            <input
-              type="number"
-              min={1}
-              value={assignmentForm.weekly_hours}
-              onChange={(event) =>
-                setAssignmentForm((previous) => ({
-                  ...previous,
-                  weekly_hours: event.target.value,
-                }))
-              }
-              required
-            />
-          </label>
+          <div className="form-field">
+            <label>
+              Horas semanales
+              <input
+                type="number"
+                min={1}
+                value={assignmentForm.weekly_hours}
+                onChange={(event) =>
+                  setAssignmentForm((previous) => ({
+                    ...previous,
+                    weekly_hours: event.target.value,
+                  }))
+                }
+                required
+              />
+            </label>
+            <HelpText>
+              Monitor: máximo 12 horas. Asistente: máximo 22 horas. Los monitores también están
+              sujetos a la regla del 40% respecto a asistentes.
+            </HelpText>
+          </div>
 
-          <button type="submit">Crear assignment</button>
+          <div className="form-actions">
+            <button type="submit">Crear vinculación</button>
+          </div>
         </form>
 
         <p className="muted">
-          Errores de negocio esperados: assignment already exists, period inscription is closed,
-          monitor weekly hours cannot exceed 12, assistant weekly hours cannot exceed 22.
+          El sistema mostrará errores del backend cuando se incumplan reglas de negocio de horas o
+          permisos.
         </p>
       </section>
 
       <section className="card">
-        <h2>GET /auth/me</h2>
+        <h2>Resumen de sesión</h2>
         {me ? (
           <table>
             <tbody>
@@ -586,15 +673,15 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 <td>{me.id}</td>
               </tr>
               <tr>
-                <th>Name</th>
+                <th>Nombre</th>
                 <td>{me.name}</td>
               </tr>
               <tr>
-                <th>Email</th>
+                <th>Correo</th>
                 <td>{me.email}</td>
               </tr>
               <tr>
-                <th>Role</th>
+                <th>Rol</th>
                 <td>{me.global_role}</td>
               </tr>
             </tbody>
@@ -605,135 +692,197 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       </section>
 
       <section className="card">
-        <h2>GET /users</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((item) => (
-              <tr key={item.id}>
-                <td>{item.id}</td>
-                <td>{item.name}</td>
-                <td>{item.email}</td>
-                <td>{item.global_role}</td>
+        <h2>Usuarios registrados</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Rol</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {users.length === 0 ? (
+                <EmptyState colSpan={4} />
+              ) : (
+                users.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.id}</td>
+                    <td>{item.name}</td>
+                    <td>{item.email}</td>
+                    <td>{item.global_role}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="card">
-        <h2>GET /periods</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Initial Date</th>
-              <th>Final Date</th>
-              <th>State</th>
-            </tr>
-          </thead>
-          <tbody>
-            {periods.map((item) => (
-              <tr key={item.id}>
-                <td>{item.id}</td>
-                <td>{item.name}</td>
-                <td>{item.initial_date}</td>
-                <td>{item.final_date}</td>
-                <td>{item.period_state}</td>
+        <h2>Periodos académicos</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Fecha inicial</th>
+                <th>Fecha final</th>
+                <th>Estado</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {periods.length === 0 ? (
+                <EmptyState colSpan={5} />
+              ) : (
+                periods.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.id}</td>
+                    <td>{item.name}</td>
+                    <td>{item.initial_date}</td>
+                    <td>{item.final_date}</td>
+                    <td>{item.period_state}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="card">
-        <h2>GET /workspaces</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>User ID</th>
-              <th>Period ID</th>
-              <th>Type</th>
-              <th>State</th>
-            </tr>
-          </thead>
-          <tbody>
-            {workspaces.map((item) => (
-              <tr key={item.id}>
-                <td>{item.id}</td>
-                <td>{item.name}</td>
-                <td>{item.user_id}</td>
-                <td>{item.period_id}</td>
-                <td>{item.type}</td>
-                <td>{item.state}</td>
+        <h2>Cursos y proyectos</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>ID del usuario</th>
+                <th>ID del periodo</th>
+                <th>Tipo</th>
+                <th>Estado</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {workspaces.length === 0 ? (
+                <EmptyState colSpan={6} />
+              ) : (
+                workspaces.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.id}</td>
+                    <td>{item.name}</td>
+                    <td>{item.user_id}</td>
+                    <td>{item.period_id}</td>
+                    <td>{item.type}</td>
+                    <td>{item.state}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="card">
-        <h2>GET /tasks</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>User ID</th>
-              <th>Assignment ID</th>
-              <th>Status</th>
-              <th>Hours</th>
-              <th>Week Start</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map((item) => (
-              <tr key={item.id}>
-                <td>{item.id}</td>
-                <td>{item.user_id}</td>
-                <td>{item.assignment_id}</td>
-                <td>{item.status}</td>
-                <td>{item.spent_hours}</td>
-                <td>{item.week_start_date}</td>
+        <h2>Vinculaciones</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>ID del usuario</th>
+                <th>ID del curso/proyecto</th>
+                <th>Rol</th>
+                <th>Horas semanales</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {assignments.length === 0 ? (
+                <EmptyState colSpan={5} />
+              ) : (
+                assignments.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.id}</td>
+                    <td>{item.user_id}</td>
+                    <td>{item.workspace_id}</td>
+                    <td>{item.role}</td>
+                    <td>{item.weekly_hours}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="card">
-        <h2>GET /reports</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Workspace ID</th>
-              <th>Week ID</th>
-              <th>Assignment ID</th>
-              <th>User ID</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reports.map((item) => (
-              <tr key={item.id}>
-                <td>{item.id}</td>
-                <td>{item.workspace_id}</td>
-                <td>{item.week_id}</td>
-                <td>{item.assignment_id}</td>
-                <td>{item.user_id}</td>
+        <h2>Tareas reportadas</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>ID del usuario</th>
+                <th>ID de vinculación</th>
+                <th>Estado</th>
+                <th>Horas dedicadas</th>
+                <th>Fecha de inicio de semana</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {tasks.length === 0 ? (
+                <EmptyState colSpan={6} />
+              ) : (
+                tasks.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.id}</td>
+                    <td>{item.user_id}</td>
+                    <td>{item.assignment_id}</td>
+                    <td>{item.status}</td>
+                    <td>{item.spent_hours}</td>
+                    <td>{item.week_start_date}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="card">
+        <h2>Reportes generados</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>ID del curso/proyecto</th>
+                <th>ID de semana</th>
+                <th>ID de vinculación</th>
+                <th>ID del usuario</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reports.length === 0 ? (
+                <EmptyState colSpan={5} />
+              ) : (
+                reports.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.id}</td>
+                    <td>{item.workspace_id}</td>
+                    <td>{item.week_id}</td>
+                    <td>{item.assignment_id}</td>
+                    <td>{item.user_id}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
     </Layout>
   );

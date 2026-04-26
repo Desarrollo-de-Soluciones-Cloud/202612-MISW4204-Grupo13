@@ -9,9 +9,12 @@ import {
   updateTask,
 } from "../api/client";
 import type { Assignment, Task, TaskStatus, UpdateTaskPayload, User } from "../api/types";
-import ErrorMessage from "../components/ErrorMessage";
+import EmptyState from "../components/EmptyState";
+import HelpText from "../components/HelpText";
 import Layout from "../components/Layout";
 import Loading from "../components/Loading";
+import Toast from "../components/Toast";
+import useToast from "../components/useToast";
 
 interface WorkerDashboardProps {
   user: User;
@@ -48,14 +51,16 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
   const [editTaskId, setEditTaskId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<TaskFormState>(defaultForm);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const { toast, showToast, clearToast } = useToast();
 
   const assignmentIds = useMemo(() => assignments.map((item) => item.id), [assignments]);
 
+  const isAssistant = user.global_role === "assistant";
+
+  const dashboardTitle = isAssistant ? "Panel del asistente graduado" : "Panel del monitor";
+
   const loadData = async () => {
     setLoading(true);
-    setError(null);
 
     try {
       const meResult = await getMe();
@@ -69,11 +74,10 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
       setTasks(taskResult.tasks);
       setCreateForm((previous) => ({
         ...previous,
-        assignment_id:
-          previous.assignment_id || String(assignmentResult.assignments[0]?.id ?? ""),
+        assignment_id: previous.assignment_id || String(assignmentResult.assignments[0]?.id ?? ""),
       }));
     } catch (err) {
-      setError(toErrorMessage(err));
+      showToast(toErrorMessage(err), "error");
     } finally {
       setLoading(false);
     }
@@ -95,12 +99,11 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
   const handleCreateTask = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
-    setSuccess(null);
+    clearToast();
 
     try {
       await createTask(toPayload(createForm));
-      setSuccess("Task creada correctamente.");
+      showToast("Tarea registrada correctamente.", "success");
       setCreateForm({
         ...defaultForm,
         assignment_id: String(assignments[0]?.id ?? ""),
@@ -108,7 +111,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
       const taskResult = await listTasks();
       setTasks(taskResult.tasks);
     } catch (err) {
-      setError(toErrorMessage(err));
+      showToast(toErrorMessage(err), "error");
     }
   };
 
@@ -132,49 +135,51 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
       return;
     }
 
-    setError(null);
-    setSuccess(null);
+    clearToast();
 
     try {
       await updateTask(editTaskId, toPayload(editForm));
-      setSuccess("Task actualizada correctamente.");
+      showToast("Tarea actualizada correctamente.", "success");
       setEditTaskId(null);
       const taskResult = await listTasks();
       setTasks(taskResult.tasks);
     } catch (err) {
-      setError(toErrorMessage(err));
+      showToast(toErrorMessage(err), "error");
     }
   };
 
   const handleDeleteTask = async (id: number) => {
-    setError(null);
-    setSuccess(null);
+    clearToast();
 
     try {
       await deleteTask(id);
-      setSuccess("Task eliminada correctamente.");
+      showToast("Tarea eliminada correctamente.", "success");
       const taskResult = await listTasks();
       setTasks(taskResult.tasks);
     } catch (err) {
-      setError(toErrorMessage(err));
+      showToast(toErrorMessage(err), "error");
     }
   };
 
   return (
-    <Layout title="Worker Dashboard (monitor/assistant)" user={user} onLogout={onLogout}>
+    <Layout
+      title={dashboardTitle}
+      description="Consulta tus vinculaciones y registra tus tareas semanales."
+      user={user}
+      onLogout={onLogout}
+    >
       <div className="actions-row">
         <button onClick={() => void loadData()} disabled={loading}>
           Recargar datos
         </button>
       </div>
 
-      {loading && <Loading label="Cargando dashboard..." />}
-      <ErrorMessage message={error} />
-      {success && <div className="success-box">{success}</div>}
+      {loading && <Loading label="Actualizando información..." />}
+      {toast ? <Toast type={toast.type} message={toast.message} onClose={clearToast} /> : null}
 
-      <section className="card">
-        <h2>Errores backend esperados en tasks</h2>
-        <ul>
+      <section className="card info-card">
+        <h2>Errores frecuentes</h2>
+        <ul className="list-help">
           <li>task week is not active</li>
           <li>insufficient permissions</li>
           <li>task status is invalid</li>
@@ -186,7 +191,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
       </section>
 
       <section className="card">
-        <h2>GET /auth/me</h2>
+        <h2>Resumen de sesión</h2>
         {me ? (
           <table>
             <tbody>
@@ -195,11 +200,11 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 <td>{me.id}</td>
               </tr>
               <tr>
-                <th>Name</th>
+                <th>Nombre</th>
                 <td>{me.name}</td>
               </tr>
               <tr>
-                <th>Role</th>
+                <th>Rol</th>
                 <td>{me.global_role}</td>
               </tr>
             </tbody>
@@ -210,194 +215,47 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
       </section>
 
       <section className="card">
-        <h2>GET /assignments?user_id=&lt;currentUser.id&gt;</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Workspace ID</th>
-              <th>Role</th>
-              <th>Weekly Hours</th>
-            </tr>
-          </thead>
-          <tbody>
-            {assignments.map((item) => (
-              <tr key={item.id}>
-                <td>{item.id}</td>
-                <td>{item.workspace_id}</td>
-                <td>{item.role}</td>
-                <td>{item.weekly_hours}</td>
+        <h2>Mis vinculaciones</h2>
+        <p className="muted">Aquí aparecen los cursos o proyectos en los que estás vinculado.</p>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>ID del curso/proyecto</th>
+                <th>Rol</th>
+                <th>Horas semanales</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {assignments.length === 0 ? (
+                <EmptyState colSpan={4} />
+              ) : (
+                assignments.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.id}</td>
+                    <td>{item.workspace_id}</td>
+                    <td>{item.role}</td>
+                    <td>{item.weekly_hours}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="card">
-        <h2>POST /tasks</h2>
-        <form className="grid-form" onSubmit={handleCreateTask}>
-          <label>
-            assignment_id
-            <select
-              value={createForm.assignment_id}
-              onChange={(event) =>
-                setCreateForm((previous) => ({
-                  ...previous,
-                  assignment_id: event.target.value,
-                }))
-              }
-              required
-            >
-              <option value="" disabled>
-                Seleccione assignment
-              </option>
-              {assignmentIds.map((id) => (
-                <option key={id} value={id}>
-                  {id}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            title
-            <input
-              value={createForm.title}
-              onChange={(event) =>
-                setCreateForm((previous) => ({ ...previous, title: event.target.value }))
-              }
-              required
-            />
-          </label>
-
-          <label>
-            description
-            <input
-              value={createForm.description}
-              onChange={(event) =>
-                setCreateForm((previous) => ({
-                  ...previous,
-                  description: event.target.value,
-                }))
-              }
-              required
-            />
-          </label>
-
-          <label>
-            status
-            <select
-              value={createForm.status}
-              onChange={(event) =>
-                setCreateForm((previous) => ({
-                  ...previous,
-                  status: event.target.value as TaskStatus,
-                }))
-              }
-            >
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            spent_hours
-            <input
-              type="number"
-              min={1}
-              value={createForm.spent_hours}
-              onChange={(event) =>
-                setCreateForm((previous) => ({
-                  ...previous,
-                  spent_hours: event.target.value,
-                }))
-              }
-              required
-            />
-          </label>
-
-          <label>
-            observations
-            <input
-              value={createForm.observations}
-              onChange={(event) =>
-                setCreateForm((previous) => ({
-                  ...previous,
-                  observations: event.target.value,
-                }))
-              }
-            />
-          </label>
-
-          <label>
-            week_start_date
-            <input
-              type="date"
-              value={createForm.week_start_date}
-              onChange={(event) =>
-                setCreateForm((previous) => ({
-                  ...previous,
-                  week_start_date: event.target.value,
-                }))
-              }
-              required
-            />
-          </label>
-
-          <button type="submit">Crear task</button>
-        </form>
-      </section>
-
-      <section className="card">
-        <h2>GET /tasks</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Assignment</th>
-              <th>Title</th>
-              <th>Status</th>
-              <th>Hours</th>
-              <th>Week Start</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map((item) => (
-              <tr key={item.id}>
-                <td>{item.id}</td>
-                <td>{item.assignment_id}</td>
-                <td>{item.title}</td>
-                <td>{item.status}</td>
-                <td>{item.spent_hours}</td>
-                <td>{item.week_start_date}</td>
-                <td>
-                  <button type="button" onClick={() => startEdit(item)}>
-                    Editar
-                  </button>
-                  <button type="button" onClick={() => void handleDeleteTask(item.id)}>
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      {editTaskId ? (
-        <section className="card">
-          <h2>PUT /tasks/{editTaskId}</h2>
-          <form className="grid-form" onSubmit={handleUpdateTask}>
+        <h2>Registrar nueva tarea</h2>
+        <p className="section-desc">Reporta las actividades realizadas durante la semana activa.</p>
+        <form className="form-grid" onSubmit={handleCreateTask}>
+          <div className="form-field">
             <label>
-              assignment_id
+              Vinculación
               <select
-                value={editForm.assignment_id}
+                value={createForm.assignment_id}
                 onChange={(event) =>
-                  setEditForm((previous) => ({
+                  setCreateForm((previous) => ({
                     ...previous,
                     assignment_id: event.target.value,
                   }))
@@ -405,7 +263,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 required
               >
                 <option value="" disabled>
-                  Seleccione assignment
+                  Selecciona una vinculación
                 </option>
                 {assignmentIds.map((id) => (
                   <option key={id} value={id}>
@@ -414,24 +272,29 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 ))}
               </select>
             </label>
+            <HelpText>Selecciona la vinculación correspondiente al curso o proyecto.</HelpText>
+          </div>
 
+          <div className="form-field">
             <label>
-              title
+              Título
               <input
-                value={editForm.title}
+                value={createForm.title}
                 onChange={(event) =>
-                  setEditForm((previous) => ({ ...previous, title: event.target.value }))
+                  setCreateForm((previous) => ({ ...previous, title: event.target.value }))
                 }
                 required
               />
             </label>
+          </div>
 
+          <div className="form-field">
             <label>
-              description
+              Descripción
               <input
-                value={editForm.description}
+                value={createForm.description}
                 onChange={(event) =>
-                  setEditForm((previous) => ({
+                  setCreateForm((previous) => ({
                     ...previous,
                     description: event.target.value,
                   }))
@@ -439,13 +302,15 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 required
               />
             </label>
+          </div>
 
+          <div className="form-field">
             <label>
-              status
+              Estado
               <select
-                value={editForm.status}
+                value={createForm.status}
                 onChange={(event) =>
-                  setEditForm((previous) => ({
+                  setCreateForm((previous) => ({
                     ...previous,
                     status: event.target.value as TaskStatus,
                   }))
@@ -458,15 +323,18 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 ))}
               </select>
             </label>
+            <HelpText>Usa solo: abierto, en desarrollo o finalizado.</HelpText>
+          </div>
 
+          <div className="form-field">
             <label>
-              spent_hours
+              Horas dedicadas
               <input
                 type="number"
                 min={1}
-                value={editForm.spent_hours}
+                value={createForm.spent_hours}
                 onChange={(event) =>
-                  setEditForm((previous) => ({
+                  setCreateForm((previous) => ({
                     ...previous,
                     spent_hours: event.target.value,
                   }))
@@ -474,27 +342,32 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 required
               />
             </label>
+            <HelpText>Debe ser un número mayor o igual a 1.</HelpText>
+          </div>
 
+          <div className="form-field">
             <label>
-              observations
+              Observaciones
               <input
-                value={editForm.observations}
+                value={createForm.observations}
                 onChange={(event) =>
-                  setEditForm((previous) => ({
+                  setCreateForm((previous) => ({
                     ...previous,
                     observations: event.target.value,
                   }))
                 }
               />
             </label>
+          </div>
 
+          <div className="form-field">
             <label>
-              week_start_date
+              Fecha de inicio de semana
               <input
                 type="date"
-                value={editForm.week_start_date}
+                value={createForm.week_start_date}
                 onChange={(event) =>
-                  setEditForm((previous) => ({
+                  setCreateForm((previous) => ({
                     ...previous,
                     week_start_date: event.target.value,
                   }))
@@ -502,11 +375,201 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 required
               />
             </label>
+            <HelpText>
+              Debe corresponder al lunes de la semana activa. Si la semana no está activa, el
+              backend rechazará la tarea.
+            </HelpText>
+          </div>
 
-            <div className="actions-row">
+          <div className="form-actions">
+            <button type="submit">Registrar tarea</button>
+          </div>
+        </form>
+      </section>
+
+      <section className="card">
+        <h2>Mis tareas reportadas</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>ID de vinculación</th>
+                <th>Título</th>
+                <th>Estado</th>
+                <th>Horas dedicadas</th>
+                <th>Fecha de inicio de semana</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tasks.length === 0 ? (
+                <EmptyState colSpan={7} />
+              ) : (
+                tasks.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.id}</td>
+                    <td>{item.assignment_id}</td>
+                    <td>{item.title}</td>
+                    <td>{item.status}</td>
+                    <td>{item.spent_hours}</td>
+                    <td>{item.week_start_date}</td>
+                    <td>
+                      <div className="actions-row">
+                        <button type="button" onClick={() => startEdit(item)}>
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="button-danger"
+                          onClick={() => void handleDeleteTask(item.id)}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {editTaskId ? (
+        <section className="card">
+          <h2>Editar tarea</h2>
+          <p className="section-desc">Modifica los datos de la tarea seleccionada.</p>
+          <form className="form-grid" onSubmit={handleUpdateTask}>
+            <div className="form-field">
+              <label>
+                Vinculación
+                <select
+                  value={editForm.assignment_id}
+                  onChange={(event) =>
+                    setEditForm((previous) => ({
+                      ...previous,
+                      assignment_id: event.target.value,
+                    }))
+                  }
+                  required
+                >
+                  <option value="" disabled>
+                    Selecciona una vinculación
+                  </option>
+                  {assignmentIds.map((id) => (
+                    <option key={id} value={id}>
+                      {id}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="form-field">
+              <label>
+                Título
+                <input
+                  value={editForm.title}
+                  onChange={(event) =>
+                    setEditForm((previous) => ({ ...previous, title: event.target.value }))
+                  }
+                  required
+                />
+              </label>
+            </div>
+
+            <div className="form-field">
+              <label>
+                Descripción
+                <input
+                  value={editForm.description}
+                  onChange={(event) =>
+                    setEditForm((previous) => ({
+                      ...previous,
+                      description: event.target.value,
+                    }))
+                  }
+                  required
+                />
+              </label>
+            </div>
+
+            <div className="form-field">
+              <label>
+                Estado
+                <select
+                  value={editForm.status}
+                  onChange={(event) =>
+                    setEditForm((previous) => ({
+                      ...previous,
+                      status: event.target.value as TaskStatus,
+                    }))
+                  }
+                >
+                  {statusOptions.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="form-field">
+              <label>
+                Horas dedicadas
+                <input
+                  type="number"
+                  min={1}
+                  value={editForm.spent_hours}
+                  onChange={(event) =>
+                    setEditForm((previous) => ({
+                      ...previous,
+                      spent_hours: event.target.value,
+                    }))
+                  }
+                  required
+                />
+              </label>
+            </div>
+
+            <div className="form-field">
+              <label>
+                Observaciones
+                <input
+                  value={editForm.observations}
+                  onChange={(event) =>
+                    setEditForm((previous) => ({
+                      ...previous,
+                      observations: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+            </div>
+
+            <div className="form-field">
+              <label>
+                Fecha de inicio de semana
+                <input
+                  type="date"
+                  value={editForm.week_start_date}
+                  onChange={(event) =>
+                    setEditForm((previous) => ({
+                      ...previous,
+                      week_start_date: event.target.value,
+                    }))
+                  }
+                  required
+                />
+              </label>
+            </div>
+
+            <div className="form-actions">
               <button type="submit">Guardar cambios</button>
-              <button type="button" onClick={() => setEditTaskId(null)}>
-                Cancelar
+              <button type="button" className="button-secondary" onClick={() => setEditTaskId(null)}>
+                Cancelar edición
               </button>
             </div>
           </form>

@@ -1,4 +1,4 @@
-# Frontend - Guia de Ejecucion
+# Frontend - Guia de ejecucion
 
 ## Requisitos
 
@@ -8,7 +8,7 @@
 
 ## Variables de entorno
 
-Crear o verificar el archivo `frontend/.env` con los siguientes valores:
+Crear o verificar el archivo frontend/.env con estos valores:
 
 ```dotenv
 VITE_API_BASE_URL=/api
@@ -17,7 +17,7 @@ VITE_PROXY_TARGET=http://localhost:80
 
 ## Ejecucion local del frontend
 
-Desde la carpeta raiz del proyecto:
+Desde la raiz del repositorio:
 
 ```bash
 cd frontend
@@ -39,14 +39,14 @@ docker compose up --build
 
 ## Credenciales admin
 
-Tomar las credenciales desde el archivo `.env.admin`:
+Tomar las credenciales desde .env.admin:
 
 - DEFAULT_ADMIN_EMAIL
 - DEFAULT_ADMIN_PASSWORD
 
 ## Proxy de Vite y CORS
 
-El frontend realiza peticiones a rutas relativas `/api`. Vite intercepta esas rutas y las redirige a `VITE_PROXY_TARGET` (nginx/backend), lo que evita errores de CORS en desarrollo.
+El frontend envía peticiones a rutas relativas /api. El servidor de desarrollo de Vite intercepta esas rutas y las redirige a VITE_PROXY_TARGET, evitando errores de CORS en desarrollo.
 
 ## Prueba rapida de login (curl)
 
@@ -57,14 +57,28 @@ curl -X POST http://localhost:80/api/auth/sign-in -H "Content-Type: application/
 ## Problemas comunes
 
 - Failed to fetch:
-   Revisar que `docker compose` este arriba y que `frontend/.env` use `VITE_API_BASE_URL=/api`.
-- Cambios de `.env` no reflejados:
-   Reiniciar `npm run dev` o hacer rebuild con Docker.
+  Verificar que docker compose este arriba y que frontend/.env use VITE_API_BASE_URL=/api.
+- Cambios en .env no reflejados:
+  Reiniciar npm run dev o reconstruir con Docker.
 - Base de datos con estado viejo:
-   Ejecutar `docker compose down -v`.
+  Ejecutar docker compose down -v.
 
+## Alcance actual del frontend
 
-Deuda técnica a revisar:
-Reportes con IA externa real: pendiente
-Adjuntos de tareas: pendiente
-Almacenamiento en Cloud Storage: pendiente para despliegue GCP
+- Login por rol.
+- Panel de administracion.
+- Panel de profesor.
+- Panel de monitor/asistente.
+- Creacion de usuarios, periodos, cursos/proyectos y vinculaciones.
+- Registro y gestion basica de tareas.
+- Generacion y descarga de reportes PDF semanales.
+
+## Deuda tecnica conocida
+
+- Reportes con IA externa real aun no implementados.
+- Adjuntos de tareas aun no implementados.
+- Persistencia de archivos en Cloud Storage pendiente para despliegue GCP.
+- Frontend minimo orientado a demostracion, no diseno final de produccion.
+- Filtros avanzados y busquedas aun no implementados.
+- Validaciones frontend completas pendientes; actualmente se muestran errores reales del backend.
+- Validaciones de monitores y demás

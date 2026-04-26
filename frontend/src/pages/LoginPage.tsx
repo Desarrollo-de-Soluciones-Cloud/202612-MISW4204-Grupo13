@@ -1,8 +1,9 @@
 import { FormEvent, useState } from "react";
 import { signIn, toErrorMessage } from "../api/client";
 import type { AuthResponse } from "../api/types";
-import ErrorMessage from "../components/ErrorMessage";
 import Loading from "../components/Loading";
+import Toast from "../components/Toast";
+import useToast from "../components/useToast";
 
 interface LoginPageProps {
   onSignedIn: (auth: AuthResponse) => void;
@@ -12,18 +13,18 @@ export default function LoginPage({ onSignedIn }: LoginPageProps) {
   const [email, setEmail] = useState("admin@example.com");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { toast, showToast, clearToast } = useToast();
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
-    setError(null);
+    clearToast();
 
     try {
       const response = await signIn(email, password);
       onSignedIn(response);
     } catch (err) {
-      setError(toErrorMessage(err));
+      showToast(toErrorMessage(err), "error");
     } finally {
       setLoading(false);
     }
@@ -31,36 +32,46 @@ export default function LoginPage({ onSignedIn }: LoginPageProps) {
 
   return (
     <div className="login-wrapper">
-      <form className="card" onSubmit={handleSubmit}>
-        <h1>Ingreso</h1>
-        <p className="muted">Frontend minimo para Entrega 2</p>
+      <form className="card login-card" onSubmit={handleSubmit}>
+        <p className="app-system-name">Seneprojects</p>
+        <h1>Iniciar sesión</h1>
+        <p className="muted">
+          Plataforma para seguimiento semanal de monitores y asistentes graduados.
+        </p>
+        <p className="hint-note">Usa las credenciales asignadas por el administrador.</p>
 
-        <label>
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
-        </label>
+        <div className="form-field">
+          <label>
+            Correo electrónico
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </label>
+        </div>
 
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
-        </label>
+        <div className="form-field">
+          <label>
+            Contraseña
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </label>
+        </div>
 
-        <button type="submit" disabled={loading}>
-          Ingresar
-        </button>
+        <div className="form-actions login-actions">
+          <button type="submit" disabled={loading}>
+            Entrar al sistema
+          </button>
+        </div>
 
         {loading && <Loading label="Autenticando..." />}
-        <ErrorMessage message={error} />
+        {toast ? <Toast type={toast.type} message={toast.message} onClose={clearToast} /> : null}
       </form>
     </div>
   );
