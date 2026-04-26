@@ -1,6 +1,8 @@
 package application
 
 import (
+	"time"
+
 	assignmentsDomain "backend/internal/assignments/domain"
 	reportsDomain "backend/internal/reports/domain"
 	tasksDomain "backend/internal/tasks/domain"
@@ -21,22 +23,48 @@ type AssignmentReader interface {
 }
 
 type TaskReader interface {
-	FindAll() ([]tasksDomain.Task, error)
+	FindAllByWorkspaceAndWeek(workspaceID uint, weekID uint, weekInitialDate string) ([]tasksDomain.Task, error)
 }
 
 type PDFGenerator interface {
 	Generate(filePath string, title string, lines []string) error
 }
 
+type AIReportGenerator interface {
+	GenerateWeeklyReport(input AIWeeklyReportInput) (string, error)
+}
+
+type AIWeeklyReportInput struct {
+	WorkspaceID  uint
+	WeekID       uint
+	WeekNumber   int
+	InitialDate  string
+	FinalDate    string
+	AssignmentID uint
+	UserID       uint
+	Role         string
+	TotalHours   int
+	Tasks        []AIWeeklyReportTask
+}
+
+type AIWeeklyReportTask struct {
+	Title        string
+	Description  string
+	Status       string
+	SpentHours   int
+	Observations string
+	Late         bool
+}
+
 type ReportOutput struct {
-	ID           uint   `json:"id"`
-	WorkspaceID  uint   `json:"workspace_id"`
-	WeekID       uint   `json:"week_id"`
-	AssignmentID uint   `json:"assignment_id"`
-	UserID       uint   `json:"user_id"`
-	Type         string `json:"type"`
-	Summary      string `json:"summary"`
-	FilePath     string `json:"file_path"`
+	ID           uint      `json:"id"`
+	WorkspaceID  uint      `json:"workspace_id"`
+	WeekID       uint      `json:"week_id"`
+	AssignmentID uint      `json:"assignment_id"`
+	UserID       uint      `json:"user_id"`
+	FilePath     string    `json:"file_path"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 func toReportOutput(report reportsDomain.Report) ReportOutput {
@@ -46,8 +74,8 @@ func toReportOutput(report reportsDomain.Report) ReportOutput {
 		WeekID:       report.WeekID,
 		AssignmentID: report.AssignmentID,
 		UserID:       report.UserID,
-		Type:         string(report.Type),
-		Summary:      report.Summary,
 		FilePath:     report.FilePath,
+		CreatedAt:    report.CreatedAt,
+		UpdatedAt:    report.UpdatedAt,
 	}
 }
