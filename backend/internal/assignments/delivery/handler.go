@@ -11,18 +11,19 @@ import (
 	workspacesDomain "backend/internal/workspaces/domain"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AssignmentHandler struct {
-	createAssignment        *application.CreateAssignment
-	getAssignmentByID       *application.GetAssignmentByID
-	listAssignmentsByUserID *application.ListAssignmentsByUserID
-	updateAssignment        *application.UpdateAssignment
-	workspaceReader         AssignmentWorkspaceReader
-	userReader              AssignmentUserReader
+	createAssignment          *application.CreateAssignment
+	getAssignmentByID         *application.GetAssignmentByID
+	listAllAssignments        *application.ListAllAssignments
+	listAssignmentsByWorkspace *application.ListAssignmentsByWorkspace
+	listAssignmentsByUserID   *application.ListAssignmentsByUserID
+	updateAssignment          *application.UpdateAssignment
+	workspaceReader           AssignmentWorkspaceReader
+	userReader                AssignmentUserReader
 }
 
 type AssignmentWorkspaceReader interface {
@@ -36,18 +37,22 @@ type AssignmentUserReader interface {
 func NewAssignmentHandler(
 	createAssignment *application.CreateAssignment,
 	getAssignmentByID *application.GetAssignmentByID,
+	listAllAssignments *application.ListAllAssignments,
+	listAssignmentsByWorkspace *application.ListAssignmentsByWorkspace,
 	listAssignmentsByUserID *application.ListAssignmentsByUserID,
 	updateAssignment *application.UpdateAssignment,
 	workspaceReader AssignmentWorkspaceReader,
 	userReader AssignmentUserReader,
 ) *AssignmentHandler {
 	return &AssignmentHandler{
-		createAssignment:        createAssignment,
-		getAssignmentByID:       getAssignmentByID,
-		listAssignmentsByUserID: listAssignmentsByUserID,
-		updateAssignment:        updateAssignment,
-		workspaceReader:         workspaceReader,
-		userReader:              userReader,
+		createAssignment:          createAssignment,
+		getAssignmentByID:         getAssignmentByID,
+		listAllAssignments:        listAllAssignments,
+		listAssignmentsByWorkspace: listAssignmentsByWorkspace,
+		listAssignmentsByUserID:   listAssignmentsByUserID,
+		updateAssignment:          updateAssignment,
+		workspaceReader:           workspaceReader,
+		userReader:                userReader,
 	}
 }
 
@@ -292,46 +297,60 @@ func (h *AssignmentHandler) UpdateAssignment(c *gin.Context) {
 	})
 }
 
-func (h *AssignmentHandler) ListAssignmentsByUserID(c *gin.Context) {
+func (h *AssignmentHandler) ListAssignments(c *gin.Context) {
 	currentUser, ok := authDelivery.GetCurrentUser(c)
 	if !ok {
 		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
 		return
 	}
 
-	rawUserID := c.Query("user_id")
-	parsedID, err := strconv.ParseUint(rawUserID, 10, 32)
-	if err != nil || parsedID == 0 {
-		sharedHelpers.RespondWithError(c, http.StatusBadRequest, domain.ErrAssignmentUserIDRequired)
-		return
-	}
+	var output *application.ListAssignmentsByUserIDOutput
 
-	targetUserID := uint(parsedID)
-	if (currentUser.GlobalRole == usersDomain.RoleMonitor || currentUser.GlobalRole == usersDomain.RoleAssistant) && currentUser.ID != targetUserID {
-		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
-		return
-	}
-
-	output, err := h.listAssignmentsByUserID.Execute(application.ListAssignmentsByUserIDInput{
-		UserID: targetUserID,
-	})
-	if err != nil {
-		switch {
-		case isAssignmentValidationError(err):
-			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-		default:
+	// Determine what assignments to fetch based on user role
+	switch currentUser.GlobalRole {
+	case usersDomain.RoleAdmin:
+		// Admin gets ALL assignments
+		allOutput, err := h.listAllAssignments.Execute(application.ListAllAssignmentsInput{})
+		if err != nil {
 			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+			return
 		}
+		output = &application.ListAssignmentsByUserIDOutput{Assignments: allOutput.Assignments}
+
+	case usersDomain.RoleProfessor:
+		// Professor gets assignments from their workspaces
+		workspaceOutput, err := h.listAssignmentsByWorkspace.Execute(application.ListAssignmentsByWorkspaceInput{
+			ProfessorID: currentUser.ID,
+		})
+		if err != nil {
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+			return
+		}
+		output = &application.ListAssignmentsByUserIDOutput{Assignments: workspaceOutput.Assignments}
+
+	case usersDomain.RoleMonitor, usersDomain.RoleAssistant:
+		// Monitor/Assistant get only their own assignments
+		userOutput, err := h.listAssignmentsByUserID.Execute(application.ListAssignmentsByUserIDInput{
+			UserID: currentUser.ID,
+		})
+		if err != nil {
+			switch {
+			case isAssignmentValidationError(err):
+				sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+			default:
+				sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+			}
+			return
+		}
+		output = userOutput
+
+	default:
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
 		return
 	}
 
 	assignments := make([]AssignmentResponse, 0, len(output.Assignments))
 	for _, a := range output.Assignments {
-		if !h.canReadAssignment(currentUser.GlobalRole, currentUser.ID, a.UserID, a.WorkspaceID) {
-			sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
-			return
-		}
-
 		assignments = append(assignments, AssignmentResponse{
 			ID:          a.ID,
 			UserID:      a.UserID,

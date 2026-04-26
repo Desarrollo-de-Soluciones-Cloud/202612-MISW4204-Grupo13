@@ -25,10 +25,12 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 
 	createAssignment := application.NewCreateAssignment(repo).WithRepositories(userRepo, workspaceRepo).WithPeriodRepository(periodRepo)
 	getAssignmentByID := application.NewGetAssignmentByID(repo)
+	listAllAssignments := application.NewListAllAssignments(repo)
+	listAssignmentsByWorkspace := application.NewListAssignmentsByWorkspace(repo)
 	listAssignmentsByUserID := application.NewListAssignmentsByUserID(repo)
 	updateAssignment := application.NewUpdateAssignment(repo).WithWorkspaceRepository(workspaceRepo).WithPeriodRepository(periodRepo)
 
-	handler := NewAssignmentHandler(createAssignment, getAssignmentByID, listAssignmentsByUserID, updateAssignment, workspaceRepo, userRepo)
+	handler := NewAssignmentHandler(createAssignment, getAssignmentByID, listAllAssignments, listAssignmentsByWorkspace, listAssignmentsByUserID, updateAssignment, workspaceRepo, userRepo)
 
 	assignments := r.Group("/assignments")
 	{
@@ -42,6 +44,6 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 		assignmentReaders := assignments.Group("")
 		assignmentReaders.Use(authorizer.RequireRoles(usersDomain.RoleProfessor, usersDomain.RoleAdmin, usersDomain.RoleMonitor, usersDomain.RoleAssistant))
 		assignmentReaders.GET("/:id", handler.GetAssignmentByID)
-		assignmentReaders.GET("", handler.ListAssignmentsByUserID)
+		assignmentReaders.GET("", handler.ListAssignments)
 	}
 }
