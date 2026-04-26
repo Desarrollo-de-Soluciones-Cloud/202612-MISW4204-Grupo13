@@ -2,7 +2,11 @@ import { getAccessToken } from "../auth/authStorage";
 import type {
   Assignment,
   AuthResponse,
+  CreateAssignmentPayload,
+  CreatePeriodPayload,
   CreateTaskPayload,
+  CreateUserPayload,
+  CreateWorkspacePayload,
   GenerateWeeklyReportPayload,
   GenerateWeeklyReportResponse,
   ListAssignmentsResponse,
@@ -151,8 +155,22 @@ export function listUsers(role?: string): Promise<ListUsersResponse> {
   return request<ListUsersResponse>(`/users${search}`);
 }
 
+export function createUser(payload: CreateUserPayload): Promise<User> {
+  return request<User>("/users", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function listPeriods(): Promise<ListPeriodsResponse> {
   return request<ListPeriodsResponse>("/periods");
+}
+
+export function createPeriod(payload: CreatePeriodPayload): Promise<Period> {
+  return request<Period>("/periods", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function listWeeksByPeriod(periodId: number): Promise<ListWeeksResponse> {
@@ -164,8 +182,22 @@ export function listWorkspaces(periodId?: number): Promise<ListWorkspacesRespons
   return request<ListWorkspacesResponse>(`/workspaces${search}`);
 }
 
+export function createWorkspace(payload: CreateWorkspacePayload): Promise<Workspace> {
+  return request<Workspace>("/workspaces", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function listAssignmentsByUser(userId: number): Promise<ListAssignmentsResponse> {
   return request<ListAssignmentsResponse>(`/assignments?user_id=${userId}`);
+}
+
+export function createAssignment(payload: CreateAssignmentPayload): Promise<Assignment> {
+  return request<Assignment>("/assignments", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function listTasks(): Promise<ListTasksResponse> {

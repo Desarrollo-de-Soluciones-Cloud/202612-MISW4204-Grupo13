@@ -5,7 +5,6 @@ import {
   getMe,
   listReports,
   listTasks,
-  listUsers,
   listWorkspaces,
   toErrorMessage,
 } from "../api/client";
@@ -22,7 +21,6 @@ interface ProfessorDashboardProps {
 export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboardProps) {
   const [me, setMe] = useState<User | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [monitors, setMonitors] = useState<User[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [workspaceId, setWorkspaceId] = useState("");
@@ -38,19 +36,19 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     setError(null);
 
     try {
-      const [meResult, workspaceResult, monitorResult, taskResult, reportResult] = await Promise.all([
+      const [meResult, workspaceResult, taskResult, reportResult] = await Promise.all([
         getMe(),
         listWorkspaces(),
-        listUsers("monitor"),
         listTasks(),
         listReports(),
       ]);
 
       setMe(meResult);
       setWorkspaces(workspaceResult.workspaces);
-      setMonitors(monitorResult.users);
       setTasks(taskResult.tasks);
       setReports(reportResult.reports);
+
+      setWorkspaceId((previous) => previous || String(workspaceResult.workspaces[0]?.id ?? ""));
     } catch (err) {
       setError(toErrorMessage(err));
     } finally {
@@ -73,6 +71,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         week_id: Number(weekId),
       });
       setSuccess(`Reportes generados: ${response.generated_count}`);
+      setWeekId("");
       const reportResult = await listReports();
       setReports(reportResult.reports);
     } catch (err) {
@@ -129,6 +128,15 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
       {success && <div className="success-box">{success}</div>}
 
       <section className="card">
+        <h2>Alcance MVP actual</h2>
+        <ul>
+          <li>Reportes: generación semanal PDF mínima soportada por backend.</li>
+          <li>IA externa para reportes: pendiente (deuda técnica).</li>
+          <li>Adjuntos de tareas: pendiente (deuda técnica).</li>
+        </ul>
+      </section>
+
+      <section className="card">
         <h2>GET /auth/me</h2>
         {me ? (
           <table>
@@ -174,28 +182,6 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
                 <td>{item.name}</td>
                 <td>{item.period_id}</td>
                 <td>{item.state}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      <section className="card">
-        <h2>GET /users?role=monitor</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Email</th>
-            </tr>
-          </thead>
-          <tbody>
-            {monitors.map((item) => (
-              <tr key={item.id}>
-                <td>{item.id}</td>
-                <td>{item.name}</td>
-                <td>{item.email}</td>
               </tr>
             ))}
           </tbody>

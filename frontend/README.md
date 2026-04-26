@@ -62,3 +62,9 @@ curl -X POST http://localhost:80/api/auth/sign-in -H "Content-Type: application/
    Reiniciar `npm run dev` o hacer rebuild con Docker.
 - Base de datos con estado viejo:
    Ejecutar `docker compose down -v`.
+
+
+Deuda técnica a revisar:
+Reportes con IA externa real: pendiente
+Adjuntos de tareas: pendiente
+Almacenamiento en Cloud Storage: pendiente para despliegue GCP

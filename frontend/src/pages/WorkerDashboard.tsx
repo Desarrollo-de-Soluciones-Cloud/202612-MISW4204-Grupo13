@@ -178,6 +178,10 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
           <li>task week is not active</li>
           <li>insufficient permissions</li>
           <li>task status is invalid</li>
+          <li>period inscription is closed</li>
+          <li>assignment already exists</li>
+          <li>monitor weekly hours cannot exceed 12</li>
+          <li>assistant weekly hours cannot exceed 22</li>
         </ul>
       </section>
 

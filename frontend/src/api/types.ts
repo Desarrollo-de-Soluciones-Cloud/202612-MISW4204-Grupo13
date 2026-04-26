@@ -106,6 +106,38 @@ export interface ListReportsResponse {
   reports: Report[];
 }
 
+export interface CreateUserPayload {
+  name: string;
+  email: string;
+  password: string;
+  global_role: GlobalRole;
+}
+
+export interface CreatePeriodPayload {
+  name: string;
+  initial_date: string;
+  weeks_count: 8 | 16;
+  period_state: "active" | "closed";
+}
+
+export interface CreateWorkspacePayload {
+  period_id: number;
+  user_id: number;
+  name: string;
+  type: "course" | "project";
+  initial_date: string;
+  final_date: string;
+  observations: string;
+  state: "active" | "closed";
+}
+
+export interface CreateAssignmentPayload {
+  user_id: number;
+  workspace_id: number;
+  role: "monitor" | "assistant";
+  weekly_hours: number;
+}
+
 export interface GenerateWeeklyReportPayload {
   workspace_id: number;
   week_id: number;
