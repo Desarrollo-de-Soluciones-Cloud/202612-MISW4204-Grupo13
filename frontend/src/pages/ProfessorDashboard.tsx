@@ -5,10 +5,11 @@ import {
   getMe,
   listReports,
   listTasks,
+  listWeeksByPeriod,
   listWorkspaces,
   toErrorMessage,
 } from "../api/client";
-import type { Report, Task, User, Workspace } from "../api/types";
+import type { Report, Task, User, Week, Workspace } from "../api/types";
 import EmptyState from "../components/EmptyState";
 import HelpText from "../components/HelpText";
 import Layout from "../components/Layout";
@@ -26,6 +27,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [weeksByPeriod, setWeeksByPeriod] = useState<Record<number, Week[]>>({});
   const [workspaceId, setWorkspaceId] = useState("");
   const [weekId, setWeekId] = useState("");
   const [filterWorkspaceId, setFilterWorkspaceId] = useState("");
@@ -33,22 +35,64 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
   const [loading, setLoading] = useState(false);
   const { toast, showToast, clearToast } = useToast();
 
+  const getReportsWorkspaceId = (fallbackWorkspaceId?: number): number | undefined => {
+    if (filterWorkspaceId) {
+      return Number(filterWorkspaceId);
+    }
+
+    if (workspaceId) {
+      return Number(workspaceId);
+    }
+
+    return fallbackWorkspaceId;
+  };
+
+  const getWorkspaceLabel = (workspace: Workspace): string =>
+    `${workspace.name} - ${workspace.type} (ID ${workspace.id})`;
+
+  const getWeekLabel = (week: Week): string =>
+    `Semana ${week.number}: ${week.initial_date} a ${week.final_date} (ID ${week.id})`;
+
+  const loadWeeksForPeriod = async (periodId: number) => {
+    if (weeksByPeriod[periodId]) {
+      return;
+    }
+
+    const response = await listWeeksByPeriod(periodId);
+    setWeeksByPeriod((previous) => ({
+      ...previous,
+      [periodId]: response.weeks,
+    }));
+  };
+
+  const selectedWorkspace = workspaces.find((item) => String(item.id) === workspaceId);
+  const selectedFilterWorkspace = workspaces.find((item) => String(item.id) === filterWorkspaceId);
+  const generateWeeks = selectedWorkspace ? weeksByPeriod[selectedWorkspace.period_id] ?? [] : [];
+  const filterWeeks = selectedFilterWorkspace
+    ? weeksByPeriod[selectedFilterWorkspace.period_id] ?? []
+    : [];
+
   const loadBase = async () => {
     setLoading(true);
 
     try {
-      const [meResult, workspaceResult, taskResult, reportResult] = await Promise.all([
+      const [meResult, workspaceResult, taskResult] = await Promise.all([
         getMe(),
         listWorkspaces(),
         listTasks(),
-        listReports(),
       ]);
+
+      const defaultWorkspaceId = workspaceResult.workspaces[0]?.id;
+      const reportResult = defaultWorkspaceId
+        ? await listReports({ workspace_id: defaultWorkspaceId })
+        : { reports: [] };
 
       setMe(meResult);
       setWorkspaces(workspaceResult.workspaces);
       setTasks(taskResult.tasks);
       setReports(reportResult.reports);
-      setWorkspaceId((previous) => previous || String(workspaceResult.workspaces[0]?.id ?? ""));
+      setWorkspaceId((previous) => previous || String(defaultWorkspaceId ?? ""));
+      setFilterWorkspaceId((previous) => previous || String(defaultWorkspaceId ?? ""));
     } catch (err) {
       showToast(toErrorMessage(err), "error");
     } finally {
@@ -60,18 +104,106 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     void loadBase();
   }, []);
 
+  useEffect(() => {
+    const loadGenerateWeeks = async () => {
+      if (!selectedWorkspace) {
+        setWeekId("");
+        return;
+      }
+
+      try {
+        await loadWeeksForPeriod(selectedWorkspace.period_id);
+      } catch (err) {
+        showToast(toErrorMessage(err), "error");
+      }
+    };
+
+    void loadGenerateWeeks();
+  }, [workspaceId, workspaces]);
+
+  useEffect(() => {
+    if (generateWeeks.length === 0) {
+      setWeekId("");
+      return;
+    }
+
+    setWeekId((previous) => {
+      if (previous && generateWeeks.some((item) => String(item.id) === previous)) {
+        return previous;
+      }
+
+      return String(generateWeeks[0].id);
+    });
+  }, [generateWeeks]);
+
+  useEffect(() => {
+    const loadFilterWeeks = async () => {
+      if (!selectedFilterWorkspace) {
+        setFilterWeekId("");
+        return;
+      }
+
+      try {
+        await loadWeeksForPeriod(selectedFilterWorkspace.period_id);
+      } catch (err) {
+        showToast(toErrorMessage(err), "error");
+      }
+    };
+
+    void loadFilterWeeks();
+  }, [filterWorkspaceId, workspaces]);
+
+  useEffect(() => {
+    if (filterWeekId && !filterWeeks.some((item) => String(item.id) === filterWeekId)) {
+      setFilterWeekId("");
+    }
+  }, [filterWeeks]);
+
+  useEffect(() => {
+    const selectedWorkspaceId = Number(filterWorkspaceId);
+    if (!selectedWorkspaceId) {
+      setReports([]);
+      return;
+    }
+
+    const loadReports = async () => {
+      try {
+        const response = await listReports({
+          workspace_id: selectedWorkspaceId,
+          week_id: filterWeekId ? Number(filterWeekId) : undefined,
+        });
+        setReports(response.reports);
+      } catch (err) {
+        showToast(toErrorMessage(err), "error");
+      }
+    };
+
+    void loadReports();
+  }, [filterWorkspaceId]);
+
   const handleGenerateReport = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     clearToast();
 
     try {
+      const selectedWorkspaceId = Number(workspaceId);
+      const selectedWeekId = Number(weekId);
+
       const response = await generateWeeklyReport({
-        workspace_id: Number(workspaceId),
-        week_id: Number(weekId),
+        workspace_id: selectedWorkspaceId,
+        week_id: selectedWeekId,
       });
       showToast(`Se generaron ${response.generated_count} reportes semanales.`, "success");
       setWeekId("");
-      const reportResult = await listReports();
+
+      const reportsWorkspaceId = getReportsWorkspaceId(selectedWorkspaceId);
+      const reportResult = reportsWorkspaceId
+        ? await listReports({
+            workspace_id: reportsWorkspaceId,
+            week_id: filterWeekId ? Number(filterWeekId) : undefined,
+          })
+        : { reports: [] };
+
       setReports(reportResult.reports);
     } catch (err) {
       showToast(toErrorMessage(err), "error");
@@ -83,8 +215,13 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     clearToast();
 
     try {
+      if (!filterWorkspaceId) {
+        showToast("El filtro por curso/proyecto es obligatorio para consultar reportes.", "error");
+        return;
+      }
+
       const response = await listReports({
-        workspace_id: filterWorkspaceId ? Number(filterWorkspaceId) : undefined,
+        workspace_id: Number(filterWorkspaceId),
         week_id: filterWeekId ? Number(filterWeekId) : undefined,
       });
       setReports(response.reports);
@@ -131,9 +268,8 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
       <section className="card info-card">
         <h2>Alcance MVP actual</h2>
         <p>
-          Actualmente el sistema genera reportes PDF semanales básicos. La integración con IA
-          externa, los adjuntos de tareas y Cloud Storage quedan registrados como deuda técnica
-          para la siguiente fase.
+          El sistema genera reportes PDF semanales con apoyo de IA usando las tareas registradas,
+          sus descripciones, observaciones y las horas reportadas por monitores y asistentes.
         </p>
       </section>
 
@@ -237,28 +373,45 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         <form className="form-grid" onSubmit={handleGenerateReport}>
           <div className="form-field">
             <label>
-              ID del curso/proyecto
-              <input
-                type="number"
+              Curso/proyecto
+              <select
                 value={workspaceId}
                 onChange={(event) => setWorkspaceId(event.target.value)}
                 required
-                min={1}
-              />
+              >
+                <option value="" disabled>
+                  Selecciona un curso/proyecto
+                </option>
+                {workspaces.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {getWorkspaceLabel(item)}
+                  </option>
+                ))}
+              </select>
             </label>
             <HelpText>Selecciona un curso o proyecto propio.</HelpText>
           </div>
 
           <div className="form-field">
             <label>
-              ID de semana
-              <input
-                type="number"
+              Semana
+              <select
                 value={weekId}
                 onChange={(event) => setWeekId(event.target.value)}
                 required
-                min={1}
-              />
+                disabled={generateWeeks.length === 0}
+              >
+                <option value="" disabled>
+                  {generateWeeks.length === 0
+                    ? "No hay semanas disponibles"
+                    : "Selecciona una semana"}
+                </option>
+                {generateWeeks.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {getWeekLabel(item)}
+                  </option>
+                ))}
+              </select>
             </label>
             <HelpText>
               El reporte se genera para la semana académica seleccionada.
@@ -277,25 +430,39 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         <form className="form-grid" onSubmit={handleFilterReports}>
           <div className="form-field">
             <label>
-              ID del curso/proyecto (opcional)
-              <input
-                type="number"
+              Curso/proyecto
+              <select
                 value={filterWorkspaceId}
                 onChange={(event) => setFilterWorkspaceId(event.target.value)}
-                min={1}
-              />
+                required
+              >
+                <option value="" disabled>
+                  Selecciona un curso/proyecto
+                </option>
+                {workspaces.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {getWorkspaceLabel(item)}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
 
           <div className="form-field">
             <label>
-              ID de semana (opcional)
-              <input
-                type="number"
+              Semana
+              <select
                 value={filterWeekId}
                 onChange={(event) => setFilterWeekId(event.target.value)}
-                min={1}
-              />
+                disabled={filterWorkspaceId === "" || filterWeeks.length === 0}
+              >
+                <option value="">Todas las semanas</option>
+                {filterWeeks.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {getWeekLabel(item)}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
 
