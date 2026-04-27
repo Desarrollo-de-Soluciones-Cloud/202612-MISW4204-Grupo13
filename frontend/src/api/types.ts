@@ -74,6 +74,7 @@ export interface Report {
   assignment_id: number;
   user_id: number;
   file_path: string;
+  created_at?: string;
 }
 
 export interface ListUsersResponse {
@@ -120,7 +121,7 @@ export interface CreatePeriodPayload {
 
 export interface CreateWorkspacePayload {
   period_id: number;
-  user_id: number;
+  user_id?: number;
   name: string;
   type: "course" | "project";
   initial_date: string;
