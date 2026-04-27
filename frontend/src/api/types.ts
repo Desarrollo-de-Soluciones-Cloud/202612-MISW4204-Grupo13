@@ -74,6 +74,7 @@ export interface Report {
   assignment_id: number;
   user_id: number;
   file_path: string;
+  created_at?: string;
 }
 
 export interface ListUsersResponse {
