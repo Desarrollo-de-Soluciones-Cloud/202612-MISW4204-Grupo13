@@ -5,22 +5,17 @@ services:
     env_file:
       - .env
       - .env.admin
-    depends_on:
-      seneprojects_db:
-        condition: service_healthy
+    expose:
+      - "8080"
     restart: on-failure
-    volumes:
-      - ./credentials/vertex-ai-sa.json:/app/credentials/vertex-ai-sa.json:ro
-      - ./storage/reports:/app/storage/reports
 
-  seneprojects_backend_test:
+  seneprojects_frontend:
     build:
-      context: ./backend
-      target: builder
-    container_name: seneprojects_backend_test
-    profiles:
-      - test
-    working_dir: /app
+      context: ./frontend
+    container_name: seneprojects_frontend
+    expose:
+      - "5173"
+    restart: on-failure
 
   seneprojects_nginx:
     build: ./nginx
@@ -29,37 +24,5 @@ services:
       - "80:80"
     depends_on:
       - seneprojects_backend
-
-  frontend:
-    build:
-      context: ./frontend
-    container_name: seneprojects_frontend
-    ports:
-      - "5173:5173"
-    environment:
-      - VITE_API_BASE_URL=/api
-      - VITE_PROXY_TARGET=http://seneprojects_nginx:80
-    depends_on:
-      - seneprojects_nginx
-
-  seneprojects_db:
-    image: postgres:15
-    container_name: seneprojects_db
-    restart: always
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-    ports:
-      - "5432:5432"
-    volumes:
-      - seneprojects_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h localhost -p ${DB_PORT} -d ${DB_NAME} -U ${DB_USER}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
-
-volumes:
-  seneprojects_data:
+      - seneprojects_frontend
+    restart: on-failure
