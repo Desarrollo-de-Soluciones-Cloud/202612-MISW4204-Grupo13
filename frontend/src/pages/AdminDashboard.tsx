@@ -10,10 +10,11 @@ import {
   listReports,
   listTasks,
   listUsers,
+  listWeeksByPeriod,
   listWorkspaces,
   toErrorMessage,
 } from "../api/client";
-import type { Assignment, GlobalRole, Period, Report, Task, User, Workspace } from "../api/types";
+import type { Assignment, GlobalRole, Period, Report, Task, User, Week, Workspace } from "../api/types";
 import EmptyState from "../components/EmptyState";
 import HelpText from "../components/HelpText";
 import Layout from "../components/Layout";
@@ -34,6 +35,11 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [reportWeeks, setReportWeeks] = useState<Week[]>([]);
+  const [reportFilters, setReportFilters] = useState({
+    workspace_id: "",
+    week_id: "",
+  });
   const [loading, setLoading] = useState(false);
   const { toast, showToast, clearToast } = useToast();
 
@@ -76,19 +82,43 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     [users, assignmentForm.role],
   );
 
+  const getWorkspaceLabel = (workspace: Workspace): string =>
+    `${workspace.name} - ${workspace.type} - ${workspace.state} (ID ${workspace.id})`;
+
+  const getPeriodLabel = (period: Period): string =>
+    `${period.name} - ${period.period_state} (ID ${period.id})`;
+
+  const getProfessorLabel = (professor: User): string =>
+    `${professor.name} - ${professor.email} - ${professor.global_role} (ID ${professor.id})`;
+
+  const getAssignableUserLabel = (account: User): string =>
+    `${account.name} - ${account.email} - ${account.global_role} (ID ${account.id})`;
+
+  const getWeekLabel = (week: Week): string =>
+    `Semana ${week.number}: ${week.initial_date} a ${week.final_date} (ID ${week.id})`;
+
   const loadAll = async () => {
     setLoading(true);
 
     try {
-      const [meResult, usersResult, periodsResult, workspacesResult, tasksResult, reportsResult] =
+      const [meResult, usersResult, periodsResult, workspacesResult, tasksResult] =
         await Promise.all([
           getMe(),
           listUsers(),
           listPeriods(),
           listWorkspaces(),
           listTasks(),
-          listReports(),
         ]);
+
+      const defaultWorkspaceId = workspacesResult.workspaces[0]?.id;
+      const selectedWorkspaceId = Number(reportFilters.workspace_id || String(defaultWorkspaceId ?? ""));
+      const selectedWeekId = reportFilters.week_id ? Number(reportFilters.week_id) : undefined;
+      const reportsResult = selectedWorkspaceId
+        ? await listReports({
+            workspace_id: selectedWorkspaceId,
+            week_id: selectedWeekId,
+          })
+        : { reports: [] };
 
       const usersForAssignments = usersResult.users.filter(
         (item) => item.global_role === "monitor" || item.global_role === "assistant",
@@ -111,6 +141,10 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       setAssignments(Array.from(uniqueAssignments.values()));
       setTasks(tasksResult.tasks);
       setReports(reportsResult.reports);
+      setReportFilters((previous) => ({
+        ...previous,
+        workspace_id: previous.workspace_id || String(defaultWorkspaceId ?? ""),
+      }));
 
       setWorkspaceForm((previous) => ({
         ...previous,
@@ -146,6 +180,61 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       user_id: String(assignableUsers[0]?.id ?? ""),
     }));
   }, [assignableUsers]);
+
+  useEffect(() => {
+    const selectedWorkspaceId = Number(reportFilters.workspace_id);
+    if (!selectedWorkspaceId) {
+      setReports([]);
+      setReportWeeks([]);
+      setReportFilters((previous) => ({ ...previous, week_id: "" }));
+      return;
+    }
+
+    const loadReports = async () => {
+      try {
+        const selectedWorkspace = workspaces.find((item) => item.id === selectedWorkspaceId);
+        if (selectedWorkspace) {
+          const weeksResponse = await listWeeksByPeriod(selectedWorkspace.period_id);
+          setReportWeeks(weeksResponse.weeks);
+          if (!weeksResponse.weeks.some((item) => String(item.id) === reportFilters.week_id)) {
+            setReportFilters((previous) => ({ ...previous, week_id: "" }));
+          }
+        } else {
+          setReportWeeks([]);
+        }
+
+        const response = await listReports({
+          workspace_id: selectedWorkspaceId,
+          week_id: reportFilters.week_id ? Number(reportFilters.week_id) : undefined,
+        });
+        setReports(response.reports);
+      } catch (err) {
+        showToast(toErrorMessage(err), "error");
+      }
+    };
+
+    void loadReports();
+  }, [reportFilters.workspace_id, workspaces]);
+
+  const handleFilterReports = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    clearToast();
+
+    try {
+      if (!reportFilters.workspace_id) {
+        showToast("El filtro por curso/proyecto es obligatorio para consultar reportes.", "error");
+        return;
+      }
+
+      const response = await listReports({
+        workspace_id: Number(reportFilters.workspace_id),
+        week_id: reportFilters.week_id ? Number(reportFilters.week_id) : undefined,
+      });
+      setReports(response.reports);
+    } catch (err) {
+      showToast(toErrorMessage(err), "error");
+    }
+  };
 
   const handleCreateUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -426,7 +515,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 </option>
                 {periods.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.id} - {item.name}
+                    {getPeriodLabel(item)}
                   </option>
                 ))}
               </select>
@@ -451,7 +540,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 </option>
                 {professorUsers.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.id} - {item.name}
+                    {getProfessorLabel(item)}
                   </option>
                 ))}
               </select>
@@ -598,7 +687,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 </option>
                 {assignableUsers.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.id} - {item.name}
+                    {getAssignableUserLabel(item)}
                   </option>
                 ))}
               </select>
@@ -623,7 +712,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 </option>
                 {workspaces.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.id} - {item.name}
+                    {getWorkspaceLabel(item)}
                   </option>
                 ))}
               </select>
@@ -855,6 +944,60 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
       <section className="card">
         <h2>Reportes generados</h2>
+        <form className="form-grid" onSubmit={handleFilterReports}>
+          <div className="form-field">
+            <label>
+              ID del curso/proyecto
+              <select
+                value={reportFilters.workspace_id}
+                onChange={(event) =>
+                  setReportFilters((previous) => ({
+                    ...previous,
+                    workspace_id: event.target.value,
+                  }))
+                }
+                required
+              >
+                <option value="" disabled>
+                  Selecciona un curso/proyecto
+                </option>
+                {workspaces.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {getWorkspaceLabel(item)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="form-field">
+            <label>
+              Semana
+              <select
+                value={reportFilters.week_id}
+                onChange={(event) =>
+                  setReportFilters((previous) => ({
+                    ...previous,
+                    week_id: event.target.value,
+                  }))
+                }
+                disabled={reportFilters.workspace_id === "" || reportWeeks.length === 0}
+              >
+                <option value="">Todas las semanas</option>
+                {reportWeeks.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {getWeekLabel(item)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="form-actions">
+            <button type="submit">Aplicar filtros</button>
+          </div>
+        </form>
+
         <div className="table-wrap">
           <table>
             <thead>

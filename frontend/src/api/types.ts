@@ -73,8 +73,6 @@ export interface Report {
   week_id: number;
   assignment_id: number;
   user_id: number;
-  type: "weekly_pdf";
-  summary: string;
   file_path: string;
 }
 
