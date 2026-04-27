@@ -2,9 +2,13 @@ package application
 
 import (
 	periodsDomain "backend/internal/periods/domain"
+	"time"
 	usersDomain "backend/internal/users/domain"
 	workspacesDomain "backend/internal/workspaces/domain"
 )
+
+
+
 
 type CreateWorkspaceInput struct {
 	PeriodID     uint
@@ -45,9 +49,15 @@ func NewCreateWorkspace(workspaceRepo workspacesDomain.WorkspaceRepository, peri
 
 func (uc *CreateWorkspace) Execute(input CreateWorkspaceInput) (*CreateWorkspaceOutput, error) {
 	// Verify that the period exists
-	_, err := uc.periodRepository.FindByID(input.PeriodID)
+	period, err := uc.periodRepository.FindByID(input.PeriodID)
 	if err != nil {
 		return nil, workspacesDomain.ErrWorkspacePeriodNotFound
+	}
+	if period.PeriodState == periodsDomain.ClosedPeriod {
+		return nil, workspacesDomain.ErrWorkspacePeriodClosed
+	}
+	if period.InscriptionFinalDate < time.Now().Format("2006-01-02") {
+		return nil, workspacesDomain.ErrWorkspaceInscriptionClosed
 	}
 
 	// Verify that the user exists and has professor role

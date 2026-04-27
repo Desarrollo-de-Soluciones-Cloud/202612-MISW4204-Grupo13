@@ -48,6 +48,9 @@ func (uc *UpdateWorkspace) Execute(input UpdateWorkspaceInput) (*UpdateWorkspace
 	if err != nil {
 		return nil, err
 	}
+	if workspace.State == workspacesDomain.ClosedState {
+		return nil, workspacesDomain.ErrWorkspaceClosedUpdateForbidden
+	}
 
 	// Verify that the user still has professor role (validate existing user)
 	user, err := uc.userRepository.FindByID(workspace.UserID)

@@ -2,6 +2,7 @@ package delivery_test
 
 import (
 	"backend/internal/shared/database"
+	usersDomain "backend/internal/users/domain"
 	"backend/internal/weeks/delivery"
 	weeksDomain "backend/internal/weeks/domain"
 	"net/http"
@@ -12,6 +13,16 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+type noopAuthorizer struct{}
+
+func (noopAuthorizer) RequireAuthentication() gin.HandlerFunc {
+	return func(c *gin.Context) { c.Next() }
+}
+
+func (noopAuthorizer) RequireRoles(...usersDomain.UserRole) gin.HandlerFunc {
+	return func(c *gin.Context) { c.Next() }
+}
 
 func TestSetupRoutesRegistersWeekReadRoutes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -28,7 +39,7 @@ func TestSetupRoutesRegistersWeekReadRoutes(t *testing.T) {
 
 	router := gin.New()
 
-	delivery.SetupRoutes(router)
+	delivery.SetupRoutes(router, noopAuthorizer{})
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/weeks/periods/1", nil)
@@ -63,7 +74,7 @@ func TestSetupRoutesRegistersWeekByNumberRoute(t *testing.T) {
 
 	router := gin.New()
 
-	delivery.SetupRoutes(router)
+	delivery.SetupRoutes(router, noopAuthorizer{})
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/weeks/1/periods/1", nil)

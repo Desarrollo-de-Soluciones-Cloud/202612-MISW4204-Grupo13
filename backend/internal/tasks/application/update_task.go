@@ -48,6 +48,9 @@ func (uc *UpdateTask) Execute(input UpdateTaskInput) (*TaskOutput, error) {
 		}
 		return nil, err
 	}
+	if domain.IsWeekClosed(task.WeekStartDate, uc.now()) {
+		return nil, domain.ErrTaskLateUpdateForbidden
+	}
 	if task.Late {
 		return nil, domain.ErrTaskLateUpdateForbidden
 	}
