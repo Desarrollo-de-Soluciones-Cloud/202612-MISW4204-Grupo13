@@ -17,6 +17,7 @@ var (
 	ErrAssignmentPeriodClosed         = errors.New("assignment period is closed")
 	ErrAssignmentUserInvalidRole      = errors.New("assignment can only be created for users with role monitor or assistant")
 	ErrAssignmentRoleNotAllowedForUser = errors.New("assignment role is not allowed for this user global role")
+	ErrAssignmentProfessorCannotCreateInForeignWorkspace = errors.New("professor can only create assignments in their own workspaces")
 	ErrAssignmentProfessorCannotChangeWeeklyHours = errors.New("professor cannot change assignment weekly hours")
 	ErrAssignmentProfessorCannotUpdate = errors.New("professor can only update assignments in their own workspaces")
 

@@ -136,6 +136,14 @@ function mapDomainErrorMessage(rawMessage: string, status: number): string {
     return "No se puede crear un curso/proyecto en un periodo cerrado.";
   }
 
+  if (normalized.includes("professor can only create workspaces for themselves")) {
+    return "Como profesor, solo puedes crear cursos/proyectos asociados a tu propia cuenta.";
+  }
+
+  if (normalized.includes("professor can only create assignments in their own workspaces")) {
+    return "Como profesor, solo puedes crear vinculaciones en cursos/proyectos que te pertenecen.";
+  }
+
   if (normalized.includes("professor") && (normalized.includes("not found") || normalized.includes("invalid"))) {
     return "El profesor seleccionado no existe o no tiene rol de profesor.";
   }
