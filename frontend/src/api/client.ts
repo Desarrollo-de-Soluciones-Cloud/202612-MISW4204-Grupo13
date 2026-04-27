@@ -225,6 +225,10 @@ function extractApiMessages(body: ApiErrorBody | null): string[] {
   return messages;
 }
 
+
+
+
+
 async function parseErrorResponse(response: Response): Promise<{ message: string; details: string[] }> {
   const contentType = response.headers.get("content-type") || "";
   if (contentType.includes("application/json")) {
