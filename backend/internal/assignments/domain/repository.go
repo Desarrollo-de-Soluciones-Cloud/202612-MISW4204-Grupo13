@@ -6,6 +6,7 @@ type AssignmentRepository interface {
 	FindAll() ([]Assignment, error)
 	FindAllByUserID(userID uint) ([]Assignment, error)
 	FindByWorkspaceUserID(workspaceUserID uint) ([]Assignment, error)
+	FindByWorkspaceIDsAndRoles(workspaceIDs []uint, roles []AssignmentRole) ([]Assignment, error)
 	SumWeeklyHoursByUserAndRole(userID uint, role AssignmentRole) (int, error)
 	CountAssignmentsByUserAndRole(userID uint, role AssignmentRole) (int, error)
 	Update(assignment *Assignment) error

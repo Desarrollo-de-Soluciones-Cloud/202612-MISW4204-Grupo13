@@ -54,6 +54,14 @@ func (r *AssignmentRepository) FindByWorkspaceUserID(workspaceUserID uint) ([]do
 	return assignments, result.Error
 }
 
+func (r *AssignmentRepository) FindByWorkspaceIDsAndRoles(workspaceIDs []uint, roles []domain.AssignmentRole) ([]domain.Assignment, error) {
+	var assignments []domain.Assignment
+	result := database.DB.
+		Where("workspace_id IN ? AND role IN ?", workspaceIDs, roles).
+		Find(&assignments)
+	return assignments, result.Error
+}
+
 func (r *AssignmentRepository) SumWeeklyHoursByUserAndRole(userID uint, role domain.AssignmentRole) (int, error) {
 	var total int
 	result := database.DB.Model(&domain.Assignment{}).
