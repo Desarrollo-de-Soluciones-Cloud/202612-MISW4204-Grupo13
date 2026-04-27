@@ -315,6 +315,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     try {
       await createWorkspace({
         period_id: Number(workspaceForm.period_id),
+        user_id: me?.id ?? user.id,
         name: workspaceForm.name,
         type: workspaceForm.type,
         initial_date: workspaceForm.initial_date,
