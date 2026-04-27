@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	assignmentsInfra "backend/internal/assignments/infrastructure"
 	periodInfra "backend/internal/periods/infrastructure"
 	usersDomain "backend/internal/users/domain"
 	usersInfra "backend/internal/users/infrastructure"
@@ -26,13 +27,18 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 	// Initialize user repository for workspace user validation
 	userRepo := usersInfra.NewUserRepository()
 
+	// Initialize assignment repository for monitors and assistants
+	assignmentRepo := assignmentsInfra.NewAssignmentRepository()
+
 	createWorkspace := workspacesApp.NewCreateWorkspace(workspaceRepo, periodRepo, userRepo)
 	listWorkspaces := workspacesApp.NewListWorkspaces(workspaceRepo)
 	listWorkspacesByPeriod := workspacesApp.NewListWorkspacesByPeriod(workspaceRepo)
 	getWorkspaceByID := workspacesApp.NewGetWorkspaceByID(workspaceRepo)
 	updateWorkspace := workspacesApp.NewUpdateWorkspace(workspaceRepo, periodRepo, userRepo)
 	deleteWorkspace := workspacesApp.NewDeleteWorkspace(workspaceRepo)
-	handler := NewWorkspaceHandler(createWorkspace, listWorkspaces, listWorkspacesByPeriod, getWorkspaceByID, updateWorkspace, deleteWorkspace)
+	closeWorkspace := workspacesApp.NewCloseWorkspace(workspaceRepo, userRepo)
+	listWorkspaceMonitorsAndAssistants := workspacesApp.NewListWorkspaceMonitorsAndAssistants(workspaceRepo, assignmentRepo, userRepo)
+	handler := NewWorkspaceHandler(createWorkspace, listWorkspaces, listWorkspacesByPeriod, getWorkspaceByID, updateWorkspace, deleteWorkspace, closeWorkspace, listWorkspaceMonitorsAndAssistants)
 	workspaces := r.Group("/workspaces")
 	{
 		workspaces.Use(authorizer.RequireAuthentication())
@@ -43,6 +49,10 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 		adminAndProfessorWorkspaces.GET("", handler.ListWorkspaces)
 		adminAndProfessorWorkspaces.GET("/:id", handler.GetWorkspaceByID)
 		adminAndProfessorWorkspaces.PUT("/:id", handler.UpdateWorkspace)
-		adminAndProfessorWorkspaces.DELETE("/:id", handler.DeleteWorkspace)
+		adminAndProfessorWorkspaces.PATCH("/:id/close", handler.CloseWorkspace)
+
+		professorWorkspaces := workspaces.Group("")
+		professorWorkspaces.Use(authorizer.RequireRoles(usersDomain.RoleProfessor))
+		professorWorkspaces.GET("/monitors-and-assistants/list", handler.ListWorkspaceMonitorsAndAssistants)
 	}
 }

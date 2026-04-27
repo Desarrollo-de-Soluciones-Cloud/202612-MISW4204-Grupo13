@@ -46,7 +46,7 @@ func main() {
 	workspacesDelivery.SetupRoutes(api, authHandler)
 	assignmentsDelivery.SetupRoutes(api, authHandler)
 	tasksDelivery.SetupRoutes(api, authHandler)
-	reportsDelivery.SetupRoutes(api, authHandler)
+	reportsDelivery.SetupRoutes(api, authHandler, cfg)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

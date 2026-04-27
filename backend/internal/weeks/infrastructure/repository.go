@@ -38,6 +38,18 @@ func (r *WeekRepository) FindByPeriodIDAndNumber(periodID uint, number int) (*do
 	return &week, nil
 }
 
+func (r *WeekRepository) FindByPeriodIDAndStartDate(periodID uint, startDate string) (*domain.Week, error) {
+	var week domain.Week
+	result := database.DB.Where("period_id = ? AND initial_date = ?", periodID, startDate).First(&week)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrWeekNotFound
+		}
+		return nil, result.Error
+	}
+	return &week, nil
+}
+
 func (r *WeekRepository) ExistsByPeriodID(periodID uint) (bool, error) {
 	var count int64
 	result := database.DB.Model(&domain.Week{}).Where("period_id = ?", periodID).Count(&count)

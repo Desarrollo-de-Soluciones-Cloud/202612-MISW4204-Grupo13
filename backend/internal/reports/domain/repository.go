@@ -1,8 +1,8 @@
 package domain
 
 type ReportRepository interface {
-	Create(report *Report) error
+	Save(report *Report) error
 	FindByID(id uint) (*Report, error)
-	FindAll(workspaceID *uint, weekID *uint) ([]Report, error)
+	FindAll(workspaceID uint, weekID *uint, userID *uint) ([]Report, error)
 	AutoMigrate() error
 }

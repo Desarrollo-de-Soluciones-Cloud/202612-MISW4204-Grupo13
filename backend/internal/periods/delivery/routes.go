@@ -36,8 +36,7 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 		adminPeriods.Use(authorizer.RequireRoles(usersDomain.RoleAdmin))
 		adminPeriods.POST("", handler.CreatePeriod)
 		adminPeriods.GET("", handler.ListPeriods)
-		adminPeriods.GET("/:id", handler.GetPeriodByID)
-		adminPeriods.PUT("/:id", handler.UpdatePeriod)
+		adminPeriods.PATCH("/:id", handler.UpdatePeriod)
 		adminPeriods.PATCH("/:id/close", handler.ClosePeriod)
 	}
 }
