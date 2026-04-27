@@ -1,0 +1,34 @@
+{
+  "auth_users": [
+    {
+      "email": "admin@seneprojects.com",
+      "password": "seneprojects123"
+    },
+    {
+      "email": "valeria.mendoza@uniandes.edu.co",
+      "password": "Seneprojects2026!"
+    },
+    {
+      "email": "camila.torres.s@uniandes.edu.co",
+      "password": "Seneprojects2026!"
+    },
+    {
+      "email": "nicolas.herrera@uniandes.edu.co",
+      "password": "Seneprojects2026!"
+    },
+    {
+      "email": "mariana.leon@uniandes.edu.co",
+      "password": "Seneprojects2026!"
+    },
+    {
+      "email": "santiago.alvarez.g@uniandes.edu.co",
+      "password": "Seneprojects2026!"
+    }
+  ],
+  "professor_view": {
+    "email": "valeria.mendoza@uniandes.edu.co",
+    "password": "Seneprojects2026!",
+    "period_id": 1,
+    "assignment_user_ids": [3, 4, 5, 6]
+  }
+}
