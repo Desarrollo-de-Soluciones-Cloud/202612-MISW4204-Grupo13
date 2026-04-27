@@ -4,6 +4,7 @@ import (
 	assignmentsDomain "backend/internal/assignments/domain"
 	applicationpkg "backend/internal/tasks/application"
 	"backend/internal/tasks/domain"
+	weeksDomain "backend/internal/weeks/domain"
 	workspacesDomain "backend/internal/workspaces/domain"
 	"errors"
 	"testing"
@@ -23,6 +24,10 @@ type mockWorkspaceRepository struct {
 	workspaces map[uint]*workspacesDomain.Workspace
 }
 
+type mockWeekRepository struct {
+	weeks map[string]*weeksDomain.Week
+}
+
 func newMockTaskRepository() *mockTaskRepository {
 	return &mockTaskRepository{
 		tasks:  make(map[uint]*domain.Task),
@@ -38,6 +43,10 @@ func newMockAssignmentRepository() *mockAssignmentRepository {
 
 func newMockWorkspaceRepository() *mockWorkspaceRepository {
 	return &mockWorkspaceRepository{workspaces: make(map[uint]*workspacesDomain.Workspace)}
+}
+
+func newMockWeekRepository() *mockWeekRepository {
+	return &mockWeekRepository{weeks: make(map[string]*weeksDomain.Week)}
 }
 
 func (m *mockTaskRepository) Create(task *domain.Task) error {
@@ -105,6 +114,15 @@ func (m *mockWorkspaceRepository) FindByID(id uint) (*workspacesDomain.Workspace
 	return workspace, nil
 }
 
+func (m *mockWeekRepository) FindByPeriodIDAndStartDate(periodID uint, startDate string) (*weeksDomain.Week, error) {
+	key := startDate
+	week, ok := m.weeks[key]
+	if !ok {
+		return nil, weeksDomain.ErrWeekNotFound
+	}
+	return week, nil
+}
+
 func seedAssignment(repo *mockAssignmentRepository, id, userID uint) {
 	repo.assignments[id] = &assignmentsDomain.Assignment{
 		ID:          id,
@@ -116,7 +134,17 @@ func seedAssignment(repo *mockAssignmentRepository, id, userID uint) {
 }
 
 func seedWorkspace(repo *mockWorkspaceRepository, id uint, state workspacesDomain.WorkspaceState) {
-	repo.workspaces[id] = &workspacesDomain.Workspace{ID: id, State: state}
+	repo.workspaces[id] = &workspacesDomain.Workspace{ID: id, State: state, PeriodID: 1}
+}
+
+func seedWeek(repo *mockWeekRepository, periodID uint, initialDate string) {
+	repo.weeks[initialDate] = &weeksDomain.Week{
+		ID:          1,
+		PeriodID:    periodID,
+		Number:      1,
+		InitialDate: initialDate,
+		FinalDate:   "2026-04-12",
+	}
 }
 
 func seedTask(t *testing.T, repo *mockTaskRepository, userID, assignmentID uint, late bool, weekStartDate time.Time) *domain.Task {
@@ -147,10 +175,11 @@ func TestCreateTaskRejectsInactiveWeek(t *testing.T) {
 	taskRepo := newMockTaskRepository()
 	assignmentRepo := newMockAssignmentRepository()
 	workspaceRepo := newMockWorkspaceRepository()
+	weekRepo := newMockWeekRepository()
 	seedAssignment(assignmentRepo, 10, 3)
 	seedWorkspace(workspaceRepo, 5, workspacesDomain.ActiveState)
 	now := func() time.Time { return time.Date(2026, 4, 14, 9, 0, 0, 0, time.UTC) }
-	createTask := applicationpkg.NewCreateTask(taskRepo, assignmentRepo, workspaceRepo, now)
+	createTask := applicationpkg.NewCreateTask(taskRepo, assignmentRepo, workspaceRepo, weekRepo, now)
 
 	_, err := createTask.Execute(applicationpkg.CreateTaskInput{
 		AssignmentID:  10,
@@ -161,8 +190,8 @@ func TestCreateTaskRejectsInactiveWeek(t *testing.T) {
 		Observations:  "",
 		WeekStartDate: time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
 	})
-	if !errors.Is(err, domain.ErrTaskWeekInactive) {
-		t.Fatalf("expected ErrTaskWeekInactive, got %v", err)
+	if !errors.Is(err, weeksDomain.ErrWeekNotFound) {
+		t.Fatalf("expected ErrWeekNotFound, got %v", err)
 	}
 }
 
@@ -170,7 +199,8 @@ func TestCreateTaskRejectsMissingAssignment(t *testing.T) {
 	taskRepo := newMockTaskRepository()
 	assignmentRepo := newMockAssignmentRepository()
 	workspaceRepo := newMockWorkspaceRepository()
-	createTask := applicationpkg.NewCreateTask(taskRepo, assignmentRepo, workspaceRepo, time.Now)
+	weekRepo := newMockWeekRepository()
+	createTask := applicationpkg.NewCreateTask(taskRepo, assignmentRepo, workspaceRepo, weekRepo, time.Now)
 
 	_, err := createTask.Execute(applicationpkg.CreateTaskInput{
 		AssignmentID:  10,
@@ -190,9 +220,11 @@ func TestCreateTaskRejectsLegacyEnglishStatus(t *testing.T) {
 	taskRepo := newMockTaskRepository()
 	assignmentRepo := newMockAssignmentRepository()
 	workspaceRepo := newMockWorkspaceRepository()
+	weekRepo := newMockWeekRepository()
 	seedAssignment(assignmentRepo, 10, 3)
 	seedWorkspace(workspaceRepo, 5, workspacesDomain.ActiveState)
-	createTask := applicationpkg.NewCreateTask(taskRepo, assignmentRepo, workspaceRepo, func() time.Time {
+	seedWeek(weekRepo, 1, "2026-04-06")
+	createTask := applicationpkg.NewCreateTask(taskRepo, assignmentRepo, workspaceRepo, weekRepo, func() time.Time {
 		return time.Date(2026, 4, 9, 9, 0, 0, 0, time.UTC)
 	})
 
@@ -214,9 +246,10 @@ func TestCreateTaskRejectsClosedWorkspace(t *testing.T) {
 	taskRepo := newMockTaskRepository()
 	assignmentRepo := newMockAssignmentRepository()
 	workspaceRepo := newMockWorkspaceRepository()
+	weekRepo := newMockWeekRepository()
 	seedAssignment(assignmentRepo, 10, 3)
 	seedWorkspace(workspaceRepo, 5, workspacesDomain.ClosedState)
-	createTask := applicationpkg.NewCreateTask(taskRepo, assignmentRepo, workspaceRepo, func() time.Time {
+	createTask := applicationpkg.NewCreateTask(taskRepo, assignmentRepo, workspaceRepo, weekRepo, func() time.Time {
 		return time.Date(2026, 4, 9, 9, 0, 0, 0, time.UTC)
 	})
 

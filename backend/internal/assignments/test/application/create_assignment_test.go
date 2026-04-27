@@ -121,6 +121,46 @@ func (m *MockAssignmentRepository) Update(assignment *domain.Assignment) error {
 	return nil
 }
 
+func (m *MockWorkspaceRepository) FindByUserID(userID uint) ([]workspacesDomain.Workspace, error) {
+	result := make([]workspacesDomain.Workspace, 0)
+	for _, workspace := range m.workspaces {
+		if workspace.UserID == userID {
+			result = append(result, *workspace)
+		}
+	}
+	return result, nil
+}
+
+func (m *MockAssignmentRepository) FindAll() ([]domain.Assignment, error) {
+	result := make([]domain.Assignment, 0, len(m.byID))
+	for _, assignment := range m.byID {
+		result = append(result, *assignment)
+	}
+	return result, nil
+}
+
+func (m *MockAssignmentRepository) FindByWorkspaceUserID(workspaceUserID uint) ([]domain.Assignment, error) {
+	return nil, nil
+}
+
+func (m *MockAssignmentRepository) FindByWorkspaceIDsAndRoles(workspaceIDs []uint, roles []domain.AssignmentRole) ([]domain.Assignment, error) {
+	result := make([]domain.Assignment, 0)
+	roleMap := make(map[domain.AssignmentRole]bool)
+	for _, role := range roles {
+		roleMap[role] = true
+	}
+	workspaceMap := make(map[uint]bool)
+	for _, wsID := range workspaceIDs {
+		workspaceMap[wsID] = true
+	}
+	for _, assignment := range m.byID {
+		if workspaceMap[assignment.WorkspaceID] && roleMap[assignment.Role] {
+			result = append(result, *assignment)
+		}
+	}
+	return result, nil
+}
+
 func TestCreateAssignmentSuccess(t *testing.T) {
 	mockRepo := NewMockAssignmentRepository()
 	userRepo := NewMockUserRepository()
