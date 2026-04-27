@@ -85,7 +85,7 @@ func (h *AssignmentHandler) CreateAssignment(c *gin.Context) {
 		}
 
 		if workspace.UserID != currentUser.ID {
-			sharedHelpers.RespondWithError(c, http.StatusForbidden, domain.ErrAssignmentProfessorCannotCreateInForeignWorkspace)
+			sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
 			return
 		}
 	default:

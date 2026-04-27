@@ -2,7 +2,7 @@ package delivery
 
 type CreateWorkspaceRequest struct {
 	PeriodID     uint   `json:"period_id" binding:"required"`
-	UserID       uint   `json:"user_id"`
+	UserID       uint   `json:"user_id" binding:"required"`
 	Name         string `json:"name" binding:"required"`
 	Type         string `json:"type" binding:"required,oneof=course project"`
 	InitialDate  string `json:"initial_date" binding:"required"`
