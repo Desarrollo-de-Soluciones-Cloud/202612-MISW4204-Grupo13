@@ -258,5 +258,5 @@ func isUserValidationError(err error) bool {
 }
 
 func isProfessorAllowedRoleFilter(role domain.UserRole) bool {
-	return role == domain.RoleProfessor || role == domain.RoleMonitor
+	return role == domain.RoleAssistant || role == domain.RoleMonitor
 }

@@ -35,9 +35,12 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 		adminPeriods := periods.Group("")
 		adminPeriods.Use(authorizer.RequireRoles(usersDomain.RoleAdmin))
 		adminPeriods.POST("", handler.CreatePeriod)
-		adminPeriods.GET("", handler.ListPeriods)
 		adminPeriods.PATCH("/:id", handler.UpdatePeriod)
 		adminPeriods.PATCH("/:id/close", handler.ClosePeriod)
+
+		professorAndAdminPeriods := periods.Group("")
+		professorAndAdminPeriods.Use(authorizer.RequireRoles(usersDomain.RoleAdmin, usersDomain.RoleProfessor))
+		adminPeriods.GET("", handler.ListPeriods)
 	}
 }
 // merge a develop
