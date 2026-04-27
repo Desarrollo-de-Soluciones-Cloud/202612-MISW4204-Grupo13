@@ -1,17 +1,19 @@
 package main
 
 import (
+	assignmentsDelivery "backend/internal/assignments/delivery"
 	authDelivery "backend/internal/auth/delivery"
-    assignmentsDelivery "backend/internal/assignments/delivery"
 	periodDelivery "backend/internal/periods/delivery"
+	reportsDelivery "backend/internal/reports/delivery"
 	"backend/internal/shared/config"
 	"backend/internal/shared/database"
+	tasksDelivery "backend/internal/tasks/delivery"
 	usersDelivery "backend/internal/users/delivery"
 	usersSeed "backend/internal/users/seed"
 	weeksDelivery "backend/internal/weeks/delivery"
 	workspacesDelivery "backend/internal/workspaces/delivery"
 	"log"
-	
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -39,13 +41,16 @@ func main() {
 
 	authHandler := authDelivery.SetupRoutes(api, cfg)
 	usersDelivery.SetupRoutes(api, authHandler)
-	periodDelivery.SetupRoutes(api)
-	weeksDelivery.SetupRoutes(api)
-	workspacesDelivery.SetupRoutes(api)
-    assignmentsDelivery.SetupRoutes(api)
+	periodDelivery.SetupRoutes(api, authHandler)
+	weeksDelivery.SetupRoutes(api, authHandler)
+	workspacesDelivery.SetupRoutes(api, authHandler)
+	assignmentsDelivery.SetupRoutes(api, authHandler)
+	tasksDelivery.SetupRoutes(api, authHandler)
+	reportsDelivery.SetupRoutes(api, authHandler, cfg)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
+//merge develop

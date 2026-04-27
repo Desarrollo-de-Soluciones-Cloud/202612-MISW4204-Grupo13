@@ -35,6 +35,8 @@ func mapBindingErrors(err error) []error {
 			switch validationError.Tag() {
 			case "required":
 				result = append(result, domain.ErrWorkspaceTypeRequired)
+			case "oneof":
+				result = append(result, domain.ErrWorkspaceTypeInvalid)
 			}
 		case "InitialDate":
 			switch validationError.Tag() {
@@ -55,6 +57,8 @@ func mapBindingErrors(err error) []error {
 			switch validationError.Tag() {
 			case "required":
 				result = append(result, domain.ErrWorkspaceStateRequired)
+			case "oneof":
+				result = append(result, domain.ErrWorkspaceStateInvalid)
 			}
 		}
 	}
@@ -69,17 +73,24 @@ func mapBindingErrors(err error) []error {
 func isWorkspaceValidationError(err error) bool {
 	return errors.Is(err, domain.ErrInvalidInput) ||
 		errors.Is(err, domain.ErrWorkspacePeriodNotFound) ||
+		errors.Is(err, domain.ErrWorkspacePeriodClosed) ||
+		errors.Is(err, domain.ErrWorkspaceInscriptionClosed) ||
 		errors.Is(err, domain.ErrWorkspaceUserNotFound) ||
 		errors.Is(err, domain.ErrWorkspaceUserNotProfessor) ||
+		errors.Is(err, domain.ErrWorkspaceClosedUpdateForbidden) ||
+		errors.Is(err, domain.ErrWorkspaceUserIDChangeNotAllowed) ||
 		errors.Is(err, domain.ErrWorkspaceNameRequired) ||
 		errors.Is(err, domain.ErrWorkspaceNameTooLong) ||
 		errors.Is(err, domain.ErrWorkspacePeriodIDRequired) ||
 		errors.Is(err, domain.ErrWorkspaceUserIDRequired) ||
 		errors.Is(err, domain.ErrWorkspaceTypeRequired) ||
+		errors.Is(err, domain.ErrWorkspaceTypeInvalid) ||
 		errors.Is(err, domain.ErrWorkspaceInitialDateRequired) ||
 		errors.Is(err, domain.ErrWorkspaceInitialDateWrongFormat) ||
+		errors.Is(err, domain.ErrWorkspaceInitialDateOutOfRange) ||
 		errors.Is(err, domain.ErrWorkspaceFinalDateRequired) ||
 		errors.Is(err, domain.ErrWorkspaceFinalDateWrongFormat) ||
+		errors.Is(err, domain.ErrWorkspaceFinalDateOutOfRange) ||
 		errors.Is(err, domain.ErrWorkspaceDateSequenceInvalid) ||
 		errors.Is(err, domain.ErrWorkspaceStateRequired) ||
 		errors.Is(err, domain.ErrWorkspaceStateInvalid)

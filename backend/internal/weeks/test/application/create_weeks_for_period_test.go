@@ -40,6 +40,16 @@ func (m *MockWeekRepository) FindByPeriodIDAndNumber(periodID uint, number int) 
 	return nil, domain.ErrWeekNotFound
 }
 
+func (m *MockWeekRepository) FindByPeriodIDAndStartDate(periodID uint, startDate string) (*domain.Week, error) {
+	for _, week := range m.weeks {
+		if week.PeriodID == periodID && week.InitialDate == startDate {
+			copy := week
+			return &copy, nil
+		}
+	}
+	return nil, domain.ErrWeekNotFound
+}
+
 func (m *MockWeekRepository) ExistsByPeriodID(periodID uint) (bool, error) {
 	for _, week := range m.weeks {
 		if week.PeriodID == periodID {

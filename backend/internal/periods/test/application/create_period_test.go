@@ -152,15 +152,15 @@ func TestCreatePeriodInvalidName(t *testing.T) {
 	weeksCount := 8
 
 	input := applicationpkg.CreatePeriodInput{
-		Name:        "ab",
+		Name:        "",
 		InitialDate: initialDate,
 		WeeksCount:  weeksCount,
 		PeriodState: domain.ActivePeriod,
 	}
 
 	_, err := createPeriod.Execute(input)
-	if !errors.Is(err, domain.ErrPeriodNameWrongFormat) {
-		t.Errorf("expected ErrPeriodNameWrongFormat, got %v", err)
+	if !errors.Is(err, domain.ErrPeriodNameRequired) {
+		t.Errorf("expected ErrPeriodNameRequired, got %v", err)
 	}
 }
 

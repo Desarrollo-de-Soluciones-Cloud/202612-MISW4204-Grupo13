@@ -27,7 +27,7 @@ func (r *WorkspaceRepository) FindByID(id uint) (*domain.Workspace, error) {
 	result := database.DB.First(&workspace, id)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, errors.New("workspace not found")
+			return nil, domain.ErrWorkspaceNotFound
 		}
 		return nil, result.Error
 	}
@@ -46,6 +46,12 @@ func (r *WorkspaceRepository) FindByPeriodID(periodID uint) ([]domain.Workspace,
 	return workspaces, result.Error
 }
 
+func (r *WorkspaceRepository) FindByUserID(userID uint) ([]domain.Workspace, error) {
+	var workspaces []domain.Workspace
+	result := database.DB.Where("user_id = ?", userID).Find(&workspaces)
+	return workspaces, result.Error
+}
+
 func (r *WorkspaceRepository) Update(workspace *domain.Workspace) error {
 	return database.DB.Save(workspace).Error
 }
@@ -56,7 +62,7 @@ func (r *WorkspaceRepository) Delete(id uint) error {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return errors.New("workspace not found")
+		return domain.ErrWorkspaceNotFound
 	}
 	return nil
 }

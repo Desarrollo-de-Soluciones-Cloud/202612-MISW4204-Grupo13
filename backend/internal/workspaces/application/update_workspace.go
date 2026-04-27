@@ -9,6 +9,7 @@ import (
 type UpdateWorkspaceInput struct {
 	ID           uint
 	PeriodID     uint
+	UserID       uint
 	Name         string
 	Type         string
 	InitialDate  string
@@ -44,9 +45,22 @@ func NewUpdateWorkspace(workspaceRepo workspacesDomain.WorkspaceRepository, peri
 }
 
 func (uc *UpdateWorkspace) Execute(input UpdateWorkspaceInput) (*UpdateWorkspaceOutput, error) {
+	// Verify that workspace initial date is not greater than final date
+	if input.InitialDate > input.FinalDate {
+		return nil, workspacesDomain.ErrWorkspaceDateSequenceInvalid
+	}
+
 	workspace, err := uc.workspaceRepository.FindByID(input.ID)
 	if err != nil {
 		return nil, err
+	}
+	if workspace.State == workspacesDomain.ClosedState {
+		return nil, workspacesDomain.ErrWorkspaceClosedUpdateForbidden
+	}
+
+	// Verify that user_id cannot be changed
+	if input.UserID > 0 && input.UserID != workspace.UserID {
+		return nil, workspacesDomain.ErrWorkspaceUserIDChangeNotAllowed
 	}
 
 	// Verify that the user still has professor role (validate existing user)
@@ -60,11 +74,31 @@ func (uc *UpdateWorkspace) Execute(input UpdateWorkspaceInput) (*UpdateWorkspace
 
 	// Verify that the period exists if PeriodID is provided
 	if input.PeriodID > 0 {
-		_, err := uc.periodRepository.FindByID(input.PeriodID)
+		period, err := uc.periodRepository.FindByID(input.PeriodID)
 		if err != nil {
 			return nil, workspacesDomain.ErrWorkspacePeriodNotFound
 		}
+		if period.PeriodState == periodsDomain.ClosedPeriod {
+			return nil, workspacesDomain.ErrWorkspacePeriodClosed
+		}
 		workspace.PeriodID = input.PeriodID
+	}
+
+	// Get the period to validate workspace dates are within period range
+	period, err := uc.periodRepository.FindByID(workspace.PeriodID)
+	if err != nil {
+		return nil, workspacesDomain.ErrWorkspacePeriodNotFound
+	}
+	if period.PeriodState == periodsDomain.ClosedPeriod {
+		return nil, workspacesDomain.ErrWorkspacePeriodClosed
+	}
+
+	// Verify that workspace dates are within period date range
+	if input.InitialDate < period.InitialDate {
+		return nil, workspacesDomain.ErrWorkspaceInitialDateOutOfRange
+	}
+	if input.FinalDate > period.FinalDate {
+		return nil, workspacesDomain.ErrWorkspaceFinalDateOutOfRange
 	}
 
 	if err := workspace.UpdateWorkspace(

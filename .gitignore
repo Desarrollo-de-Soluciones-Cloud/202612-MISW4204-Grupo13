@@ -1,10 +1,62 @@
 # Environment files
 .env
+.env.*
 .env.admin
+.env.admin.*
+!.env.example
+!.env.admin.example
+
+# Google Cloud credentials / secrets
+credentials/
+secrets/
+backend/credentials/
+backend/secrets/
+frontend/credentials/
+frontend/secrets/
+gcp-service-account.json
+service-account.json
+*-service-account.json
+*.pem
+*.key
+*.crt
+*.p12
+
+# Generated local files
+storage/
+reports/
+uploads/
+tmp/
+logs/
+
+backend/storage/
+backend/reports/
+backend/uploads/
+backend/tmp/
+
+# Allow backend Cloud Storage integration code
+!backend/internal/shared/storage/
+!backend/internal/shared/storage/**
+
+# Frontend dependencies and builds
+node_modules/
+dist/
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Go build
 bin/
 pkg/
+backend/bin/
+backend/pkg/
+backend/build/
+backend/dist/
 *.exe
 *.exe~
 *.dll
@@ -12,6 +64,7 @@ pkg/
 *.dylib
 *.test
 *.out
+coverage.out
 
 # Logs
 *.log
@@ -26,4 +79,4 @@ pkg/
 Thumbs.db
 
 # Docker
-tmp/
+docker-compose.override.yml

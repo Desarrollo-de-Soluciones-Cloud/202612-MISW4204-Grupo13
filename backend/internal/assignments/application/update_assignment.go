@@ -1,6 +1,11 @@
 package application
 
-import "backend/internal/assignments/domain"
+import (
+	"backend/internal/assignments/domain"
+	periodsDomain "backend/internal/periods/domain"
+	workspacesDomain "backend/internal/workspaces/domain"
+	"errors"
+)
 
 type UpdateAssignmentInput struct {
 	ID          uint
@@ -17,11 +22,61 @@ type UpdateAssignmentOutput struct {
 }
 
 type UpdateAssignment struct {
-	repository domain.AssignmentRepository
+	repository          domain.AssignmentRepository
+	workspaceRepository UpdateAssignmentWorkspaceRepository
+	periodRepository    UpdateAssignmentPeriodRepository
+}
+
+type UpdateAssignmentWorkspaceRepository interface {
+	FindByID(id uint) (*workspacesDomain.Workspace, error)
+}
+
+type UpdateAssignmentPeriodRepository interface {
+	FindByID(id uint) (*periodsDomain.Period, error)
 }
 
 func NewUpdateAssignment(repo domain.AssignmentRepository) *UpdateAssignment {
 	return &UpdateAssignment{repository: repo}
+}
+
+func (uc *UpdateAssignment) WithWorkspaceRepository(workspaceRepo UpdateAssignmentWorkspaceRepository) *UpdateAssignment {
+	uc.workspaceRepository = workspaceRepo
+	return uc
+}
+
+func (uc *UpdateAssignment) WithPeriodRepository(periodRepo UpdateAssignmentPeriodRepository) *UpdateAssignment {
+	uc.periodRepository = periodRepo
+	return uc
+}
+
+func (uc *UpdateAssignment) validateWorkspaceNotClosed(workspaceID uint) error {
+	if uc.workspaceRepository != nil {
+		workspace, err := uc.workspaceRepository.FindByID(workspaceID)
+		if err != nil {
+			if errors.Is(err, workspacesDomain.ErrWorkspaceNotFound) {
+				return domain.ErrAssignmentWorkspaceNotFound
+			}
+			return err
+		}
+		if workspace.State == workspacesDomain.ClosedState {
+			return domain.ErrAssignmentWorkspaceClosed
+		}
+
+		// Validate period is not closed
+		if uc.periodRepository != nil {
+			period, err := uc.periodRepository.FindByID(workspace.PeriodID)
+			if err != nil {
+				if errors.Is(err, periodsDomain.ErrPeriodNotFound) {
+					return domain.ErrAssignmentWorkspaceNotFound
+				}
+				return err
+			}
+			if period.PeriodState == periodsDomain.ClosedPeriod {
+				return domain.ErrAssignmentPeriodClosed
+			}
+		}
+	}
+	return nil
 }
 
 func (uc *UpdateAssignment) Execute(input UpdateAssignmentInput) (*UpdateAssignmentOutput, error) {
@@ -29,6 +84,11 @@ func (uc *UpdateAssignment) Execute(input UpdateAssignmentInput) (*UpdateAssignm
 	// TODO RF05: Revisar aplicacion de RF05 en futuras operaciones administrativas adicionales fuera de create/update.
 	assignment, err := uc.repository.FindByID(input.ID)
 	if err != nil {
+		return nil, err
+	}
+
+	// Validate workspace is not closed
+	if err := uc.validateWorkspaceNotClosed(assignment.WorkspaceID); err != nil {
 		return nil, err
 	}
 

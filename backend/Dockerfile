@@ -17,7 +17,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/api
 # STAGE 2: Production
 # ============================================
 FROM alpine:3.19
-WORKDIR /root/
+WORKDIR /app
 # Install CA certificates for HTTPS
 RUN apk --no-cache add ca-certificates
 # Copy compiled binary from builder
@@ -27,6 +27,6 @@ ENV PORT=8080
 # Expose port
 EXPOSE 8080
 # Non-root user for security
-RUN adduser -D -g '' appuser
+RUN adduser -D -g '' appuser && chown -R appuser:appuser /app
 USER appuser
 CMD ["./server"]
