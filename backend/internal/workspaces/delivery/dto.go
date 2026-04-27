@@ -50,6 +50,19 @@ type WorkspaceResponse struct {
 	State        string `json:"state"`
 }
 
+type MonitorAssistantResponse struct {
+	ID          uint   `json:"id"`
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	Role        string `json:"role"`
+	WeeklyHours int    `json:"weekly_hours"`
+}
+
+type ListWorkspaceMonitorsAndAssistantsResponse struct {
+	Monitors   []MonitorAssistantResponse `json:"monitors"`
+	Assistants []MonitorAssistantResponse `json:"assistants"`
+}
+
 type CloseWorkspaceResponse struct {
 	ID           uint   `json:"id"`
 	PeriodID     uint   `json:"period_id"`

@@ -15,13 +15,14 @@ import (
 )
 
 type WorkspaceHandler struct {
-	createWorkspace         *application.CreateWorkspace
-	listWorkspaces          *application.ListWorkspaces
-	listWorkspacesByPeriod  *application.ListWorkspacesByPeriod
-	getWorkspaceByID        *application.GetWorkspaceByID
-	updateWorkspace         *application.UpdateWorkspace
-	deleteWorkspace         *application.DeleteWorkspace
-	closeWorkspace          *application.CloseWorkspace
+	createWorkspace                          *application.CreateWorkspace
+	listWorkspaces                           *application.ListWorkspaces
+	listWorkspacesByPeriod                   *application.ListWorkspacesByPeriod
+	getWorkspaceByID                         *application.GetWorkspaceByID
+	updateWorkspace                          *application.UpdateWorkspace
+	deleteWorkspace                          *application.DeleteWorkspace
+	closeWorkspace                           *application.CloseWorkspace
+	listWorkspaceMonitorsAndAssistants       *application.ListWorkspaceMonitorsAndAssistants
 }
 
 func NewWorkspaceHandler(
@@ -32,15 +33,17 @@ func NewWorkspaceHandler(
 	updateWorkspace *application.UpdateWorkspace,
 	deleteWorkspace *application.DeleteWorkspace,
 	closeWorkspace *application.CloseWorkspace,
+	listWorkspaceMonitorsAndAssistants *application.ListWorkspaceMonitorsAndAssistants,
 ) *WorkspaceHandler {
 	return &WorkspaceHandler{
-		createWorkspace:        createWorkspace,
-		listWorkspaces:         listWorkspaces,
-		listWorkspacesByPeriod: listWorkspacesByPeriod,
-		getWorkspaceByID:       getWorkspaceByID,
-		updateWorkspace:        updateWorkspace,
-		deleteWorkspace:        deleteWorkspace,
-		closeWorkspace:         closeWorkspace,
+		createWorkspace:                          createWorkspace,
+		listWorkspaces:                           listWorkspaces,
+		listWorkspacesByPeriod:                   listWorkspacesByPeriod,
+		getWorkspaceByID:                         getWorkspaceByID,
+		updateWorkspace:                          updateWorkspace,
+		deleteWorkspace:                          deleteWorkspace,
+		closeWorkspace:                           closeWorkspace,
+		listWorkspaceMonitorsAndAssistants:       listWorkspaceMonitorsAndAssistants,
 	}
 }
 
@@ -481,6 +484,54 @@ func (h *WorkspaceHandler) CloseWorkspace(c *gin.Context) {
 		FinalDate:    output.FinalDate,
 		Observations: output.Observations,
 		State:        output.State,
+	})
+}
+
+func (h *WorkspaceHandler) ListWorkspaceMonitorsAndAssistants(c *gin.Context) {
+	currentUser, ok := authDelivery.GetCurrentUser(c)
+	if !ok {
+		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
+		return
+	}
+
+	if currentUser.GlobalRole != usersDomain.RoleProfessor {
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+		return
+	}
+
+	output, err := h.listWorkspaceMonitorsAndAssistants.Execute(application.ListWorkspaceMonitorsAndAssistantsInput{
+		ProfessorID: currentUser.ID,
+	})
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		return
+	}
+
+	monitors := make([]MonitorAssistantResponse, len(output.Monitors))
+	for i, m := range output.Monitors {
+		monitors[i] = MonitorAssistantResponse{
+			ID:          m.ID,
+			Name:        m.Name,
+			Email:       m.Email,
+			Role:        m.Role,
+			WeeklyHours: m.WeeklyHours,
+		}
+	}
+
+	assistants := make([]MonitorAssistantResponse, len(output.Assistants))
+	for i, a := range output.Assistants {
+		assistants[i] = MonitorAssistantResponse{
+			ID:          a.ID,
+			Name:        a.Name,
+			Email:       a.Email,
+			Role:        a.Role,
+			WeeklyHours: a.WeeklyHours,
+		}
+	}
+
+	c.JSON(http.StatusOK, ListWorkspaceMonitorsAndAssistantsResponse{
+		Monitors:   monitors,
+		Assistants: assistants,
 	})
 }
 
