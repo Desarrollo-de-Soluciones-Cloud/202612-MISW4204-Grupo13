@@ -40,7 +40,7 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 
 		professorAndAdminPeriods := periods.Group("")
 		professorAndAdminPeriods.Use(authorizer.RequireRoles(usersDomain.RoleAdmin, usersDomain.RoleProfessor))
-		adminPeriods.GET("", handler.ListPeriods)
+		professorAndAdminPeriods.GET("", handler.ListPeriods)
 	}
 }
 // merge a develop
