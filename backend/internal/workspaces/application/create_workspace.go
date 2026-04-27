@@ -2,9 +2,9 @@ package application
 
 import (
 	periodsDomain "backend/internal/periods/domain"
-	"time"
 	usersDomain "backend/internal/users/domain"
 	workspacesDomain "backend/internal/workspaces/domain"
+	"time"
 )
 
 
@@ -48,6 +48,11 @@ func NewCreateWorkspace(workspaceRepo workspacesDomain.WorkspaceRepository, peri
 }
 
 func (uc *CreateWorkspace) Execute(input CreateWorkspaceInput) (*CreateWorkspaceOutput, error) {
+	// Verify that workspace initial date is not greater than final date
+	if input.InitialDate > input.FinalDate {
+		return nil, workspacesDomain.ErrWorkspaceDateSequenceInvalid
+	}
+
 	// Verify that the period exists
 	period, err := uc.periodRepository.FindByID(input.PeriodID)
 	if err != nil {
@@ -58,6 +63,14 @@ func (uc *CreateWorkspace) Execute(input CreateWorkspaceInput) (*CreateWorkspace
 	}
 	if period.InscriptionFinalDate < time.Now().Format("2006-01-02") {
 		return nil, workspacesDomain.ErrWorkspaceInscriptionClosed
+	}
+
+	// Verify that workspace dates are within period date range
+	if input.InitialDate < period.InitialDate {
+		return nil, workspacesDomain.ErrWorkspaceInitialDateOutOfRange
+	}
+	if input.FinalDate > period.FinalDate {
+		return nil, workspacesDomain.ErrWorkspaceFinalDateOutOfRange
 	}
 
 	// Verify that the user exists and has professor role

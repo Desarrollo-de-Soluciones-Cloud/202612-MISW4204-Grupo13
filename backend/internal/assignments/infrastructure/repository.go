@@ -33,9 +33,32 @@ func (r *AssignmentRepository) FindByID(id uint) (*domain.Assignment, error) {
 	return &assignment, nil
 }
 
+func (r *AssignmentRepository) FindAll() ([]domain.Assignment, error) {
+	var assignments []domain.Assignment
+	result := database.DB.Find(&assignments)
+	return assignments, result.Error
+}
+
 func (r *AssignmentRepository) FindAllByUserID(userID uint) ([]domain.Assignment, error) {
 	var assignments []domain.Assignment
 	result := database.DB.Where("user_id = ?", userID).Find(&assignments)
+	return assignments, result.Error
+}
+
+func (r *AssignmentRepository) FindByWorkspaceUserID(workspaceUserID uint) ([]domain.Assignment, error) {
+	var assignments []domain.Assignment
+	result := database.DB.
+		Joins("INNER JOIN workspaces ON assignments.workspace_id = workspaces.id").
+		Where("workspaces.user_id = ?", workspaceUserID).
+		Find(&assignments)
+	return assignments, result.Error
+}
+
+func (r *AssignmentRepository) FindByWorkspaceIDsAndRoles(workspaceIDs []uint, roles []domain.AssignmentRole) ([]domain.Assignment, error) {
+	var assignments []domain.Assignment
+	result := database.DB.
+		Where("workspace_id IN ? AND role IN ?", workspaceIDs, roles).
+		Find(&assignments)
 	return assignments, result.Error
 }
 

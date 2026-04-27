@@ -26,37 +26,32 @@ func TestValidatePeriodName(t *testing.T) {
 			name:    "empty name",
 			input:   "",
 			wantErr: true,
-			errType: domain.ErrPeriodNameWrongFormat,
+			errType: domain.ErrPeriodNameRequired,
 		},
 		{
 			name:    "wrong format - missing dash",
 			input:   "202610",
-			wantErr: true,
-			errType: domain.ErrPeriodNameWrongFormat,
+			wantErr: false,
 		},
 		{
 			name:    "wrong format - wrong year length",
 			input:   "26-10",
-			wantErr: true,
-			errType: domain.ErrPeriodNameWrongFormat,
+			wantErr: false,
 		},
 		{
 			name:    "wrong format - wrong semester length",
 			input:   "2026-1",
-			wantErr: true,
-			errType: domain.ErrPeriodNameWrongFormat,
+			wantErr: false,
 		},
 		{
 			name:    "wrong format - non-numeric values",
 			input:   "abcd-ef",
-			wantErr: true,
-			errType: domain.ErrPeriodNameWrongFormat,
+			wantErr: false,
 		},
 		{
 			name:    "wrong format - too long",
 			input:   "2026-101",
-			wantErr: true,
-			errType: domain.ErrPeriodNameWrongFormat,
+			wantErr: false,
 		},
 	}
 

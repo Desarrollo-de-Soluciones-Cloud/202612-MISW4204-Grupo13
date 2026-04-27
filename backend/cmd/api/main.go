@@ -13,7 +13,7 @@ import (
 	weeksDelivery "backend/internal/weeks/delivery"
 	workspacesDelivery "backend/internal/workspaces/delivery"
 	"log"
-	
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -46,10 +46,11 @@ func main() {
 	workspacesDelivery.SetupRoutes(api, authHandler)
 	assignmentsDelivery.SetupRoutes(api, authHandler)
 	tasksDelivery.SetupRoutes(api, authHandler)
-	reportsDelivery.SetupRoutes(api, authHandler)
+	reportsDelivery.SetupRoutes(api, authHandler, cfg)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
+//merge develop

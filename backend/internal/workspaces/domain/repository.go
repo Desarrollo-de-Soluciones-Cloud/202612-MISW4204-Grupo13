@@ -5,6 +5,7 @@ type WorkspaceRepository interface {
 	FindByID(id uint) (*Workspace, error)
 	FindAll() ([]Workspace, error)
 	FindByPeriodID(periodID uint) ([]Workspace, error)
+	FindByUserID(userID uint) ([]Workspace, error)
 	Update(workspace *Workspace) error
 	Delete(id uint) error
 }

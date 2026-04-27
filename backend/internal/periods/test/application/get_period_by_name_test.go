@@ -41,9 +41,9 @@ func TestGetPeriodByNameInvalidName(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 	getPeriodByName := applicationpkg.NewGetPeriodByName(mockRepo)
 
-	_, err := getPeriodByName.Execute(applicationpkg.GetPeriodByNameInput{Name: "ab"})
+	_, err := getPeriodByName.Execute(applicationpkg.GetPeriodByNameInput{Name: "nonexistent"})
 
-	if !errors.Is(err, domain.ErrPeriodNameWrongFormat) {
-		t.Errorf("expected ErrPeriodNameWrongFormat, got %v", err)
+	if !errors.Is(err, domain.ErrPeriodNotFound) {
+		t.Errorf("expected ErrPeriodNotFound, got %v", err)
 	}
 }

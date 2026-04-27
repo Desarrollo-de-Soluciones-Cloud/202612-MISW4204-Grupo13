@@ -39,9 +39,17 @@ func NewPeriodHandler(
 }
 
 func (h *PeriodHandler) CreatePeriod(c *gin.Context) {
-	var req CreatePeriodRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		sharedHelpers.RespondWithErrors(c, http.StatusBadRequest, mapBindingErrors(err))
+	// Read request body
+	body, err := c.GetRawData()
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, domain.ErrInvalidInput)
+		return
+	}
+
+	// Parse and validate request field by field
+	req, validationErrors := ParseAndValidateCreatePeriodRequest(body)
+	if len(validationErrors) > 0 {
+		sharedHelpers.RespondWithErrors(c, http.StatusBadRequest, validationErrors)
 		return
 	}
 
@@ -55,6 +63,8 @@ func (h *PeriodHandler) CreatePeriod(c *gin.Context) {
 	output, err := h.createPeriod.Execute(input)
 	if err != nil {
 		switch {
+		case errors.Is(err, domain.ErrPeriodNameAlreadyExists):
+			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		case isPeriodValidationError(err):
 			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		default:
@@ -169,9 +179,17 @@ func (h *PeriodHandler) UpdatePeriod(c *gin.Context) {
 		return
 	}
 
-	var req UpdatePeriodRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		sharedHelpers.RespondWithErrors(c, http.StatusBadRequest, mapBindingErrors(err))
+	// Read request body
+	body, err := c.GetRawData()
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, domain.ErrInvalidInput)
+		return
+	}
+
+	// Parse and validate request field by field
+	req, validationErrors := ParseAndValidateUpdatePeriodRequest(body)
+	if len(validationErrors) > 0 {
+		sharedHelpers.RespondWithErrors(c, http.StatusBadRequest, validationErrors)
 		return
 	}
 
@@ -233,10 +251,6 @@ func (h *PeriodHandler) ClosePeriod(c *gin.Context) {
 		WeeksCount:           output.WeeksCount,
 		PeriodState:          string(output.PeriodState),
 	})
-}
-
-func (h *PeriodHandler) DeletePeriod(c *gin.Context) {
-	sharedHelpers.RespondWithError(c, http.StatusNotFound, errors.New("not found"))
 }
 
 func isPeriodValidationError(err error) bool {
