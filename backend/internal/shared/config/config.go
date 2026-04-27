@@ -14,9 +14,12 @@ type Config struct {
 	DBName               string
 	JWTSecret            string
 	JWTExpirationMinutes int
-	GCPProjectID         string
-	GCPLocation          string
-	VertexAIModel        string
+	GCPProjectID  string
+	GCPLocation   string
+	VertexAIModel string
+	GCSBucketName        string
+	GCSReportsPrefix     string
+	GCSAttachmentsPrefix string
 }
 
 func Load() *Config {
@@ -32,6 +35,9 @@ func Load() *Config {
 		GCPProjectID:         getEnv("GCP_PROJECT_ID", ""),
 		GCPLocation:          getEnv("GCP_LOCATION", "us-central1"),
 		VertexAIModel:        getEnv("VERTEX_AI_MODEL", "gemini-2.5-flash-lite"),
+		GCSBucketName:        getEnv("GCS_BUCKET_NAME", ""),
+		GCSReportsPrefix:     getEnv("GCS_REPORTS_PREFIX", "reports"),
+		GCSAttachmentsPrefix: getEnv("GCS_ATTACHMENTS_PREFIX", "attachments"),
 	}
 }
 

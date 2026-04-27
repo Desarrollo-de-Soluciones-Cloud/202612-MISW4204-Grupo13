@@ -1,11 +1,14 @@
 package delivery
 
 import (
+	"context"
+
 	reportsApplication "backend/internal/reports/application"
 	reportsInfrastructure "backend/internal/reports/infrastructure"
 	sharedConfig "backend/internal/shared/config"
-	usersInfrastructure "backend/internal/users/infrastructure"
+	sharedStorage "backend/internal/shared/storage"
 	usersDomain "backend/internal/users/domain"
+	usersInfrastructure "backend/internal/users/infrastructure"
 	weeksInfrastructure "backend/internal/weeks/infrastructure"
 	workspacesInfrastructure "backend/internal/workspaces/infrastructure"
 
@@ -40,6 +43,14 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer, cfg *sharedConfig.Co
 		panic(err)
 	}
 
+	reportFileStorage, err := sharedStorage.NewGCSStorage(
+		context.Background(),
+		cfg.GCSBucketName,
+	)
+	if err != nil {
+		panic(err)
+	}
+
 	generateWeeklyReports := reportsApplication.NewGenerateWeeklyReports(
 		reportRepo,
 		workspaceRepo,
@@ -49,7 +60,10 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer, cfg *sharedConfig.Co
 		userRepo,
 		pdfGenerator,
 		aiReportGenerator,
-		nil,
+		reportFileStorage,
+		&reportsApplication.GenerateWeeklyReportsOptions{
+			ReportsGCSPrefix: cfg.GCSReportsPrefix,
+		},
 	)
 
 	listReports := reportsApplication.NewListReports(
@@ -66,6 +80,7 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer, cfg *sharedConfig.Co
 		listReports,
 		getReportByID,
 		workspaceRepo,
+		reportFileStorage,
 	)
 
 	reports := r.Group("/reports")

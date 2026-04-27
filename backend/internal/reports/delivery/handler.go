@@ -1,6 +1,14 @@
 package delivery
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"path/filepath"
+	"strings"
+
 	authDelivery "backend/internal/auth/delivery"
 	authDomain "backend/internal/auth/domain"
 	reportsApplication "backend/internal/reports/application"
@@ -9,10 +17,6 @@ import (
 	sharedHelpers "backend/internal/shared/helpers"
 	usersDomain "backend/internal/users/domain"
 	workspacesDomain "backend/internal/workspaces/domain"
-	"errors"
-	"net/http"
-	"os"
-	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,11 +25,16 @@ type ReportWorkspaceReader interface {
 	FindByID(id uint) (*workspacesDomain.Workspace, error)
 }
 
+type ReportFileStorage interface {
+	Download(ctx context.Context, objectName string) (io.ReadCloser, error)
+}
+
 type ReportHandler struct {
 	generateWeeklyReports *reportsApplication.GenerateWeeklyReports
 	listReports           *reportsApplication.ListReports
 	getReportByID         *reportsApplication.GetReportByID
 	workspaceReader       ReportWorkspaceReader
+	reportFileStorage     ReportFileStorage
 }
 
 func NewReportHandler(
@@ -33,12 +42,14 @@ func NewReportHandler(
 	listReports *reportsApplication.ListReports,
 	getReportByID *reportsApplication.GetReportByID,
 	workspaceReader ReportWorkspaceReader,
+	reportFileStorage ReportFileStorage,
 ) *ReportHandler {
 	return &ReportHandler{
 		generateWeeklyReports: generateWeeklyReports,
 		listReports:           listReports,
 		getReportByID:         getReportByID,
 		workspaceReader:       workspaceReader,
+		reportFileStorage:     reportFileStorage,
 	}
 }
 
@@ -169,12 +180,27 @@ func (h *ReportHandler) DownloadReport(c *gin.Context) {
 		return
 	}
 
-	if _, err := os.Stat(report.FilePath); err != nil {
-		sharedHelpers.RespondWithError(c, http.StatusNotFound, reportsDomain.ErrReportFileNotFound)
+	if h.reportFileStorage == nil {
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
 		return
 	}
 
-	c.FileAttachment(report.FilePath, filepath.Base(report.FilePath))
+	reader, err := h.reportFileStorage.Download(context.Background(), report.FilePath)
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusNotFound, reportsDomain.ErrReportFileNotFound)
+		return
+	}
+	defer reader.Close()
+
+	fileName := filepath.Base(strings.ReplaceAll(report.FilePath, "\\", "/"))
+
+	c.Header("Content-Type", "application/pdf")
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileName))
+
+	if _, err := io.Copy(c.Writer, reader); err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		return
+	}
 }
 
 func handleGenerateReportsError(c *gin.Context, err error) {
