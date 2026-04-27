@@ -9,6 +9,9 @@ services:
       seneprojects_db:
         condition: service_healthy
     restart: on-failure
+    volumes:
+      - ./credentials/vertex-ai-sa.json:/app/credentials/vertex-ai-sa.json:ro
+      - ./storage/reports:/app/storage/reports
 
   seneprojects_backend_test:
     build:

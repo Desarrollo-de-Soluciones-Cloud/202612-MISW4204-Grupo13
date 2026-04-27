@@ -2,6 +2,7 @@ package application
 
 import (
 	"backend/internal/assignments/domain"
+	periodsDomain "backend/internal/periods/domain"
 	usersDomain "backend/internal/users/domain"
 	workspacesDomain "backend/internal/workspaces/domain"
 	"errors"
@@ -26,6 +27,7 @@ type CreateAssignment struct {
 	repository          domain.AssignmentRepository
 	userRepository      AssignmentUserRepository
 	workspaceRepository AssignmentWorkspaceRepository
+	periodRepository    AssignmentPeriodRepository
 }
 
 type AssignmentUserRepository interface {
@@ -36,6 +38,10 @@ type AssignmentWorkspaceRepository interface {
 	FindByID(id uint) (*workspacesDomain.Workspace, error)
 }
 
+type AssignmentPeriodRepository interface {
+	FindByID(id uint) (*periodsDomain.Period, error)
+}
+
 func NewCreateAssignment(repo domain.AssignmentRepository) *CreateAssignment {
 	return &CreateAssignment{repository: repo}
 }
@@ -44,6 +50,11 @@ func (uc *CreateAssignment) WithRepositories(userRepo AssignmentUserRepository, 
 	uc.userRepository = userRepo
 	uc.workspaceRepository = workspaceRepo
 
+	return uc
+}
+
+func (uc *CreateAssignment) WithPeriodRepository(periodRepo AssignmentPeriodRepository) *CreateAssignment {
+	uc.periodRepository = periodRepo
 	return uc
 }
 
@@ -71,6 +82,20 @@ func (uc *CreateAssignment) validateUserAndWorkspace(userID, workspaceID uint) e
 		}
 		if workspace.State == workspacesDomain.ClosedState {
 			return domain.ErrAssignmentWorkspaceClosed
+		}
+
+		// Validate period is not closed
+		if uc.periodRepository != nil {
+			period, err := uc.periodRepository.FindByID(workspace.PeriodID)
+			if err != nil {
+				if errors.Is(err, periodsDomain.ErrPeriodNotFound) {
+					return domain.ErrAssignmentWorkspaceNotFound
+				}
+				return err
+			}
+			if period.PeriodState == periodsDomain.ClosedPeriod {
+				return domain.ErrAssignmentPeriodClosed
+			}
 		}
 	}
 

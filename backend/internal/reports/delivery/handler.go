@@ -7,13 +7,12 @@ import (
 	reportsDomain "backend/internal/reports/domain"
 	sharedErrors "backend/internal/shared/errors"
 	sharedHelpers "backend/internal/shared/helpers"
+	usersDomain "backend/internal/users/domain"
+	workspacesDomain "backend/internal/workspaces/domain"
 	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
-
-	usersDomain "backend/internal/users/domain"
-	workspacesDomain "backend/internal/workspaces/domain"
 
 	"github.com/gin-gonic/gin"
 )
@@ -63,7 +62,7 @@ func (h *ReportHandler) GenerateWeeklyReports(c *gin.Context) {
 	}
 
 	if !canAccessWorkspace(currentUser, workspace.UserID) {
-		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, reportsDomain.ErrReportWorkspaceAccessDenied)
 		return
 	}
 
@@ -72,14 +71,7 @@ func (h *ReportHandler) GenerateWeeklyReports(c *gin.Context) {
 		WeekID:      req.WeekID,
 	})
 	if err != nil {
-		switch {
-		case errors.Is(err, reportsDomain.ErrReportWorkspaceNotFound), errors.Is(err, reportsDomain.ErrReportWeekNotFound):
-			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
-		case errors.Is(err, reportsDomain.ErrReportWorkspaceIDRequired), errors.Is(err, reportsDomain.ErrReportWeekIDRequired):
-			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-		default:
-			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-		}
+		handleGenerateReportsError(c, err)
 		return
 	}
 
@@ -101,32 +93,47 @@ func (h *ReportHandler) ListReports(c *gin.Context) {
 		return
 	}
 
-	workspaceID, err := parseOptionalUint(c.Query("workspace_id"))
+	workspaceID, err := parseRequiredWorkspaceID(c.Query("workspace_id"))
 	if err != nil {
 		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
 		return
 	}
 
-	weekID, err := parseOptionalUint(c.Query("week_id"))
+	weekID, err := parseOptionalResourceID(c.Query("week_id"))
 	if err != nil {
 		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+		return
+	}
+
+	userID, err := parseOptionalResourceID(c.Query("user_id"))
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+		return
+	}
+
+	workspace, err := h.workspaceReader.FindByID(workspaceID)
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusNotFound, reportsDomain.ErrReportWorkspaceNotFound)
+		return
+	}
+
+	if !canAccessWorkspace(currentUser, workspace.UserID) {
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, reportsDomain.ErrReportWorkspaceAccessDenied)
 		return
 	}
 
 	output, err := h.listReports.Execute(reportsApplication.ListReportsInput{
 		WorkspaceID: workspaceID,
 		WeekID:      weekID,
+		UserID:      userID,
 	})
 	if err != nil {
-		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		handleListReportsError(c, err)
 		return
 	}
 
 	responses := make([]ReportResponse, 0, len(output.Reports))
 	for _, report := range output.Reports {
-		if !h.canAccessReport(currentUser, report.WorkspaceID) {
-			continue
-		}
 		responses = append(responses, toReportResponse(report))
 	}
 
@@ -152,12 +159,13 @@ func (h *ReportHandler) DownloadReport(c *gin.Context) {
 			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
 			return
 		}
+
 		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
 		return
 	}
 
 	if !h.canAccessReport(currentUser, report.WorkspaceID) {
-		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, reportsDomain.ErrReportWorkspaceAccessDenied)
 		return
 	}
 
@@ -169,10 +177,52 @@ func (h *ReportHandler) DownloadReport(c *gin.Context) {
 	c.FileAttachment(report.FilePath, filepath.Base(report.FilePath))
 }
 
+func handleGenerateReportsError(c *gin.Context, err error) {
+	switch {
+	case isReportValidationError(err),
+		errors.Is(err, reportsDomain.ErrReportNoAssignmentsFound),
+		errors.Is(err, reportsDomain.ErrReportNoTasksFoundForWeek):
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+
+	case errors.Is(err, reportsDomain.ErrReportWorkspaceNotFound),
+		errors.Is(err, reportsDomain.ErrReportWeekNotFound):
+		sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+
+	case errors.Is(err, reportsDomain.ErrReportWorkspaceAccessDenied):
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, err)
+
+	case errors.Is(err, reportsDomain.ErrReportAIGenerationFailed),
+		errors.Is(err, reportsDomain.ErrReportPDFGenerationFailed):
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, err)
+
+	default:
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+	}
+}
+
+func handleListReportsError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, reportsDomain.ErrReportWorkspaceFilterRequired):
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+
+	case errors.Is(err, reportsDomain.ErrReportWorkspaceNotFound),
+		errors.Is(err, reportsDomain.ErrReportWeekNotFound),
+		errors.Is(err, reportsDomain.ErrReportUserNotFound):
+		sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+
+	case errors.Is(err, reportsDomain.ErrReportWorkspaceAccessDenied):
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, err)
+
+	default:
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+	}
+}
+
 func (h *ReportHandler) canAccessReport(currentUser authDomain.AuthenticatedUser, workspaceID uint) bool {
 	if currentUser.GlobalRole == usersDomain.RoleAdmin {
 		return true
 	}
+
 	if currentUser.GlobalRole != usersDomain.RoleProfessor {
 		return false
 	}
@@ -189,9 +239,11 @@ func canAccessWorkspace(currentUser authDomain.AuthenticatedUser, workspaceOwner
 	if currentUser.GlobalRole == usersDomain.RoleAdmin {
 		return true
 	}
+
 	if currentUser.GlobalRole == usersDomain.RoleProfessor {
 		return currentUser.ID == workspaceOwnerID
 	}
+
 	return false
 }
 
@@ -202,8 +254,6 @@ func toReportResponse(report reportsApplication.ReportOutput) ReportResponse {
 		WeekID:       report.WeekID,
 		AssignmentID: report.AssignmentID,
 		UserID:       report.UserID,
-		Type:         report.Type,
-		Summary:      report.Summary,
 		FilePath:     report.FilePath,
 	}
 }

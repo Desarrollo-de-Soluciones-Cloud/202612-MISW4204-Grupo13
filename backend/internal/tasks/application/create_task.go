@@ -22,10 +22,11 @@ type CreateTask struct {
 	repository           domain.TaskRepository
 	assignmentRepository TaskAssignmentRepository
 	workspaceRepository  TaskWorkspaceRepository
+	weekRepository       TaskWeekRepository
 	now                  func() time.Time
 }
 
-func NewCreateTask(repo domain.TaskRepository, assignmentRepo TaskAssignmentRepository, workspaceRepo TaskWorkspaceRepository, now func() time.Time) *CreateTask {
+func NewCreateTask(repo domain.TaskRepository, assignmentRepo TaskAssignmentRepository, workspaceRepo TaskWorkspaceRepository, weeksRepo TaskWeekRepository, now func() time.Time) *CreateTask {
 	if now == nil {
 		now = time.Now
 	}
@@ -34,6 +35,7 @@ func NewCreateTask(repo domain.TaskRepository, assignmentRepo TaskAssignmentRepo
 		repository:           repo,
 		assignmentRepository: assignmentRepo,
 		workspaceRepository:  workspaceRepo,
+		weekRepository:       weeksRepo,
 		now:                  now,
 	}
 }
@@ -59,15 +61,18 @@ func (uc *CreateTask) Execute(input CreateTaskInput) (*TaskOutput, error) {
 	}
 
 	normalizedWeekStartDate := domain.NormalizeWeekStartDate(input.WeekStartDate)
-	if !domain.IsWeekActive(normalizedWeekStartDate, uc.now()) {
-		return nil, domain.ErrTaskWeekInactive
-	}
+
 	late := domain.IsWeekClosed(normalizedWeekStartDate, uc.now())
+
+	week, err := uc.weekRepository.FindByPeriodIDAndStartDate(workspace.PeriodID, normalizedWeekStartDate.Format("2006-01-02"))
+	if err != nil {
+		return nil, err
+	}
 
 	task, err := domain.NewTask(
 		assignment.UserID,
 		assignment.ID,
-		input.WeekID,
+		&week.ID,
 		input.Title,
 		input.Description,
 		input.Status,

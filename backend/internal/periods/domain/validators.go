@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"regexp"
 	"strings"
 	"time"
 )
@@ -19,16 +18,9 @@ func NormalizePeriodName(name string) string {
 func ValidatePeriodName(name string) error {
 	trimmedName := strings.TrimSpace(name)
 
-	matched, _ := regexp.MatchString(`^\d{4}-\d{2}$`, trimmedName)
-	if !matched {
-		return ErrPeriodNameWrongFormat
-	}
-
 	switch {
 	case trimmedName == "":
 		return ErrPeriodNameRequired
-	case len(trimmedName) != PeriodNameLength:
-		return ErrPeriodNameWrongFormat
 	default:
 		return nil
 	}

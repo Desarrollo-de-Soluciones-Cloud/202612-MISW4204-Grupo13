@@ -32,7 +32,8 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 	getWorkspaceByID := workspacesApp.NewGetWorkspaceByID(workspaceRepo)
 	updateWorkspace := workspacesApp.NewUpdateWorkspace(workspaceRepo, periodRepo, userRepo)
 	deleteWorkspace := workspacesApp.NewDeleteWorkspace(workspaceRepo)
-	handler := NewWorkspaceHandler(createWorkspace, listWorkspaces, listWorkspacesByPeriod, getWorkspaceByID, updateWorkspace, deleteWorkspace)
+	closeWorkspace := workspacesApp.NewCloseWorkspace(workspaceRepo, userRepo)
+	handler := NewWorkspaceHandler(createWorkspace, listWorkspaces, listWorkspacesByPeriod, getWorkspaceByID, updateWorkspace, deleteWorkspace, closeWorkspace)
 	workspaces := r.Group("/workspaces")
 	{
 		workspaces.Use(authorizer.RequireAuthentication())
@@ -43,6 +44,6 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 		adminAndProfessorWorkspaces.GET("", handler.ListWorkspaces)
 		adminAndProfessorWorkspaces.GET("/:id", handler.GetWorkspaceByID)
 		adminAndProfessorWorkspaces.PUT("/:id", handler.UpdateWorkspace)
-		adminAndProfessorWorkspaces.DELETE("/:id", handler.DeleteWorkspace)
+		adminAndProfessorWorkspaces.PATCH("/:id/close", handler.CloseWorkspace)
 	}
 }
