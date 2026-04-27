@@ -257,6 +257,11 @@ async function parseErrorResponse(response: Response): Promise<{ message: string
   };
 }
 
+
+
+
+
+
 export function toErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     const source = error.details[0] || error.message || formatStatusMessage(error.status);
