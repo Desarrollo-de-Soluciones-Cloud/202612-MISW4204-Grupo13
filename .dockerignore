@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+.github
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+!.env.admin.example
+.env.admin
+credentials/
+secrets/
+*.pem
+*.key
+*.crt
+
+# Logs
+*.log
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.code-workspace
+
+# Frontend
+frontend/node_modules
+frontend/dist
+
+# Backend generated/local files
+backend/bin
+backend/tmp
+backend/storage
+backend/reports
+backend/uploads
+backend/*.test
+backend/*.out
+
+# Root generated/local files
+storage/
+tmp/

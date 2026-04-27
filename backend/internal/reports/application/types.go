@@ -1,6 +1,8 @@
 package application
 
 import (
+	"context"
+	"io"
 	"time"
 
 	assignmentsDomain "backend/internal/assignments/domain"
@@ -33,6 +35,10 @@ type TaskReader interface {
 
 type PDFGenerator interface {
 	Generate(filePath string, title string, lines []string) error
+}
+
+type ReportFileStorage interface {
+	Upload(ctx context.Context, objectName string, reader io.Reader, contentType string) error
 }
 
 type AIReportGenerator interface {

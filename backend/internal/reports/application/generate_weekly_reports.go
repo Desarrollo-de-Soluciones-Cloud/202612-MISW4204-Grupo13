@@ -1,6 +1,8 @@
 package application
 
 import (
+	"bytes"
+	"context"
 	assignmentsDomain "backend/internal/assignments/domain"
 	reportsDomain "backend/internal/reports/domain"
 	tasksDomain "backend/internal/tasks/domain"
@@ -23,12 +25,15 @@ type GenerateWeeklyReports struct {
 	userReader        UserReader
 	pdfGenerator      PDFGenerator
 	aiReportGenerator AIReportGenerator
+	reportFileStorage ReportFileStorage
 	reportsStorageDir string
+	reportsGCSPrefix  string
 	now               func() time.Time
 }
 
 type GenerateWeeklyReportsOptions struct {
 	ReportsStorageDir string
+	ReportsGCSPrefix  string
 	Now               func() time.Time
 }
 
@@ -50,18 +55,25 @@ func NewGenerateWeeklyReports(
 	userReader UserReader,
 	pdfGenerator PDFGenerator,
 	aiReportGenerator AIReportGenerator,
+	reportFileStorage ReportFileStorage,
 	options *GenerateWeeklyReportsOptions,
 ) *GenerateWeeklyReports {
 	reportsStorageDir := ""
+	reportsGCSPrefix := "reports"
 	var now func() time.Time
 
 	if options != nil {
 		reportsStorageDir = options.ReportsStorageDir
+		reportsGCSPrefix = strings.Trim(options.ReportsGCSPrefix, "/")
 		now = options.Now
 	}
 
 	if reportsStorageDir == "" {
 		reportsStorageDir = filepath.Join("storage", "reports")
+	}
+
+	if reportsGCSPrefix == "" {
+		reportsGCSPrefix = "reports"
 	}
 
 	if now == nil {
@@ -77,7 +89,9 @@ func NewGenerateWeeklyReports(
 		userReader:        userReader,
 		pdfGenerator:      pdfGenerator,
 		aiReportGenerator: aiReportGenerator,
+		reportFileStorage: reportFileStorage,
 		reportsStorageDir: reportsStorageDir,
+		reportsGCSPrefix:  reportsGCSPrefix,
 		now:               now,
 	}
 }
@@ -152,10 +166,6 @@ func (uc *GenerateWeeklyReports) generateReportsForAssignments(
 		return nil, err
 	}
 
-	if err := os.MkdirAll(uc.reportsStorageDir, 0o755); err != nil {
-		return nil, reportsDomain.ErrReportPDFGenerationFailed
-	}
-
 	outputs := make([]ReportOutput, 0, len(reportableAssignments))
 
 	for _, assignment := range reportableAssignments {
@@ -222,16 +232,40 @@ func (uc *GenerateWeeklyReports) generateReportForAssignment(
 		return ReportOutput{}, reportsDomain.ErrReportAIGenerationFailed
 	}
 
-	filePath := uc.buildFilePath(input.WorkspaceID, input.WeekID, assignment.ID)
+	fileName := uc.buildFileName(input.WorkspaceID, input.WeekID, assignment.ID)
+	localFilePath := filepath.Join(uc.reportsStorageDir, fileName)
+	objectName := uc.buildObjectName(fileName)
 
 	title := "Reporte generado por IA"
 	lines := buildPDFLines(workspace, user, assignment, week, filteredTasks, totalHours, aiReport)
 
-	if err := uc.pdfGenerator.Generate(filePath, title, lines); err != nil {
+	if err := uc.pdfGenerator.Generate(localFilePath, title, lines); err != nil {
 		return ReportOutput{}, reportsDomain.ErrReportPDFGenerationFailed
 	}
 
-	report, err := reportsDomain.NewWeeklyReport(input.WorkspaceID, input.WeekID, assignment.ID, assignment.UserID, filePath)
+	pdfBytes, err := os.ReadFile(localFilePath)
+	if err != nil {
+		return ReportOutput{}, reportsDomain.ErrReportPDFGenerationFailed
+	}
+
+	if uc.reportFileStorage != nil {
+		if err := uc.reportFileStorage.Upload(
+			context.Background(),
+			objectName,
+			bytes.NewReader(pdfBytes),
+			"application/pdf",
+		); err != nil {
+			return ReportOutput{}, reportsDomain.ErrReportPDFGenerationFailed
+		}
+	}
+
+	report, err := reportsDomain.NewWeeklyReport(
+		input.WorkspaceID,
+		input.WeekID,
+		assignment.ID,
+		assignment.UserID,
+		objectName,
+	)
 	if err != nil {
 		return ReportOutput{}, reportsDomain.ErrReportPDFGenerationFailed
 	}
@@ -281,15 +315,22 @@ func buildAIWeeklyReportInput(
 	}
 }
 
-func (uc *GenerateWeeklyReports) buildFilePath(workspaceID, weekID, assignmentID uint) string {
-	fileName := fmt.Sprintf(
+func (uc *GenerateWeeklyReports) buildFileName(workspaceID, weekID, assignmentID uint) string {
+	return fmt.Sprintf(
 		"workspace_%d_week_%d_assignment_%d.pdf",
 		workspaceID,
 		weekID,
 		assignmentID,
 	)
+}
 
-	return filepath.Join(uc.reportsStorageDir, fileName)
+func (uc *GenerateWeeklyReports) buildObjectName(fileName string) string {
+	prefix := strings.Trim(uc.reportsGCSPrefix, "/")
+	if prefix == "" {
+		return fileName
+	}
+
+	return prefix + "/" + fileName
 }
 
 func collectTasksForAssignment(
