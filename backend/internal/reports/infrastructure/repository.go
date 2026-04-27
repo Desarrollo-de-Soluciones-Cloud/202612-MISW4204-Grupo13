@@ -87,5 +87,17 @@ func (r *ReportRepository) FindAll(workspaceID uint, weekID *uint, userID *uint)
 }
 
 func (r *ReportRepository) AutoMigrate() error {
-	return database.DB.AutoMigrate(&reportsDomain.Report{})
+	if err := database.DB.AutoMigrate(&reportsDomain.Report{}); err != nil {
+		return err
+	}
+
+	if err := database.DB.Exec(`ALTER TABLE reports DROP COLUMN IF EXISTS "type"`).Error; err != nil {
+		return err
+	}
+
+	if err := database.DB.Exec(`ALTER TABLE reports DROP COLUMN IF EXISTS summary`).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
