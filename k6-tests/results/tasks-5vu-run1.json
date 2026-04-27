@@ -1,0 +1,204 @@
+{
+    "metrics": {
+        "vus_max": {
+            "max": 5,
+            "value": 5,
+            "min": 5
+        },
+        "data_sent": {
+            "count": 505213,
+            "rate": 2782.268282887239
+        },
+        "http_req_sending": {
+            "med": 0.045,
+            "max": 2.726,
+            "p(95)": 0.335,
+            "p(99)": 0.653059999999999,
+            "avg": 0.0860525657071339,
+            "min": 0.012
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 799,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "checks": {
+            "passes": 799,
+            "fails": 0,
+            "value": 1
+        },
+        "http_reqs": {
+            "count": 799,
+            "rate": 4.400188352292803
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 134.5417209011263,
+            "min": 109.831,
+            "med": 119.982,
+            "max": 258.206,
+            "p(95)": 187.1015,
+            "p(99)": 197.15168
+        },
+        "http_req_receiving": {
+            "avg": 0.11052941176470579,
+            "min": 0.018,
+            "med": 0.074,
+            "max": 0.578,
+            "p(95)": 0.285,
+            "p(99)": 0.46602000000000005
+        },
+        "data_received": {
+            "count": 343685,
+            "rate": 1892.7143102099526
+        },
+        "http_req_duration{name:task_create}": {
+            "avg": 134.23626289308166,
+            "min": 109.831,
+            "med": 119.898,
+            "max": 205.256,
+            "p(95)": 186.90759999999997,
+            "p(99)": 196.67159999999998,
+            "thresholds": {
+                "p(95)<2500": false,
+                "p(99)<5000": false
+            }
+        },
+        "iterations": {
+            "count": 795,
+            "rate": 4.378159874934641
+        },
+        "vus": {
+            "max": 5,
+            "value": 5,
+            "min": 5
+        },
+        "http_req_duration": {
+            "med": 119.982,
+            "max": 258.206,
+            "p(95)": 187.1015,
+            "p(99)": 197.15168,
+            "avg": 134.5417209011263,
+            "min": 109.831,
+            "thresholds": {
+                "p(95)<2000": false,
+                "p(99)<4000": false
+            }
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(95)": 0,
+            "p(99)": 0
+        },
+        "iteration_duration": {
+            "p(99)": 1206.33902052,
+            "avg": 1136.2907946327045,
+            "min": 1111.279209,
+            "med": 1121.229792,
+            "max": 1224.549959,
+            "p(95)": 1188.6183999
+        },
+        "http_req_blocked": {
+            "min": 0.001,
+            "med": 0.01,
+            "max": 112.478,
+            "p(95)": 0.022099999999999963,
+            "p(99)": 0.2818599999999994,
+            "avg": 0.8065682102628234
+        },
+        "http_req_waiting": {
+            "min": 109.704,
+            "med": 119.693,
+            "max": 257.057,
+            "p(95)": 186.92589999999998,
+            "p(99)": 197.06956,
+            "avg": 134.34513892365467
+        },
+        "http_req_connecting": {
+            "p(95)": 0,
+            "p(99)": 0,
+            "avg": 0.7919111389236545,
+            "min": 0,
+            "med": 0,
+            "max": 112.035
+        }
+    },
+    "setup_data": [
+        {
+            "observations": "Carga monitor 1",
+            "password": "Seneprojects2026!",
+            "spent_hours": 1,
+            "status": "abierto",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjMsIm5hbWUiOiJDYW1pbGEgVG9ycmVzIFPDoW5jaGV6IiwiZW1haWwiOiJjYW1pbGEudG9ycmVzLnNAdW5pYW5kZXMuZWR1LmNvIiwiZ2xvYmFsX3JvbGUiOiJtb25pdG9yIiwiaWF0IjoxNzc3MjY4MDYzLCJleHAiOjE3NzcyNzE2NjN9.fu3TK9L5i2KlcTaoi0sGdiomeGIIAkuZQHpZaGCUllQ",
+            "week_start_date": "2026-05-04",
+            "assignment_id": 1,
+            "email": "camila.torres.s@uniandes.edu.co"
+        },
+        {
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjQsIm5hbWUiOiJOaWNvbMOhcyBIZXJyZXJhIFLDrW9zIiwiZW1haWwiOiJuaWNvbGFzLmhlcnJlcmFAdW5pYW5kZXMuZWR1LmNvIiwiZ2xvYmFsX3JvbGUiOiJtb25pdG9yIiwiaWF0IjoxNzc3MjY4MDYzLCJleHAiOjE3NzcyNzE2NjN9.5twg82Mhc8l90-Z9GqGqccMrSUM_wveYguT7ZWSJVUE",
+            "week_start_date": "2026-05-04",
+            "assignment_id": 2,
+            "email": "nicolas.herrera@uniandes.edu.co",
+            "observations": "Carga monitor 2",
+            "password": "Seneprojects2026!",
+            "spent_hours": 2,
+            "status": "en desarrollo"
+        },
+        {
+            "spent_hours": 2,
+            "status": "abierto",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjUsIm5hbWUiOiJNYXJpYW5hIExlw7NuIFZhcmdhcyIsImVtYWlsIjoibWFyaWFuYS5sZW9uQHVuaWFuZGVzLmVkdS5jbyIsImdsb2JhbF9yb2xlIjoiYXNzaXN0YW50IiwiaWF0IjoxNzc3MjY4MDYzLCJleHAiOjE3NzcyNzE2NjN9.tC8uPtCFp4H8rZThMOmqCvbvjE1XsphW5cTzdZ1d-wU",
+            "week_start_date": "2026-05-04",
+            "assignment_id": 3,
+            "email": "mariana.leon@uniandes.edu.co",
+            "observations": "Carga assistant 1",
+            "password": "Seneprojects2026!"
+        },
+        {
+            "week_start_date": "2026-05-04",
+            "assignment_id": 4,
+            "email": "santiago.alvarez.g@uniandes.edu.co",
+            "observations": "Carga assistant 2",
+            "password": "Seneprojects2026!",
+            "spent_hours": 1,
+            "status": "finalizado",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjYsIm5hbWUiOiJTYW50aWFnbyDDgWx2YXJleiBHw7NtZXoiLCJlbWFpbCI6InNhbnRpYWdvLmFsdmFyZXouZ0B1bmlhbmRlcy5lZHUuY28iLCJnbG9iYWxfcm9sZSI6ImFzc2lzdGFudCIsImlhdCI6MTc3NzI2ODA2MywiZXhwIjoxNzc3MjcxNjYzfQ.9bk8yizpFfjznckwLIXzwTNkpJ_0FkDIsfYBGSf0c5o"
+        }
+    ],
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "setup": {
+                "groups": {},
+                "checks": {
+                        "task creator sign-in status is 200": {
+                            "name": "task creator sign-in status is 200",
+                            "path": "::setup::task creator sign-in status is 200",
+                            "id": "d07ebf250b6538278d99a85f80120ead",
+                            "passes": 4,
+                            "fails": 0
+                        }
+                    },
+                "name": "setup",
+                "path": "::setup",
+                "id": "5c0f8025f7e0b6654089e5b00e950f1a"
+            }
+        },
+        "checks": {
+            "task create status is 201": {
+                "path": "::task create status is 201",
+                "id": "5bc8d27fe806be23db4d66c22b76ac9c",
+                "passes": 795,
+                "fails": 0,
+                "name": "task create status is 201"
+            }
+        }
+    }
+}
