@@ -1,15 +1,19 @@
 import { FormEvent, useEffect, useState } from "react";
 import {
+  createAssignment,
+  createWorkspace,
   downloadReport,
   generateWeeklyReport,
   getMe,
+  listPeriods,
   listReports,
   listTasks,
+  listUsers,
   listWeeksByPeriod,
   listWorkspaces,
   toErrorMessage,
 } from "../api/client";
-import type { Report, Task, User, Week, Workspace } from "../api/types";
+import type { Period, Report, Task, User, Week, Workspace } from "../api/types";
 import EmptyState from "../components/EmptyState";
 import HelpText from "../components/HelpText";
 import Layout from "../components/Layout";
@@ -25,6 +29,8 @@ interface ProfessorDashboardProps {
 export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboardProps) {
   const [me, setMe] = useState<User | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [periods, setPeriods] = useState<Period[]>([]);
+  const [assignableUsers, setAssignableUsers] = useState<User[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [weeksByPeriod, setWeeksByPeriod] = useState<Record<number, Week[]>>({});
@@ -32,6 +38,21 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
   const [weekId, setWeekId] = useState("");
   const [filterWorkspaceId, setFilterWorkspaceId] = useState("");
   const [filterWeekId, setFilterWeekId] = useState("");
+  const [workspaceForm, setWorkspaceForm] = useState({
+    period_id: "",
+    name: "",
+    type: "project" as "course" | "project",
+    initial_date: "",
+    final_date: "",
+    observations: "",
+    state: "active" as "active" | "closed",
+  });
+  const [assignmentForm, setAssignmentForm] = useState({
+    user_id: "",
+    workspace_id: "",
+    role: "monitor" as "monitor" | "assistant",
+    weekly_hours: "1",
+  });
   const [loading, setLoading] = useState(false);
   const { toast, showToast, clearToast } = useToast();
 
@@ -49,6 +70,12 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
   const getWorkspaceLabel = (workspace: Workspace): string =>
     `${workspace.name} - ${workspace.type} (ID ${workspace.id})`;
+
+  const getPeriodLabel = (period: Period): string =>
+    `${period.name} - ${period.period_state} (ID ${period.id})`;
+
+  const getUserLabel = (account: User): string =>
+    `${account.name} - ${account.email} - ${account.global_role} (ID ${account.id})`;
 
   const getWeekLabel = (week: Week): string =>
     `Semana ${week.number}: ${week.initial_date} a ${week.final_date} (ID ${week.id})`;
@@ -76,11 +103,16 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     setLoading(true);
 
     try {
-      const [meResult, workspaceResult, taskResult] = await Promise.all([
+      const [meResult, workspaceResult, taskResult, periodsResult, monitorResult, assistantResult] = await Promise.all([
         getMe(),
         listWorkspaces(),
         listTasks(),
+        listPeriods(),
+        listUsers("monitor"),
+        listUsers("assistant"),
       ]);
+
+      const availableUsers = [...monitorResult.users, ...assistantResult.users];
 
       const defaultWorkspaceId = workspaceResult.workspaces[0]?.id;
       const reportResult = defaultWorkspaceId
@@ -89,16 +121,43 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
       setMe(meResult);
       setWorkspaces(workspaceResult.workspaces);
+      setPeriods(periodsResult.periods);
+      setAssignableUsers(availableUsers);
       setTasks(taskResult.tasks);
       setReports(reportResult.reports);
       setWorkspaceId((previous) => previous || String(defaultWorkspaceId ?? ""));
       setFilterWorkspaceId((previous) => previous || String(defaultWorkspaceId ?? ""));
+      setWorkspaceForm((previous) => ({
+        ...previous,
+        period_id: previous.period_id || String(periodsResult.periods[0]?.id ?? ""),
+      }));
+      setAssignmentForm((previous) => ({
+        ...previous,
+        workspace_id: previous.workspace_id || String(defaultWorkspaceId ?? ""),
+      }));
+      setAssignmentForm((previous) => ({
+        ...previous,
+        user_id:
+          previous.user_id ||
+          String(availableUsers.find((item) => item.global_role === previous.role)?.id ?? ""),
+      }));
     } catch (err) {
       showToast(toErrorMessage(err), "error");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    setAssignmentForm((previous) => ({
+      ...previous,
+      user_id:
+        previous.user_id &&
+        assignableUsers.some((item) => String(item.id) === previous.user_id && item.global_role === previous.role)
+          ? previous.user_id
+          : String(assignableUsers.find((item) => item.global_role === previous.role)?.id ?? ""),
+    }));
+  }, [assignmentForm.role, assignableUsers]);
 
   useEffect(() => {
     void loadBase();
@@ -249,6 +308,58 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     }
   };
 
+  const handleCreateWorkspace = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    clearToast();
+
+    try {
+      await createWorkspace({
+        period_id: Number(workspaceForm.period_id),
+        name: workspaceForm.name,
+        type: workspaceForm.type,
+        initial_date: workspaceForm.initial_date,
+        final_date: workspaceForm.final_date,
+        observations: workspaceForm.observations,
+        state: workspaceForm.state,
+      });
+
+      showToast("Curso o proyecto creado correctamente.", "success");
+      setWorkspaceForm((previous) => ({
+        ...previous,
+        name: "",
+        initial_date: "",
+        final_date: "",
+        observations: "",
+      }));
+      await loadBase();
+    } catch (err) {
+      showToast(toErrorMessage(err), "error");
+    }
+  };
+
+  const handleCreateAssignment = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    clearToast();
+
+    try {
+      await createAssignment({
+        user_id: Number(assignmentForm.user_id),
+        workspace_id: Number(assignmentForm.workspace_id),
+        role: assignmentForm.role,
+        weekly_hours: Number(assignmentForm.weekly_hours),
+      });
+
+      showToast("Vinculacion creada correctamente.", "success");
+      setAssignmentForm((previous) => ({
+        ...previous,
+        weekly_hours: "1",
+      }));
+      await loadBase();
+    } catch (err) {
+      showToast(toErrorMessage(err), "error");
+    }
+  };
+
   return (
     <Layout
       title="Panel del profesor"
@@ -365,6 +476,241 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="card">
+        <h2>Crear curso o proyecto</h2>
+        <p className="section-desc">Registra un nuevo curso/proyecto asociado a tu cuenta de profesor.</p>
+        <form className="form-grid" onSubmit={handleCreateWorkspace}>
+          <div className="form-field">
+            <label>
+              Periodo academico
+              <select
+                value={workspaceForm.period_id}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({
+                    ...previous,
+                    period_id: event.target.value,
+                  }))
+                }
+                required
+              >
+                <option value="" disabled>
+                  Selecciona un periodo
+                </option>
+                {periods.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {getPeriodLabel(item)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="form-field">
+            <label>
+              Nombre
+              <input
+                value={workspaceForm.name}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({
+                    ...previous,
+                    name: event.target.value,
+                  }))
+                }
+                required
+              />
+            </label>
+          </div>
+
+          <div className="form-field">
+            <label>
+              Tipo
+              <select
+                value={workspaceForm.type}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({
+                    ...previous,
+                    type: event.target.value as "course" | "project",
+                  }))
+                }
+              >
+                <option value="course">Curso</option>
+                <option value="project">Proyecto</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="form-field">
+            <label>
+              Fecha inicial
+              <input
+                type="date"
+                value={workspaceForm.initial_date}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({
+                    ...previous,
+                    initial_date: event.target.value,
+                  }))
+                }
+                required
+              />
+            </label>
+          </div>
+
+          <div className="form-field">
+            <label>
+              Fecha final
+              <input
+                type="date"
+                value={workspaceForm.final_date}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({
+                    ...previous,
+                    final_date: event.target.value,
+                  }))
+                }
+                required
+              />
+            </label>
+          </div>
+
+          <div className="form-field">
+            <label>
+              Observaciones
+              <input
+                value={workspaceForm.observations}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({
+                    ...previous,
+                    observations: event.target.value,
+                  }))
+                }
+                required
+              />
+            </label>
+          </div>
+
+          <div className="form-field">
+            <label>
+              Estado
+              <select
+                value={workspaceForm.state}
+                onChange={(event) =>
+                  setWorkspaceForm((previous) => ({
+                    ...previous,
+                    state: event.target.value as "active" | "closed",
+                  }))
+                }
+              >
+                <option value="active">Activo</option>
+                <option value="closed">Cerrado</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="form-actions">
+            <button type="submit">Crear curso/proyecto</button>
+          </div>
+        </form>
+      </section>
+
+      <section className="card">
+        <h2>Crear vinculacion</h2>
+        <p className="section-desc">Vincula monitores o asistentes a uno de tus cursos/proyectos.</p>
+        <form className="form-grid" onSubmit={handleCreateAssignment}>
+          <div className="form-field">
+            <label>
+              Curso/proyecto propio
+              <select
+                value={assignmentForm.workspace_id}
+                onChange={(event) =>
+                  setAssignmentForm((previous) => ({
+                    ...previous,
+                    workspace_id: event.target.value,
+                  }))
+                }
+                required
+              >
+                <option value="" disabled>
+                  Selecciona un curso/proyecto
+                </option>
+                {workspaces.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {getWorkspaceLabel(item)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="form-field">
+            <label>
+              Rol de vinculacion
+              <select
+                value={assignmentForm.role}
+                onChange={(event) =>
+                  setAssignmentForm((previous) => ({
+                    ...previous,
+                    role: event.target.value as "monitor" | "assistant",
+                  }))
+                }
+              >
+                <option value="monitor">Monitor</option>
+                <option value="assistant">Asistente</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="form-field">
+            <label>
+              Usuario
+              <select
+                value={assignmentForm.user_id}
+                onChange={(event) =>
+                  setAssignmentForm((previous) => ({
+                    ...previous,
+                    user_id: event.target.value,
+                  }))
+                }
+                required
+              >
+                <option value="" disabled>
+                  Selecciona un usuario
+                </option>
+                {assignableUsers
+                  .filter((item) => item.global_role === assignmentForm.role)
+                  .map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {getUserLabel(item)}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="form-field">
+            <label>
+              Horas semanales
+              <input
+                type="number"
+                min={1}
+                value={assignmentForm.weekly_hours}
+                onChange={(event) =>
+                  setAssignmentForm((previous) => ({
+                    ...previous,
+                    weekly_hours: event.target.value,
+                  }))
+                }
+                required
+              />
+            </label>
+          </div>
+
+          <div className="form-actions">
+            <button type="submit">Crear vinculacion</button>
+          </div>
+        </form>
       </section>
 
       <section className="card">

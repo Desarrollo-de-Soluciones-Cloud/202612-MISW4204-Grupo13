@@ -120,7 +120,7 @@ export interface CreatePeriodPayload {
 
 export interface CreateWorkspacePayload {
   period_id: number;
-  user_id: number;
+  user_id?: number;
   name: string;
   type: "course" | "project";
   initial_date: string;

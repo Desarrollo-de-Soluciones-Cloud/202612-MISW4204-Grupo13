@@ -10,6 +10,7 @@ var (
 	ErrWorkspaceInscriptionClosed = errors.New("period inscription is closed")
 	ErrWorkspaceUserNotFound = errors.New("user not found")
 	ErrWorkspaceUserNotProfessor = errors.New("user must have professor role")
+	ErrWorkspaceProfessorCannotCreateForAnotherUser = errors.New("professor can only create workspaces for themselves")
 	ErrWorkspaceClosedUpdateForbidden = errors.New("workspace cannot be updated because it is closed")
 	ErrWorkspaceUserIDChangeNotAllowed = errors.New("workspace user_id cannot be changed")
 	ErrWorkspaceNameRequired = errors.New("workspace name is required")

@@ -60,12 +60,21 @@ func (h *WorkspaceHandler) CreateWorkspace(c *gin.Context) {
 		return
 	}
 
+	userID := req.UserID
+
 	switch currentUser.GlobalRole {
 	case usersDomain.RoleAdmin:
-		// Admin can create workspaces for any professor.
+		if userID == 0 {
+			sharedHelpers.RespondWithError(c, http.StatusBadRequest, domain.ErrWorkspaceUserIDRequired)
+			return
+		}
 	case usersDomain.RoleProfessor:
-		if req.UserID != currentUser.ID {
-			sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+		if userID == 0 {
+			userID = currentUser.ID
+		}
+
+		if userID != currentUser.ID {
+			sharedHelpers.RespondWithError(c, http.StatusForbidden, domain.ErrWorkspaceProfessorCannotCreateForAnotherUser)
 			return
 		}
 	default:
@@ -75,7 +84,7 @@ func (h *WorkspaceHandler) CreateWorkspace(c *gin.Context) {
 
 	input := application.CreateWorkspaceInput{
 		PeriodID:     req.PeriodID,
-		UserID:       req.UserID,
+		UserID:       userID,
 		Name:         req.Name,
 		Type:         req.Type,
 		InitialDate:  req.InitialDate,
