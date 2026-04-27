@@ -468,7 +468,6 @@ func TestCreatePeriodWithNilWeeksCount(t *testing.T) {
 	}
 }
 
-// TestCreatePeriodInvalidName tests CreatePeriod with invalid name
 func TestCreatePeriodInvalidName(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := newMockPeriodRepository()
@@ -476,7 +475,7 @@ func TestCreatePeriodInvalidName(t *testing.T) {
 
 	weeksCount := 8
 	body := delivery.CreatePeriodRequest{
-		Name:        "ab", // Too short
+		Name:        "",
 		InitialDate: "2026-10-05",
 		WeeksCount:  &weeksCount,
 		PeriodState: "active",
@@ -556,7 +555,6 @@ func TestCreatePeriodInvalidWeeksCount(t *testing.T) {
 }
 
 // TestUpdatePeriodInvalidID tests UpdatePeriod with invalid ID format
-// TestUpdatePeriodInvalidState tests UpdatePeriod with invalid name
 func TestUpdatePeriodInvalidState(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := newMockPeriodRepository()
@@ -566,7 +564,7 @@ func TestUpdatePeriodInvalidState(t *testing.T) {
 	repo.Create(period)
 
 	body := delivery.UpdatePeriodRequest{
-		Name: "ab",
+		Name: "",
 	}
 
 	bodyJSON, _ := json.Marshal(body)

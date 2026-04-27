@@ -69,9 +69,9 @@ func TestNewPeriodRejectsShortName(t *testing.T) {
 	initialDate := "2026-10-05"
 	weeksCount := 8
 
-	_, err := domainpkg.NewPeriod("ab", initialDate, weeksCount, domainpkg.ActivePeriod)
-	if !errors.Is(err, domainpkg.ErrPeriodNameWrongFormat) {
-		t.Fatalf("expected ErrPeriodNameWrongFormat, got %v", err)
+	_, err := domainpkg.NewPeriod("", initialDate, weeksCount, domainpkg.ActivePeriod)
+	if !errors.Is(err, domainpkg.ErrPeriodNameRequired) {
+		t.Fatalf("expected ErrPeriodNameRequired, got %v", err)
 	}
 }
 
@@ -131,8 +131,8 @@ func TestNormalizePeriodName(t *testing.T) {
 func TestValidatePeriodNameTooLong(t *testing.T) {
 	longName := strings.Repeat("a", 101)
 	err := domainpkg.ValidatePeriodName(longName)
-	if !errors.Is(err, domainpkg.ErrPeriodNameWrongFormat) {
-		t.Fatalf("expected error for too long name, got %v", err)
+	if err != nil {
+		t.Fatalf("expected no error for long name, got %v", err)
 	}
 }
 

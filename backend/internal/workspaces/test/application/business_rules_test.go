@@ -38,6 +38,9 @@ func (r *workspaceRepoStub) FindAll() ([]workspacesDomain.Workspace, error) { re
 func (r *workspaceRepoStub) FindByPeriodID(periodID uint) ([]workspacesDomain.Workspace, error) {
 	return nil, nil
 }
+func (r *workspaceRepoStub) FindByUserID(userID uint) ([]workspacesDomain.Workspace, error) {
+	return nil, nil
+}
 func (r *workspaceRepoStub) Update(workspace *workspacesDomain.Workspace) error {
 	if r.updateErr != nil {
 		return r.updateErr
@@ -118,7 +121,7 @@ func TestCreateWorkspaceRejectsAfterInscriptionDeadline(t *testing.T) {
 
 func TestCreateWorkspaceRejectsMissingProfessor(t *testing.T) {
 	workspaceRepo := &workspaceRepoStub{}
-	periodRepo := &periodRepoStub{period: &periodsDomain.Period{ID: 1, PeriodState: periodsDomain.ActivePeriod, InscriptionFinalDate: time.Now().AddDate(0, 0, 1).Format("2006-01-02")}}
+	periodRepo := &periodRepoStub{period: &periodsDomain.Period{ID: 1, PeriodState: periodsDomain.ActivePeriod, InitialDate: "2026-06-01", FinalDate: "2026-06-30", InscriptionFinalDate: time.Now().AddDate(0, 0, 1).Format("2006-01-02")}}
 	userRepo := &userRepoStub{err: usersDomain.ErrUserNotFound}
 
 	uc := workspacesApplication.NewCreateWorkspace(workspaceRepo, periodRepo, userRepo)
@@ -131,7 +134,7 @@ func TestCreateWorkspaceRejectsMissingProfessor(t *testing.T) {
 
 func TestCreateWorkspaceRejectsNonProfessorOwner(t *testing.T) {
 	workspaceRepo := &workspaceRepoStub{}
-	periodRepo := &periodRepoStub{period: &periodsDomain.Period{ID: 1, PeriodState: periodsDomain.ActivePeriod, InscriptionFinalDate: time.Now().AddDate(0, 0, 1).Format("2006-01-02")}}
+	periodRepo := &periodRepoStub{period: &periodsDomain.Period{ID: 1, PeriodState: periodsDomain.ActivePeriod, InitialDate: "2026-06-01", FinalDate: "2026-06-30", InscriptionFinalDate: time.Now().AddDate(0, 0, 1).Format("2006-01-02")}}
 	userRepo := &userRepoStub{user: &usersDomain.User{ID: 10, GlobalRole: usersDomain.RoleMonitor}}
 
 	uc := workspacesApplication.NewCreateWorkspace(workspaceRepo, periodRepo, userRepo)

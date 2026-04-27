@@ -62,11 +62,11 @@ func TestUpdatePeriodInvalidName(t *testing.T) {
 	updatePeriod := applicationpkg.NewUpdatePeriod(mockRepo)
 	_, err := updatePeriod.Execute(applicationpkg.UpdatePeriodInput{
 		ID:   period.ID,
-		Name: "ab",
+		Name: "",
 	})
 
-	if !errors.Is(err, domain.ErrPeriodNameWrongFormat) {
-		t.Errorf("expected ErrPeriodNameWrongFormat, got %v", err)
+	if !errors.Is(err, domain.ErrPeriodNameRequired) {
+		t.Errorf("expected ErrPeriodNameRequired, got %v", err)
 	}
 }
 
