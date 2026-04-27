@@ -13,7 +13,7 @@ import (
 	weeksDelivery "backend/internal/weeks/delivery"
 	workspacesDelivery "backend/internal/workspaces/delivery"
 	"log"
-	
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -53,3 +53,4 @@ func main() {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
+//merge develop
