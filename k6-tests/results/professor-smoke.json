@@ -1,0 +1,240 @@
+{
+    "metrics": {
+        "http_req_blocked": {
+            "p(95)": 1.4841999999999969,
+            "p(99)": 104.94162,
+            "avg": 4.921441860465113,
+            "min": 0.005,
+            "med": 0.012,
+            "max": 105.966
+        },
+        "checks": {
+            "fails": 0,
+            "passes": 43,
+            "value": 1
+        },
+        "data_sent": {
+            "count": 17727,
+            "rate": 1551.3782123033122
+        },
+        "http_req_duration": {
+            "max": 196.525,
+            "p(95)": 188.52939999999998,
+            "p(99)": 194.46153999999999,
+            "avg": 120.67099999999998,
+            "min": 104.228,
+            "med": 106.583,
+            "thresholds": {
+                "p(95)<2000": false,
+                "p(99)<4000": false
+            }
+        },
+        "http_req_duration{name:professor_view_weeks}": {
+            "avg": 106.27283333333332,
+            "min": 105.229,
+            "med": 106.473,
+            "max": 107.085,
+            "p(95)": 107.0705,
+            "p(99)": 107.0821,
+            "thresholds": {
+                "p(95)<2500": false
+            }
+        },
+        "http_req_tls_handshaking": {
+            "p(95)": 0,
+            "p(99)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0
+        },
+        "http_req_connecting": {
+            "p(99)": 104.85456,
+            "avg": 4.86753488372093,
+            "min": 0,
+            "med": 0,
+            "max": 105.918,
+            "p(95)": 0
+        },
+        "http_req_receiving": {
+            "med": 0.149,
+            "max": 0.542,
+            "p(95)": 0.24599999999999997,
+            "p(99)": 0.4256599999999999,
+            "avg": 0.15993023255813954,
+            "min": 0.063
+        },
+        "data_received": {
+            "count": 42120,
+            "rate": 3686.1313421456257
+        },
+        "http_req_duration{name:professor_view_tasks}": {
+            "avg": 135.74433333333334,
+            "min": 116.429,
+            "med": 127.96799999999999,
+            "max": 172.623,
+            "p(95)": 166.67125,
+            "p(99)": 171.43265,
+            "thresholds": {
+                "p(95)<3000": false
+            }
+        },
+        "http_reqs": {
+            "count": 43,
+            "rate": 3.763144532579817
+        },
+        "http_req_duration{expected_response:true}": {
+            "med": 106.583,
+            "max": 196.525,
+            "p(95)": 188.52939999999998,
+            "p(99)": 194.46153999999999,
+            "avg": 120.67099999999998,
+            "min": 104.228
+        },
+        "group_duration": {
+            "min": 783.504375,
+            "med": 882.767666,
+            "max": 920.982,
+            "p(95)": 911.65373975,
+            "p(99)": 919.11634795,
+            "avg": 856.3295206666667
+        },
+        "iteration_duration": {
+            "med": 1883.7470005,
+            "max": 1921.65525,
+            "p(95)": 1912.40535425,
+            "p(99)": 1919.80527085,
+            "avg": 1857.1795003333336,
+            "min": 1783.803292
+        },
+        "iterations": {
+            "count": 6,
+            "rate": 0.5250899347785791
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 43,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "http_req_sending": {
+            "avg": 0.041720930232558136,
+            "min": 0.015,
+            "med": 0.041,
+            "max": 0.129,
+            "p(95)": 0.0629,
+            "p(99)": 0.11345999999999999
+        },
+        "http_req_waiting": {
+            "p(99)": 194.2376,
+            "avg": 120.4693488372093,
+            "min": 104.126,
+            "med": 106.376,
+            "max": 196.283,
+            "p(95)": 188.23099999999997
+        },
+        "vus": {
+            "min": 1,
+            "max": 1,
+            "value": 1
+        },
+        "http_req_duration{name:professor_view_assignments}": {
+            "p(95)": 191.3969,
+            "p(99)": 195.39501,
+            "avg": 116.76133333333331,
+            "min": 104.228,
+            "med": 106.0145,
+            "max": 196.525,
+            "thresholds": {
+                "p(95)<3000": false
+            }
+        },
+        "vus_max": {
+            "value": 1,
+            "min": 1,
+            "max": 1
+        },
+        "http_req_duration{name:professor_view_workspaces}": {
+            "med": 129.3605,
+            "max": 145.079,
+            "p(95)": 144.73625,
+            "p(99)": 145.01045000000002,
+            "avg": 126.79766666666666,
+            "min": 106.058,
+            "thresholds": {
+                "p(95)<2500": false
+            }
+        }
+    },
+    "setup_data": {
+        "assignmentUserIds": [
+            3,
+            4,
+            5,
+            6
+        ],
+        "periodId": 1,
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsIm5hbWUiOiJEcmEuIFZhbGVyaWEgTWVuZG96YSIsImVtYWlsIjoidmFsZXJpYS5tZW5kb3phQHVuaWFuZGVzLmVkdS5jbyIsImdsb2JhbF9yb2xlIjoicHJvZmVzc29yIiwiaWF0IjoxNzc3MjY1NjA1LCJleHAiOjE3NzcyNjkyMDV9.OOsflzObSLOO9Ln7Uanv6VIB-TEUSQdIGGaNShrEtiQ"
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "setup": {
+                "groups": {},
+                "checks": {
+                        "professor sign-in status is 200": {
+                            "name": "professor sign-in status is 200",
+                            "path": "::setup::professor sign-in status is 200",
+                            "id": "cd4d45e4f7d4955f1bac6598d941b40e",
+                            "passes": 1,
+                            "fails": 0
+                        }
+                    },
+                "name": "setup",
+                "path": "::setup",
+                "id": "5c0f8025f7e0b6654089e5b00e950f1a"
+            },
+            "professor_view": {
+                "name": "professor_view",
+                "path": "::professor_view",
+                "id": "d96e0ba4cfc286c69268c231a87cdea4",
+                "groups": {},
+                "checks": {
+                        "workspaces status is 200": {
+                            "fails": 0,
+                            "name": "workspaces status is 200",
+                            "path": "::professor_view::workspaces status is 200",
+                            "id": "44198496ffe8dc41634360fad46f3f14",
+                            "passes": 6
+                        },
+                        "weeks status is 200": {
+                            "fails": 0,
+                            "name": "weeks status is 200",
+                            "path": "::professor_view::weeks status is 200",
+                            "id": "da3ddd1e6a64291b9b6194ac52490f1a",
+                            "passes": 6
+                        },
+                        "tasks status is 200": {
+                            "name": "tasks status is 200",
+                            "path": "::professor_view::tasks status is 200",
+                            "id": "486ddd70c692d81742c5641f4eb235b6",
+                            "passes": 6,
+                            "fails": 0
+                        },
+                        "assignments status is 200": {
+                            "name": "assignments status is 200",
+                            "path": "::professor_view::assignments status is 200",
+                            "id": "f4104f4b231cffd3df90b152ee77b1b8",
+                            "passes": 24,
+                            "fails": 0
+                        }
+                    }
+            }
+        },
+        "checks": {}
+    }
+}

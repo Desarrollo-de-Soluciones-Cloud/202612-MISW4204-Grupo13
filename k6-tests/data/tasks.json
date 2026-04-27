@@ -1,0 +1,40 @@
+{
+  "task_creators": [
+    {
+      "email": "camila.torres.s@uniandes.edu.co",
+      "password": "Seneprojects2026!",
+      "assignment_id": 1,
+      "week_start_date": "2026-05-04",
+      "status": "abierto",
+      "spent_hours": 1,
+      "observations": "Carga monitor 1"
+    },
+    {
+      "email": "nicolas.herrera@uniandes.edu.co",
+      "password": "Seneprojects2026!",
+      "assignment_id": 2,
+      "week_start_date": "2026-05-04",
+      "status": "en desarrollo",
+      "spent_hours": 2,
+      "observations": "Carga monitor 2"
+    },
+    {
+      "email": "mariana.leon@uniandes.edu.co",
+      "password": "Seneprojects2026!",
+      "assignment_id": 3,
+      "week_start_date": "2026-05-04",
+      "status": "abierto",
+      "spent_hours": 2,
+      "observations": "Carga assistant 1"
+    },
+    {
+      "email": "santiago.alvarez.g@uniandes.edu.co",
+      "password": "Seneprojects2026!",
+      "assignment_id": 4,
+      "week_start_date": "2026-05-04",
+      "status": "finalizado",
+      "spent_hours": 1,
+      "observations": "Carga assistant 2"
+    }
+  ]
+}
