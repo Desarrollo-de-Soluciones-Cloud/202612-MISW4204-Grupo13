@@ -4,6 +4,7 @@ import {
   createPeriod,
   createUser,
   createWorkspace,
+  downloadReport,
   getMe,
   listAssignmentsByUser,
   listPeriods,
@@ -231,6 +232,29 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         week_id: reportFilters.week_id ? Number(reportFilters.week_id) : undefined,
       });
       setReports(response.reports);
+
+      if (response.reports.length === 0) {
+        showToast("No hay reportes generados para los filtros seleccionados.", "error");
+      }
+    } catch (err) {
+      showToast(toErrorMessage(err), "error");
+    }
+  };
+
+  const handleDownloadReport = async (reportId: number) => {
+    clearToast();
+
+    try {
+      const blob = await downloadReport(reportId);
+      const fileUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = fileUrl;
+      anchor.download = `reporte_${reportId}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(fileUrl);
+      showToast("Reporte descargado correctamente.", "success");
     } catch (err) {
       showToast(toErrorMessage(err), "error");
     }
@@ -1007,11 +1031,17 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 <th>ID de semana</th>
                 <th>ID de vinculación</th>
                 <th>ID del usuario</th>
+                <th>Ruta del archivo</th>
+                <th>Fecha de creación</th>
+                <th>Acción</th>
               </tr>
             </thead>
             <tbody>
               {reports.length === 0 ? (
-                <EmptyState colSpan={5} />
+                <EmptyState
+                  colSpan={8}
+                  message="No hay reportes generados para los filtros seleccionados."
+                />
               ) : (
                 reports.map((item) => (
                   <tr key={item.id}>
@@ -1020,6 +1050,16 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                     <td>{item.week_id}</td>
                     <td>{item.assignment_id}</td>
                     <td>{item.user_id}</td>
+                    <td>{item.file_path}</td>
+                    <td>{item.created_at ?? "-"}</td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => void handleDownloadReport(item.id)}
+                      >
+                        Descargar PDF
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
