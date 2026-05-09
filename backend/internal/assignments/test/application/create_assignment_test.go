@@ -12,159 +12,10 @@ import (
 //nolint:godox // TODO RF04: Agregar tests de delivery e infrastructure para fortalecer la cobertura del modulo.
 // TODO RF05: Reforzar RF05 con pruebas de delivery e integracion/E2E para respuestas HTTP bloqueantes en create.
 
-type MockAssignmentRepository struct {
-	byID    map[uint]*domain.Assignment
-	nextID  uint
-	failErr error
-}
-
-type MockUserRepository struct {
-	users map[uint]*usersDomain.User
-}
-
-func NewMockUserRepository() *MockUserRepository {
-	return &MockUserRepository{users: make(map[uint]*usersDomain.User)}
-}
-
-func (m *MockUserRepository) FindByID(id uint) (*usersDomain.User, error) {
-	if user, ok := m.users[id]; ok {
-		return user, nil
-	}
-	return nil, usersDomain.ErrUserNotFound
-}
-
-type MockWorkspaceRepository struct {
-	workspaces map[uint]*workspacesDomain.Workspace
-}
-
-func NewMockWorkspaceRepository() *MockWorkspaceRepository {
-	return &MockWorkspaceRepository{workspaces: make(map[uint]*workspacesDomain.Workspace)}
-}
-
-func (m *MockWorkspaceRepository) FindByID(id uint) (*workspacesDomain.Workspace, error) {
-	if workspace, ok := m.workspaces[id]; ok {
-		return workspace, nil
-	}
-	return nil, workspacesDomain.ErrWorkspaceNotFound
-}
-
-func newCreateAssignmentWithDependencies(
-	assignmentRepo *MockAssignmentRepository,
-	userRepo *MockUserRepository,
-	workspaceRepo *MockWorkspaceRepository,
-) *applicationpkg.CreateAssignment {
-	return applicationpkg.NewCreateAssignment(assignmentRepo).WithRepositories(userRepo, workspaceRepo)
-}
-
-func NewMockAssignmentRepository() *MockAssignmentRepository {
-	return &MockAssignmentRepository{
-		byID:   make(map[uint]*domain.Assignment),
-		nextID: 1,
-	}
-}
-
-func (m *MockAssignmentRepository) Create(assignment *domain.Assignment) error {
-	if m.failErr != nil {
-		return m.failErr
-	}
-
-	assignment.ID = m.nextID
-	m.nextID++
-	m.byID[assignment.ID] = assignment
-	return nil
-}
-
-func (m *MockAssignmentRepository) FindByID(id uint) (*domain.Assignment, error) {
-	if assignment, ok := m.byID[id]; ok {
-		return assignment, nil
-	}
-	return nil, domain.ErrAssignmentNotFound
-}
-
-func (m *MockAssignmentRepository) FindAllByUserID(userID uint) ([]domain.Assignment, error) {
-	result := make([]domain.Assignment, 0)
-	for _, assignment := range m.byID {
-		if assignment.UserID == userID {
-			result = append(result, *assignment)
-		}
-	}
-	return result, nil
-}
-
-func (m *MockAssignmentRepository) SumWeeklyHoursByUserAndRole(userID uint, role domain.AssignmentRole) (int, error) {
-	total := 0
-	for _, assignment := range m.byID {
-		if assignment.UserID == userID && assignment.Role == role {
-			total += assignment.WeeklyHours
-		}
-	}
-
-	return total, nil
-}
-
-func (m *MockAssignmentRepository) CountAssignmentsByUserAndRole(userID uint, role domain.AssignmentRole) (int, error) {
-	total := 0
-	for _, assignment := range m.byID {
-		if assignment.UserID == userID && assignment.Role == role {
-			total++
-		}
-	}
-
-	return total, nil
-}
-
-func (m *MockAssignmentRepository) Update(assignment *domain.Assignment) error {
-	if _, ok := m.byID[assignment.ID]; !ok {
-		return domain.ErrAssignmentNotFound
-	}
-	m.byID[assignment.ID] = assignment
-	return nil
-}
-
-func (m *MockWorkspaceRepository) FindByUserID(userID uint) ([]workspacesDomain.Workspace, error) {
-	result := make([]workspacesDomain.Workspace, 0)
-	for _, workspace := range m.workspaces {
-		if workspace.UserID == userID {
-			result = append(result, *workspace)
-		}
-	}
-	return result, nil
-}
-
-func (m *MockAssignmentRepository) FindAll() ([]domain.Assignment, error) {
-	result := make([]domain.Assignment, 0, len(m.byID))
-	for _, assignment := range m.byID {
-		result = append(result, *assignment)
-	}
-	return result, nil
-}
-
-func (m *MockAssignmentRepository) FindByWorkspaceUserID(workspaceUserID uint) ([]domain.Assignment, error) {
-	return nil, nil
-}
-
-func (m *MockAssignmentRepository) FindByWorkspaceIDsAndRoles(workspaceIDs []uint, roles []domain.AssignmentRole) ([]domain.Assignment, error) {
-	result := make([]domain.Assignment, 0)
-	roleMap := make(map[domain.AssignmentRole]bool)
-	for _, role := range roles {
-		roleMap[role] = true
-	}
-	workspaceMap := make(map[uint]bool)
-	for _, wsID := range workspaceIDs {
-		workspaceMap[wsID] = true
-	}
-	for _, assignment := range m.byID {
-		if workspaceMap[assignment.WorkspaceID] && roleMap[assignment.Role] {
-			result = append(result, *assignment)
-		}
-	}
-	return result, nil
-}
-
 func TestCreateAssignmentSuccess(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
-	userRepo := NewMockUserRepository()
-	workspaceRepo := NewMockWorkspaceRepository()
+	mockRepo := newMockAssignmentRepository()
+	userRepo := newMockUserRepository()
+	workspaceRepo := newMockWorkspaceRepository()
 	userRepo.users[1] = &usersDomain.User{ID: 1}
 	workspaceRepo.workspaces[2] = &workspacesDomain.Workspace{ID: 2, State: workspacesDomain.ActiveState}
 	createAssignment := newCreateAssignmentWithDependencies(mockRepo, userRepo, workspaceRepo)
@@ -197,9 +48,9 @@ func TestCreateAssignmentSuccess(t *testing.T) {
 }
 
 func TestCreateAssignmentReturnsErrorWhenUserDoesNotExist(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
-	userRepo := NewMockUserRepository()
-	workspaceRepo := NewMockWorkspaceRepository()
+	mockRepo := newMockAssignmentRepository()
+	userRepo := newMockUserRepository()
+	workspaceRepo := newMockWorkspaceRepository()
 	workspaceRepo.workspaces[2] = &workspacesDomain.Workspace{ID: 2, State: workspacesDomain.ActiveState}
 	createAssignment := newCreateAssignmentWithDependencies(mockRepo, userRepo, workspaceRepo)
 
@@ -215,9 +66,9 @@ func TestCreateAssignmentReturnsErrorWhenUserDoesNotExist(t *testing.T) {
 }
 
 func TestCreateAssignmentReturnsErrorWhenWorkspaceDoesNotExist(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
-	userRepo := NewMockUserRepository()
-	workspaceRepo := NewMockWorkspaceRepository()
+	mockRepo := newMockAssignmentRepository()
+	userRepo := newMockUserRepository()
+	workspaceRepo := newMockWorkspaceRepository()
 	userRepo.users[1] = &usersDomain.User{ID: 1}
 	createAssignment := newCreateAssignmentWithDependencies(mockRepo, userRepo, workspaceRepo)
 
@@ -233,9 +84,9 @@ func TestCreateAssignmentReturnsErrorWhenWorkspaceDoesNotExist(t *testing.T) {
 }
 
 func TestCreateAssignmentReturnsErrorWhenWorkspaceIsClosed(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
-	userRepo := NewMockUserRepository()
-	workspaceRepo := NewMockWorkspaceRepository()
+	mockRepo := newMockAssignmentRepository()
+	userRepo := newMockUserRepository()
+	workspaceRepo := newMockWorkspaceRepository()
 	userRepo.users[1] = &usersDomain.User{ID: 1}
 	workspaceRepo.workspaces[2] = &workspacesDomain.Workspace{ID: 2, State: workspacesDomain.ClosedState}
 	createAssignment := newCreateAssignmentWithDependencies(mockRepo, userRepo, workspaceRepo)
@@ -252,9 +103,9 @@ func TestCreateAssignmentReturnsErrorWhenWorkspaceIsClosed(t *testing.T) {
 }
 
 func TestCreateAssignmentAllowsIndependentAssignments(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
-	userRepo := NewMockUserRepository()
-	workspaceRepo := NewMockWorkspaceRepository()
+	mockRepo := newMockAssignmentRepository()
+	userRepo := newMockUserRepository()
+	workspaceRepo := newMockWorkspaceRepository()
 	userRepo.users[1] = &usersDomain.User{ID: 1}
 	workspaceRepo.workspaces[10] = &workspacesDomain.Workspace{ID: 10, State: workspacesDomain.ActiveState}
 	workspaceRepo.workspaces[11] = &workspacesDomain.Workspace{ID: 11, State: workspacesDomain.ActiveState}
@@ -292,9 +143,9 @@ func TestCreateAssignmentAllowsIndependentAssignments(t *testing.T) {
 }
 
 func TestCreateAssignmentBlocksExactDuplicate(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
-	userRepo := NewMockUserRepository()
-	workspaceRepo := NewMockWorkspaceRepository()
+	mockRepo := newMockAssignmentRepository()
+	userRepo := newMockUserRepository()
+	workspaceRepo := newMockWorkspaceRepository()
 	userRepo.users[1] = &usersDomain.User{ID: 1}
 	workspaceRepo.workspaces[10] = &workspacesDomain.Workspace{ID: 10, State: workspacesDomain.ActiveState}
 	createAssignment := newCreateAssignmentWithDependencies(mockRepo, userRepo, workspaceRepo)
@@ -321,7 +172,7 @@ func TestCreateAssignmentBlocksExactDuplicate(t *testing.T) {
 }
 
 func TestCreateAssignmentInvalidRole(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 
 	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
@@ -336,7 +187,7 @@ func TestCreateAssignmentInvalidRole(t *testing.T) {
 }
 
 func TestCreateAssignmentInvalidWeeklyHours(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 
 	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
@@ -352,7 +203,7 @@ func TestCreateAssignmentInvalidWeeklyHours(t *testing.T) {
 
 func TestCreateAssignmentRepositoryError(t *testing.T) {
 	repoErr := errors.New("db error")
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	mockRepo.failErr = repoErr
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 
@@ -368,7 +219,7 @@ func TestCreateAssignmentRepositoryError(t *testing.T) {
 }
 
 func TestCreateAssignmentBlocksWhenAssistantHoursExceed22(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 
 	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
@@ -393,7 +244,7 @@ func TestCreateAssignmentBlocksWhenAssistantHoursExceed22(t *testing.T) {
 }
 
 func TestCreateAssignmentBlocksWhenMonitorAssignmentsExceed3(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 
 	for i := 1; i <= 3; i++ {
@@ -420,7 +271,7 @@ func TestCreateAssignmentBlocksWhenMonitorAssignmentsExceed3(t *testing.T) {
 }
 
 func TestCreateAssignmentBlocksWhenMonitorHoursExceed12(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 
 	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
@@ -445,7 +296,7 @@ func TestCreateAssignmentBlocksWhenMonitorHoursExceed12(t *testing.T) {
 }
 
 func TestCreateAssignmentBlocksWhenMonitorExceedsFortyPercentOfAssistant(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 
 	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
@@ -480,7 +331,7 @@ func TestCreateAssignmentBlocksWhenMonitorExceedsFortyPercentOfAssistant(t *test
 }
 
 func TestCreateAssignmentAllowsMonitorHoursAtRoundedFortyPercentLimit(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 
 	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{
@@ -518,7 +369,7 @@ func TestCreateAssignmentAllowsMonitorHoursAtRoundedFortyPercentLimit(t *testing
 }
 
 func TestCreateAssignmentValidCaseWithMixedRoles(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 
 	_, err := createAssignment.Execute(applicationpkg.CreateAssignmentInput{

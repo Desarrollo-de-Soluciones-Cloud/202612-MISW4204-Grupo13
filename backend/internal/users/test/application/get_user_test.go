@@ -8,7 +8,7 @@ import (
 )
 
 func TestGetUserByIDSuccess(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 	getUserByID := applicationpkg.NewGetUserByID(mockRepo)
 
@@ -35,7 +35,7 @@ func TestGetUserByIDSuccess(t *testing.T) {
 }
 
 func TestGetUserByIDNotFound(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	getUserByID := applicationpkg.NewGetUserByID(mockRepo)
 
 	_, err := getUserByID.Execute(applicationpkg.GetUserByIDInput{ID: 999})

@@ -9,7 +9,7 @@ import (
 )
 
 func TestGetWeekStatusByPeriodAndNumberReturnsActive(t *testing.T) {
-	repo := &MockWeekRepository{
+	repo := &mockWeekRepository{
 		weeks: []domain.Week{
 			{ID: 1, PeriodID: 1, Number: 2, InitialDate: "2026-01-19", FinalDate: "2026-01-25"},
 		},
@@ -32,7 +32,7 @@ func TestGetWeekStatusByPeriodAndNumberReturnsActive(t *testing.T) {
 }
 
 func TestGetWeekStatusByPeriodAndNumberReturnsClosed(t *testing.T) {
-	repo := &MockWeekRepository{
+	repo := &mockWeekRepository{
 		weeks: []domain.Week{
 			{ID: 1, PeriodID: 1, Number: 1, InitialDate: "2026-01-12", FinalDate: "2026-01-18"},
 		},
@@ -55,7 +55,7 @@ func TestGetWeekStatusByPeriodAndNumberReturnsClosed(t *testing.T) {
 }
 
 func TestGetWeekStatusByPeriodAndNumberRejectsInvalidNumber(t *testing.T) {
-	repo := &MockWeekRepository{}
+	repo := &mockWeekRepository{}
 	getWeekStatus := application.NewGetWeekStatusByPeriodAndNumber(repo)
 
 	_, err := getWeekStatus.Execute(application.GetWeekStatusByPeriodAndNumberInput{

@@ -9,90 +9,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type MockUserRepository struct {
-	users          map[string]*domain.User
-	byID           map[uint]*domain.User
-	nextID         uint
-	createErr      error
-	updateErr      error
-	findByEmailErr error
-}
-
-func NewMockUserRepository() *MockUserRepository {
-	return &MockUserRepository{
-		users:  make(map[string]*domain.User),
-		byID:   make(map[uint]*domain.User),
-		nextID: 1,
-	}
-}
-
-func (m *MockUserRepository) Create(user *domain.User) error {
-	if m.createErr != nil {
-		return m.createErr
-	}
-	user.ID = m.nextID
-	m.nextID++
-	m.users[user.Email] = user
-	m.byID[user.ID] = user
-	return nil
-}
-
-func (m *MockUserRepository) FindByEmail(email string) (*domain.User, error) {
-	if m.findByEmailErr != nil {
-		return nil, m.findByEmailErr
-	}
-	if user, ok := m.users[email]; ok {
-		return user, nil
-	}
-	return nil, domain.ErrUserNotFound
-}
-
-func (m *MockUserRepository) FindAll() ([]domain.User, error) {
-	users := make([]domain.User, 0, len(m.users))
-	for _, u := range m.users {
-		users = append(users, *u)
-	}
-	return users, nil
-}
-
-func (m *MockUserRepository) FindAllByRole(role domain.UserRole) ([]domain.User, error) {
-	users := make([]domain.User, 0)
-	for _, u := range m.users {
-		if u.GlobalRole == role {
-			users = append(users, *u)
-		}
-	}
-	return users, nil
-}
-
-func (m *MockUserRepository) FindByID(id uint) (*domain.User, error) {
-	if user, ok := m.byID[id]; ok {
-		return user, nil
-	}
-	return nil, domain.ErrUserNotFound
-}
-
-func (m *MockUserRepository) Update(user *domain.User) error {
-	if m.updateErr != nil {
-		return m.updateErr
-	}
-	if _, ok := m.byID[user.ID]; !ok {
-		return domain.ErrUserNotFound
-	}
-
-	for email, existingUser := range m.users {
-		if existingUser.ID == user.ID && email != user.Email {
-			delete(m.users, email)
-		}
-	}
-
-	m.byID[user.ID] = user
-	m.users[user.Email] = user
-	return nil
-}
-
 func TestCreateUserSuccess(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 	input := applicationpkg.CreateUserInput{
 		Name:       "John Doe",
@@ -128,7 +46,7 @@ func TestCreateUserSuccess(t *testing.T) {
 }
 
 func TestCreateUserInvalidName(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 	input := applicationpkg.CreateUserInput{
 		Name:       "",
@@ -144,7 +62,7 @@ func TestCreateUserInvalidName(t *testing.T) {
 }
 
 func TestCreateUserDuplicateEmail(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 	input := applicationpkg.CreateUserInput{
 		Name:       "John Doe",
@@ -172,7 +90,7 @@ func TestCreateUserDuplicateEmail(t *testing.T) {
 }
 
 func TestCreateUserInvalidEmail(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 
 	_, err := createUser.Execute(applicationpkg.CreateUserInput{
@@ -187,7 +105,7 @@ func TestCreateUserInvalidEmail(t *testing.T) {
 }
 
 func TestCreateUserInvalidRole(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 
 	_, err := createUser.Execute(applicationpkg.CreateUserInput{
@@ -202,7 +120,7 @@ func TestCreateUserInvalidRole(t *testing.T) {
 }
 
 func TestCreateUserPasswordTooShort(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 
 	_, err := createUser.Execute(applicationpkg.CreateUserInput{
@@ -217,7 +135,7 @@ func TestCreateUserPasswordTooShort(t *testing.T) {
 }
 
 func TestCreateUserPropagatesUnexpectedFindByEmailError(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	mockRepo.findByEmailErr = errors.New("database failure")
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 
@@ -233,7 +151,7 @@ func TestCreateUserPropagatesUnexpectedFindByEmailError(t *testing.T) {
 }
 
 func TestCreateUserPropagatesCreateError(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	mockRepo.createErr = errors.New("create failure")
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 
@@ -249,7 +167,7 @@ func TestCreateUserPropagatesCreateError(t *testing.T) {
 }
 
 func TestCreateUserRejectsRequiredPassword(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 
 	_, err := createUser.Execute(applicationpkg.CreateUserInput{

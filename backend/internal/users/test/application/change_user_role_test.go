@@ -8,7 +8,7 @@ import (
 )
 
 func TestChangeUserRoleSuccess(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 	changeUserRole := applicationpkg.NewChangeUserRole(mockRepo)
 
@@ -49,7 +49,7 @@ func TestChangeUserRoleSuccess(t *testing.T) {
 }
 
 func TestChangeUserRoleInvalidRole(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	changeUserRole := applicationpkg.NewChangeUserRole(mockRepo)
 
 	_, err := changeUserRole.Execute(applicationpkg.ChangeUserRoleInput{
@@ -62,7 +62,7 @@ func TestChangeUserRoleInvalidRole(t *testing.T) {
 }
 
 func TestChangeUserRoleRequiresRole(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	changeUserRole := applicationpkg.NewChangeUserRole(mockRepo)
 
 	_, err := changeUserRole.Execute(applicationpkg.ChangeUserRoleInput{
@@ -75,7 +75,7 @@ func TestChangeUserRoleRequiresRole(t *testing.T) {
 }
 
 func TestChangeUserRoleUserNotFound(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	changeUserRole := applicationpkg.NewChangeUserRole(mockRepo)
 
 	_, err := changeUserRole.Execute(applicationpkg.ChangeUserRoleInput{
@@ -88,7 +88,7 @@ func TestChangeUserRoleUserNotFound(t *testing.T) {
 }
 
 func TestChangeUserRolePropagatesUpdateError(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 	changeUserRole := applicationpkg.NewChangeUserRole(mockRepo)
 

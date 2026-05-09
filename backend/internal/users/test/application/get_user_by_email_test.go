@@ -8,7 +8,7 @@ import (
 )
 
 func TestGetUserByEmailSuccess(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 	getUserByEmail := applicationpkg.NewGetUserByEmail(mockRepo)
 
@@ -35,7 +35,7 @@ func TestGetUserByEmailSuccess(t *testing.T) {
 }
 
 func TestGetUserByEmailInvalidEmail(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	getUserByEmail := applicationpkg.NewGetUserByEmail(mockRepo)
 
 	_, err := getUserByEmail.Execute(applicationpkg.GetUserByEmailInput{Email: "invalid-email"})
@@ -45,7 +45,7 @@ func TestGetUserByEmailInvalidEmail(t *testing.T) {
 }
 
 func TestGetUserByEmailNotFound(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	getUserByEmail := applicationpkg.NewGetUserByEmail(mockRepo)
 
 	_, err := getUserByEmail.Execute(applicationpkg.GetUserByEmailInput{Email: "missing@example.com"})

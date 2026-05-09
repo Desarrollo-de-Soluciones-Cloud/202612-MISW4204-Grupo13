@@ -8,7 +8,7 @@ import (
 )
 
 func TestUpdateUserSuccess(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 	updateUser := applicationpkg.NewUpdateUser(mockRepo)
 
@@ -43,7 +43,7 @@ func TestUpdateUserSuccess(t *testing.T) {
 }
 
 func TestUpdateUserRejectsDuplicateEmail(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 	updateUser := applicationpkg.NewUpdateUser(mockRepo)
 
@@ -79,7 +79,7 @@ func TestUpdateUserRejectsDuplicateEmail(t *testing.T) {
 }
 
 func TestUpdateUserNotFound(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	updateUser := applicationpkg.NewUpdateUser(mockRepo)
 
 	_, err := updateUser.Execute(applicationpkg.UpdateUserInput{
@@ -94,7 +94,7 @@ func TestUpdateUserNotFound(t *testing.T) {
 }
 
 func TestUpdateUserInvalidRole(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 	updateUser := applicationpkg.NewUpdateUser(mockRepo)
 
@@ -120,7 +120,7 @@ func TestUpdateUserInvalidRole(t *testing.T) {
 }
 
 func TestUpdateUserPreservesPasswordAndReplacesEmailLookup(t *testing.T) {
-	mockRepo := NewMockUserRepository()
+	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
 	updateUser := applicationpkg.NewUpdateUser(mockRepo)
 

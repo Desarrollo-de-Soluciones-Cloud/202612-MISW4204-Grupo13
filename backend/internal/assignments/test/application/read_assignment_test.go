@@ -8,7 +8,7 @@ import (
 )
 
 func TestGetAssignmentByIDSuccess(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 	getAssignment := applicationpkg.NewGetAssignmentByID(mockRepo)
 
@@ -39,7 +39,7 @@ func TestGetAssignmentByIDSuccess(t *testing.T) {
 }
 
 func TestGetAssignmentByIDNotFound(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	getAssignment := applicationpkg.NewGetAssignmentByID(mockRepo)
 
 	_, err := getAssignment.Execute(applicationpkg.GetAssignmentByIDInput{ID: 999})
@@ -49,7 +49,7 @@ func TestGetAssignmentByIDNotFound(t *testing.T) {
 }
 
 func TestListAssignmentsByUserIDSuccess(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 	listAssignments := applicationpkg.NewListAssignmentsByUserID(mockRepo)
 
@@ -60,10 +60,6 @@ func TestListAssignmentsByUserIDSuccess(t *testing.T) {
 		t.Fatalf("expected no error creating first assignment: %v", err)
 	}
 
-
-
-
-	
 	_, err = createAssignment.Execute(applicationpkg.CreateAssignmentInput{
 		UserID: 5, WorkspaceID: 2, Role: domain.RoleAssistant, WeeklyHours: 20,
 	})
@@ -87,7 +83,7 @@ func TestListAssignmentsByUserIDSuccess(t *testing.T) {
 }
 
 func TestListAssignmentsByUserIDInvalidUserID(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	listAssignments := applicationpkg.NewListAssignmentsByUserID(mockRepo)
 
 	_, err := listAssignments.Execute(applicationpkg.ListAssignmentsByUserIDInput{UserID: 0})
