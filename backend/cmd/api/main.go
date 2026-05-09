@@ -45,7 +45,7 @@ func main() {
 	weeksDelivery.SetupRoutes(api, authHandler)
 	workspacesDelivery.SetupRoutes(api, authHandler)
 	assignmentsDelivery.SetupRoutes(api, authHandler)
-	tasksDelivery.SetupRoutes(api, authHandler)
+	tasksDelivery.SetupRoutes(api, authHandler, cfg)
 	reportsDelivery.SetupRoutes(api, authHandler, cfg)
 
 	log.Printf("Server starting on port %s", cfg.Port)

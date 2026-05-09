@@ -2,13 +2,14 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   createTask,
   deleteTask,
+  downloadTaskAttachment,
   getMe,
   listAssignmentsByUser,
   listTasks,
   toErrorMessage,
   updateTask,
 } from "../api/client";
-import type { Assignment, Task, TaskStatus, UpdateTaskPayload, User } from "../api/types";
+import type { Assignment, Task, TaskAttachment, TaskStatus, UpdateTaskPayload, User } from "../api/types";
 import EmptyState from "../components/EmptyState";
 import HelpText from "../components/HelpText";
 import Layout from "../components/Layout";
@@ -29,27 +30,40 @@ interface TaskFormState {
   spent_hours: string;
   observations: string;
   week_start_date: string;
+  attachments: File[];
+  existing_attachments: TaskAttachment[];
 }
 
-const defaultForm: TaskFormState = {
-  assignment_id: "",
-  title: "",
-  description: "",
-  status: "abierto",
-  spent_hours: "1",
-  observations: "",
-  week_start_date: "",
-};
+function buildDefaultFormState(): TaskFormState {
+  return {
+    assignment_id: "",
+    title: "",
+    description: "",
+    status: "abierto",
+    spent_hours: "1",
+    observations: "",
+    week_start_date: "",
+    attachments: [],
+    existing_attachments: [],
+  };
+}
 
 const statusOptions: TaskStatus[] = ["abierto", "en desarrollo", "finalizado"];
+
+function normalizeTaskAttachments(task: Task): Task {
+  return {
+    ...task,
+    attachments: Array.isArray(task.attachments) ? task.attachments : [],
+  };
+}
 
 export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps) {
   const [me, setMe] = useState<User | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [createForm, setCreateForm] = useState<TaskFormState>(defaultForm);
+  const [createForm, setCreateForm] = useState<TaskFormState>(buildDefaultFormState());
   const [editTaskId, setEditTaskId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<TaskFormState>(defaultForm);
+  const [editForm, setEditForm] = useState<TaskFormState>(buildDefaultFormState());
   const [loading, setLoading] = useState(false);
   const { toast, showToast, clearToast } = useToast();
 
@@ -71,8 +85,8 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
       setMe(meResult);
       setAssignments(assignmentResult.assignments);
-      setTasks(taskResult.tasks);
-      setCreateForm((previous) => ({
+      setTasks(taskResult.tasks.map(normalizeTaskAttachments));
+      setCreateForm((previous): TaskFormState => ({
         ...previous,
         assignment_id: previous.assignment_id || String(assignmentResult.assignments[0]?.id ?? ""),
       }));
@@ -95,6 +109,8 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
     spent_hours: Number(form.spent_hours),
     observations: form.observations,
     week_start_date: form.week_start_date,
+    attachments: form.attachments,
+    existing_attachments: form.existing_attachments,
   });
 
   const handleCreateTask = async (event: FormEvent<HTMLFormElement>) => {
@@ -105,11 +121,11 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
       await createTask(toPayload(createForm));
       showToast("Tarea registrada correctamente.", "success");
       setCreateForm({
-        ...defaultForm,
+        ...buildDefaultFormState(),
         assignment_id: String(assignments[0]?.id ?? ""),
       });
       const taskResult = await listTasks();
-      setTasks(taskResult.tasks);
+      setTasks(taskResult.tasks.map(normalizeTaskAttachments));
     } catch (err) {
       showToast(toErrorMessage(err), "error");
     }
@@ -125,7 +141,25 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
       spent_hours: String(task.spent_hours),
       observations: task.observations,
       week_start_date: task.week_start_date,
+      attachments: [],
+      existing_attachments: Array.isArray(task.attachments) ? task.attachments : [],
     });
+  };
+
+  const handleDownloadAttachment = async (taskId: number, attachmentId: string, fileName: string) => {
+    clearToast();
+
+    try {
+      const blob = await downloadTaskAttachment(taskId, attachmentId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      showToast(toErrorMessage(err), "error");
+    }
   };
 
   const handleUpdateTask = async (event: FormEvent<HTMLFormElement>) => {
@@ -142,7 +176,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
       showToast("Tarea actualizada correctamente.", "success");
       setEditTaskId(null);
       const taskResult = await listTasks();
-      setTasks(taskResult.tasks);
+      setTasks(taskResult.tasks.map(normalizeTaskAttachments));
     } catch (err) {
       showToast(toErrorMessage(err), "error");
     }
@@ -155,7 +189,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
       await deleteTask(id);
       showToast("Tarea eliminada correctamente.", "success");
       const taskResult = await listTasks();
-      setTasks(taskResult.tasks);
+      setTasks(taskResult.tasks.map(normalizeTaskAttachments));
     } catch (err) {
       showToast(toErrorMessage(err), "error");
     }
@@ -255,7 +289,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
               <select
                 value={createForm.assignment_id}
                 onChange={(event) =>
-                  setCreateForm((previous) => ({
+                  setCreateForm((previous): TaskFormState => ({
                     ...previous,
                     assignment_id: event.target.value,
                   }))
@@ -281,11 +315,29 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
               <input
                 value={createForm.title}
                 onChange={(event) =>
-                  setCreateForm((previous) => ({ ...previous, title: event.target.value }))
+                  setCreateForm((previous): TaskFormState => ({ ...previous, title: event.target.value }))
                 }
                 required
               />
             </label>
+            <HelpText>Puedes adjuntar uno o varios archivos de soporte.</HelpText>
+          </div>
+
+          <div className="form-field">
+            <label>
+              Adjuntos
+              <input
+                type="file"
+                multiple
+                onChange={(event) =>
+                  setCreateForm((previous): TaskFormState => ({
+                    ...previous,
+                    attachments: Array.from(event.target.files ?? []),
+                  }))
+                }
+              />
+            </label>
+            <HelpText>{createForm.attachments.length} archivo(s) seleccionados.</HelpText>
           </div>
 
           <div className="form-field">
@@ -294,7 +346,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
               <input
                 value={createForm.description}
                 onChange={(event) =>
-                  setCreateForm((previous) => ({
+                  setCreateForm((previous): TaskFormState => ({
                     ...previous,
                     description: event.target.value,
                   }))
@@ -310,7 +362,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
               <select
                 value={createForm.status}
                 onChange={(event) =>
-                  setCreateForm((previous) => ({
+                  setCreateForm((previous): TaskFormState => ({
                     ...previous,
                     status: event.target.value as TaskStatus,
                   }))
@@ -334,7 +386,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 min={1}
                 value={createForm.spent_hours}
                 onChange={(event) =>
-                  setCreateForm((previous) => ({
+                  setCreateForm((previous): TaskFormState => ({
                     ...previous,
                     spent_hours: event.target.value,
                   }))
@@ -351,7 +403,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
               <input
                 value={createForm.observations}
                 onChange={(event) =>
-                  setCreateForm((previous) => ({
+                  setCreateForm((previous): TaskFormState => ({
                     ...previous,
                     observations: event.target.value,
                   }))
@@ -367,7 +419,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 type="date"
                 value={createForm.week_start_date}
                 onChange={(event) =>
-                  setCreateForm((previous) => ({
+                  setCreateForm((previous): TaskFormState => ({
                     ...previous,
                     week_start_date: event.target.value,
                   }))
@@ -399,12 +451,13 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 <th>Estado</th>
                 <th>Horas dedicadas</th>
                 <th>Fecha de inicio de semana</th>
+                <th>Adjuntos</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {tasks.length === 0 ? (
-                <EmptyState colSpan={7} />
+                <EmptyState colSpan={8} />
               ) : (
                 tasks.map((item) => (
                   <tr key={item.id}>
@@ -414,6 +467,26 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                     <td>{item.status}</td>
                     <td>{item.spent_hours}</td>
                     <td>{item.week_start_date}</td>
+                    <td>
+                      {item.attachments.length === 0 ? (
+                        <span className="muted">Sin archivos</span>
+                      ) : (
+                        <div className="actions-row">
+                          {item.attachments.map((attachment) => (
+                            <button
+                              key={attachment.id}
+                              type="button"
+                              className="button-secondary"
+                              onClick={() =>
+                                void handleDownloadAttachment(item.id, attachment.id, attachment.name)
+                              }
+                            >
+                              {attachment.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td>
                       <div className="actions-row">
                         <button type="button" onClick={() => startEdit(item)}>
@@ -447,7 +520,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 <select
                   value={editForm.assignment_id}
                   onChange={(event) =>
-                    setEditForm((previous) => ({
+                    setEditForm((previous): TaskFormState => ({
                       ...previous,
                       assignment_id: event.target.value,
                     }))
@@ -468,11 +541,55 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
             <div className="form-field">
               <label>
+                Adjuntar nuevos archivos
+                <input
+                  type="file"
+                  multiple
+                  onChange={(event) =>
+                    setEditForm((previous): TaskFormState => ({
+                      ...previous,
+                      attachments: Array.from(event.target.files ?? []),
+                    }))
+                  }
+                />
+              </label>
+              <HelpText>{editForm.attachments.length} archivo(s) nuevos seleccionados.</HelpText>
+            </div>
+
+            <div className="form-field">
+              <label>Archivos actuales</label>
+              {editForm.existing_attachments.length === 0 ? (
+                <p className="muted">Sin archivos adjuntos.</p>
+              ) : (
+                <div className="actions-row">
+                  {editForm.existing_attachments.map((attachment) => (
+                    <button
+                      key={attachment.id}
+                      type="button"
+                      className="button-secondary"
+                      onClick={() =>
+                        setEditForm((previous): TaskFormState => ({
+                          ...previous,
+                          existing_attachments: previous.existing_attachments.filter(
+                            (item) => item.id !== attachment.id,
+                          ),
+                        }))
+                      }
+                    >
+                      Quitar {attachment.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="form-field">
+              <label>
                 Título
                 <input
                   value={editForm.title}
                   onChange={(event) =>
-                    setEditForm((previous) => ({ ...previous, title: event.target.value }))
+                    setEditForm((previous): TaskFormState => ({ ...previous, title: event.target.value }))
                   }
                   required
                 />
@@ -485,7 +602,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 <input
                   value={editForm.description}
                   onChange={(event) =>
-                    setEditForm((previous) => ({
+                    setEditForm((previous): TaskFormState => ({
                       ...previous,
                       description: event.target.value,
                     }))
@@ -501,7 +618,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 <select
                   value={editForm.status}
                   onChange={(event) =>
-                    setEditForm((previous) => ({
+                    setEditForm((previous): TaskFormState => ({
                       ...previous,
                       status: event.target.value as TaskStatus,
                     }))
@@ -524,7 +641,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                   min={1}
                   value={editForm.spent_hours}
                   onChange={(event) =>
-                    setEditForm((previous) => ({
+                    setEditForm((previous): TaskFormState => ({
                       ...previous,
                       spent_hours: event.target.value,
                     }))
@@ -540,7 +657,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                 <input
                   value={editForm.observations}
                   onChange={(event) =>
-                    setEditForm((previous) => ({
+                    setEditForm((previous): TaskFormState => ({
                       ...previous,
                       observations: event.target.value,
                     }))
@@ -556,7 +673,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
                   type="date"
                   value={editForm.week_start_date}
                   onChange={(event) =>
-                    setEditForm((previous) => ({
+                    setEditForm((previous): TaskFormState => ({
                       ...previous,
                       week_start_date: event.target.value,
                     }))

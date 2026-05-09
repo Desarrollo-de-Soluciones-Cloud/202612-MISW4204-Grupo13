@@ -49,6 +49,17 @@ func (r *TaskRepository) Update(task *domain.Task) error {
 	return database.DB.Save(task).Error
 }
 
+func (r *TaskRepository) UpdateAttachments(id uint, attachments []domain.TaskAttachment) error {
+	result := database.DB.Model(&domain.Task{}).Where("id = ?", id).Update("attachments", attachments)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrTaskNotFound
+	}
+	return nil
+}
+
 func (r *TaskRepository) Delete(id uint) error {
 	result := database.DB.Delete(&domain.Task{}, id)
 	if result.Error != nil {
