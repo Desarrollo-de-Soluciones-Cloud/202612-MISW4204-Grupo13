@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -67,7 +68,12 @@ func TestParseTokenRejectsInvalidSignature(t *testing.T) {
 		t.Fatalf("expected token, got %v", err)
 	}
 
-	invalidToken := token.AccessToken[:len(token.AccessToken)-1] + "x"
+	parts := strings.Split(token.AccessToken, ".")
+	if len(parts) != 3 {
+		t.Fatalf("expected token with 3 parts, got %q", token.AccessToken)
+	}
+
+	invalidToken := parts[0] + "." + parts[1] + "." + base64.RawURLEncoding.EncodeToString([]byte("invalid-signature"))
 	_, err = manager.ParseToken(invalidToken)
 	if !errors.Is(err, authDomain.ErrAuthTokenInvalid) {
 		t.Fatalf("expected ErrAuthTokenInvalid, got %v", err)
