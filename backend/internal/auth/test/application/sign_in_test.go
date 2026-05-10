@@ -9,6 +9,12 @@ import (
 	"testing"
 )
 
+const (
+	testAuthEmailJohn      = "john@example.com"
+	testAuthUserJohn       = "John Doe"
+	errExpectedHash        = "expected password hash, got %v"
+)
+
 type MockUserReader struct {
 	users map[string]*authDomain.AuthenticatedUserCredentials
 }
@@ -68,14 +74,14 @@ func TestSignInSuccess(t *testing.T) {
 
 	passwordHash, err := sharedHelpers.HashPassword("password123")
 	if err != nil {
-		t.Fatalf("expected password hash, got %v", err)
+		t.Fatalf(errExpectedHash, err)
 	}
 
-	userReader.users["john@example.com"] = &authDomain.AuthenticatedUserCredentials{
+	userReader.users[testAuthEmailJohn] = &authDomain.AuthenticatedUserCredentials{
 		AuthenticatedUser: authDomain.AuthenticatedUser{
 			ID:         1,
-			Name:       "John Doe",
-			Email:      "john@example.com",
+			Name:       testAuthUserJohn,
+			Email:      testAuthEmailJohn,
 			GlobalRole: usersDomain.RoleProfessor,
 		},
 		Password: passwordHash,
@@ -93,7 +99,7 @@ func TestSignInSuccess(t *testing.T) {
 		t.Fatalf("expected mock token, got %q", output.AccessToken)
 	}
 
-	if output.User.Email != "john@example.com" {
+	if output.User.Email != testAuthEmailJohn {
 		t.Fatalf("expected normalized email, got %q", output.User.Email)
 	}
 }
@@ -119,21 +125,21 @@ func TestSignInInvalidCredentialsWhenPasswordDoesNotMatch(t *testing.T) {
 
 	passwordHash, err := sharedHelpers.HashPassword("password123")
 	if err != nil {
-		t.Fatalf("expected password hash, got %v", err)
+		t.Fatalf(errExpectedHash, err)
 	}
 
-	userReader.users["john@example.com"] = &authDomain.AuthenticatedUserCredentials{
+	userReader.users[testAuthEmailJohn] = &authDomain.AuthenticatedUserCredentials{
 		AuthenticatedUser: authDomain.AuthenticatedUser{
 			ID:         1,
-			Name:       "John Doe",
-			Email:      "john@example.com",
+			Name:       testAuthUserJohn,
+			Email:      testAuthEmailJohn,
 			GlobalRole: usersDomain.RoleAdmin,
 		},
 		Password: passwordHash,
 	}
 
 	_, err = signIn.Execute(applicationpkg.SignInInput{
-		Email:    "john@example.com",
+		Email:    testAuthEmailJohn,
 		Password: "wrong-password",
 	})
 	if !errors.Is(err, authDomain.ErrInvalidCredentials) {
@@ -161,7 +167,7 @@ func TestSignInRejectsShortPassword(t *testing.T) {
 	signIn := applicationpkg.NewSignIn(userReader, tokenManager)
 
 	_, err := signIn.Execute(applicationpkg.SignInInput{
-		Email:    "john@example.com",
+		Email:    testAuthEmailJohn,
 		Password: "short",
 	})
 	if !errors.Is(err, authDomain.ErrAuthPasswordTooShort) {
@@ -180,7 +186,7 @@ func TestSignInPropagatesUnexpectedReaderError(t *testing.T) {
 	signIn = applicationpkg.NewSignIn(userReaderWithErr, tokenManager)
 
 	_, err := signIn.Execute(applicationpkg.SignInInput{
-		Email:    "john@example.com",
+		Email:    testAuthEmailJohn,
 		Password: "password123",
 	})
 	if !errors.Is(err, readerErr) {
@@ -196,21 +202,21 @@ func TestSignInPropagatesTokenGenerationError(t *testing.T) {
 
 	passwordHash, err := sharedHelpers.HashPassword("password123")
 	if err != nil {
-		t.Fatalf("expected password hash, got %v", err)
+		t.Fatalf(errExpectedHash, err)
 	}
 
-	userReader.users["john@example.com"] = &authDomain.AuthenticatedUserCredentials{
+	userReader.users[testAuthEmailJohn] = &authDomain.AuthenticatedUserCredentials{
 		AuthenticatedUser: authDomain.AuthenticatedUser{
 			ID:         1,
-			Name:       "John Doe",
-			Email:      "john@example.com",
+			Name:       testAuthUserJohn,
+			Email:      testAuthEmailJohn,
 			GlobalRole: usersDomain.RoleProfessor,
 		},
 		Password: passwordHash,
 	}
 
 	_, err = signIn.Execute(applicationpkg.SignInInput{
-		Email:    "john@example.com",
+		Email:    testAuthEmailJohn,
 		Password: "password123",
 	})
 	if err == nil || err.Error() != "token generation failed" {
