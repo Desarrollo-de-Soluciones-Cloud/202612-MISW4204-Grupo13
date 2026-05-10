@@ -35,7 +35,7 @@ func TestGetByEmailSuccess(t *testing.T) {
 		users: map[string]*usersDomain.User{
 			testReaderEmailJohn: {
 				ID:         1,
-				Name:       "John Doe",
+				Name:       testReaderNameJohn,
 				Email:      testReaderEmailJohn,
 				Password:   "hashed-password",
 				GlobalRole: usersDomain.RoleProfessor,

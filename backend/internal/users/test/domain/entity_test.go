@@ -8,47 +8,47 @@ import (
 )
 
 func TestNewUserSuccess(t *testing.T) {
-	user, err := domainpkg.NewUser(" John Doe ", " John@Example.com ", "password123", domainpkg.RoleProfessor)
+	user, err := domainpkg.NewUser(" "+testDomainUserJohnName+" ", " John@Example.com ", testDomainUserPassword, domainpkg.RoleProfessor)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if user.Name != "John Doe" {
+	if user.Name != testDomainUserJohnName {
 		t.Fatalf("expected normalized name, got %q", user.Name)
 	}
-	if user.Email != "john@example.com" {
+	if user.Email != testDomainUserJohnEmail {
 		t.Fatalf("expected normalized email, got %q", user.Email)
 	}
 	if user.GlobalRole != domainpkg.RoleProfessor {
 		t.Fatalf("expected role %q, got %q", domainpkg.RoleProfessor, user.GlobalRole)
 	}
-	if user.Password != "password123" {
+	if user.Password != testDomainUserPassword {
 		t.Fatalf("expected password to remain unchanged in domain constructor, got %q", user.Password)
 	}
 }
 
 func TestNewUserRejectsInvalidRole(t *testing.T) {
-	_, err := domainpkg.NewUser("John Doe", "john@example.com", "password123", domainpkg.UserRole("visitor"))
+	_, err := domainpkg.NewUser(testDomainUserJohnName, testDomainUserJohnEmail, testDomainUserPassword, domainpkg.UserRole("visitor"))
 	if err != domainpkg.ErrUserRoleInvalid {
 		t.Fatalf("expected ErrUserRoleInvalid, got %v", err)
 	}
 }
 
 func TestUpdateProfileNormalizesValues(t *testing.T) {
-	user, err := domainpkg.NewUser("John Doe", "john@example.com", "password123", domainpkg.RoleMonitor)
+	user, err := domainpkg.NewUser(testDomainUserJohnName, testDomainUserJohnEmail, testDomainUserPassword, domainpkg.RoleMonitor)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	err = user.UpdateProfile(" Jane Doe ", " Jane@Example.com ", domainpkg.RoleAdmin)
+	err = user.UpdateProfile(" "+testDomainUserJaneName+" ", " Jane@Example.com ", domainpkg.RoleAdmin)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if user.Name != "Jane Doe" {
+	if user.Name != testDomainUserJaneName {
 		t.Fatalf("expected normalized name, got %q", user.Name)
 	}
-	if user.Email != "jane@example.com" {
+	if user.Email != testDomainUserJaneEmail {
 		t.Fatalf("expected normalized email, got %q", user.Email)
 	}
 	if user.GlobalRole != domainpkg.RoleAdmin {
@@ -57,63 +57,63 @@ func TestUpdateProfileNormalizesValues(t *testing.T) {
 }
 
 func TestNewUserRejectsInvalidEmail(t *testing.T) {
-	_, err := domainpkg.NewUser("John Doe", "invalid-email", "password123", domainpkg.RoleProfessor)
+	_, err := domainpkg.NewUser(testDomainUserJohnName, "invalid-email", testDomainUserPassword, domainpkg.RoleProfessor)
 	if !errors.Is(err, domainpkg.ErrUserEmailInvalid) {
 		t.Fatalf("expected ErrUserEmailInvalid, got %v", err)
 	}
 }
 
 func TestNewUserRejectsShortPassword(t *testing.T) {
-	_, err := domainpkg.NewUser("John Doe", "john@example.com", "short", domainpkg.RoleProfessor)
+	_, err := domainpkg.NewUser(testDomainUserJohnName, testDomainUserJohnEmail, "short", domainpkg.RoleProfessor)
 	if !errors.Is(err, domainpkg.ErrUserPasswordTooShort) {
 		t.Fatalf("expected ErrUserPasswordTooShort, got %v", err)
 	}
 }
 
 func TestUpdateProfileRejectsInvalidRole(t *testing.T) {
-	user, err := domainpkg.NewUser("John Doe", "john@example.com", "password123", domainpkg.RoleProfessor)
+	user, err := domainpkg.NewUser(testDomainUserJohnName, testDomainUserJohnEmail, testDomainUserPassword, domainpkg.RoleProfessor)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	err = user.UpdateProfile("John Doe", "john@example.com", domainpkg.UserRole("guest"))
+	err = user.UpdateProfile(testDomainUserJohnName, testDomainUserJohnEmail, domainpkg.UserRole("guest"))
 	if !errors.Is(err, domainpkg.ErrUserRoleInvalid) {
 		t.Fatalf("expected ErrUserRoleInvalid, got %v", err)
 	}
 }
 
 func TestUpdateProfileRejectsInvalidNameWithoutMutatingUser(t *testing.T) {
-	user, err := domainpkg.NewUser("John Doe", "john@example.com", "password123", domainpkg.RoleProfessor)
+	user, err := domainpkg.NewUser(testDomainUserJohnName, testDomainUserJohnEmail, testDomainUserPassword, domainpkg.RoleProfessor)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	err = user.UpdateProfile("  ", "jane@example.com", domainpkg.RoleAdmin)
+	err = user.UpdateProfile("  ", testDomainUserJaneEmail, domainpkg.RoleAdmin)
 	if !errors.Is(err, domainpkg.ErrUserNameRequired) {
 		t.Fatalf("expected ErrUserNameRequired, got %v", err)
 	}
-	if user.Name != "John Doe" {
+	if user.Name != testDomainUserJohnName {
 		t.Fatalf("expected original name to remain unchanged, got %q", user.Name)
 	}
-	if user.Email != "john@example.com" {
+	if user.Email != testDomainUserJohnEmail {
 		t.Fatalf("expected original email to remain unchanged, got %q", user.Email)
 	}
 }
 
 func TestUpdateProfileRejectsInvalidEmailWithoutMutatingUser(t *testing.T) {
-	user, err := domainpkg.NewUser("John Doe", "john@example.com", "password123", domainpkg.RoleProfessor)
+	user, err := domainpkg.NewUser(testDomainUserJohnName, testDomainUserJohnEmail, testDomainUserPassword, domainpkg.RoleProfessor)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	err = user.UpdateProfile("Jane Doe", "invalid-email", domainpkg.RoleAdmin)
+	err = user.UpdateProfile(testDomainUserJaneName, "invalid-email", domainpkg.RoleAdmin)
 	if !errors.Is(err, domainpkg.ErrUserEmailInvalid) {
 		t.Fatalf("expected ErrUserEmailInvalid, got %v", err)
 	}
-	if user.Name != "John Doe" {
+	if user.Name != testDomainUserJohnName {
 		t.Fatalf("expected original name to remain unchanged, got %q", user.Name)
 	}
-	if user.Email != "john@example.com" {
+	if user.Email != testDomainUserJohnEmail {
 		t.Fatalf("expected original email to remain unchanged, got %q", user.Email)
 	}
 }

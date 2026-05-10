@@ -13,9 +13,9 @@ func TestChangeUserRoleSuccess(t *testing.T) {
 	changeUserRole := applicationpkg.NewChangeUserRole(mockRepo)
 
 	created, err := createUser.Execute(applicationpkg.CreateUserInput{
-		Name:       "John Doe",
-		Email:      "john@example.com",
-		Password:   "password123",
+		Name:       testUserJohnName,
+		Email:      testUserJohnEmail,
+		Password:   testUserPassword123,
 		GlobalRole: domain.RoleMonitor,
 	})
 	if err != nil {
@@ -40,10 +40,10 @@ func TestChangeUserRoleSuccess(t *testing.T) {
 	if storedUser.GlobalRole != domain.RoleProfessor {
 		t.Fatalf("expected persisted role %q, got %q", domain.RoleProfessor, storedUser.GlobalRole)
 	}
-	if storedUser.Name != "John Doe" {
+	if storedUser.Name != testUserJohnName {
 		t.Fatalf("expected name to remain unchanged, got %q", storedUser.Name)
 	}
-	if storedUser.Email != "john@example.com" {
+	if storedUser.Email != testUserJohnEmail {
 		t.Fatalf("expected email to remain unchanged, got %q", storedUser.Email)
 	}
 }
@@ -93,9 +93,9 @@ func TestChangeUserRolePropagatesUpdateError(t *testing.T) {
 	changeUserRole := applicationpkg.NewChangeUserRole(mockRepo)
 
 	created, err := createUser.Execute(applicationpkg.CreateUserInput{
-		Name:       "John Doe",
-		Email:      "john@example.com",
-		Password:   "password123",
+		Name:       testUserJohnName,
+		Email:      testUserJohnEmail,
+		Password:   testUserPassword123,
 		GlobalRole: domain.RoleMonitor,
 	})
 	if err != nil {

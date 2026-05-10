@@ -31,8 +31,8 @@ func TestGenerateAndParseTokenSuccess(t *testing.T) {
 	manager := authInfrastructure.NewTokenManager("secret", 10)
 	user := &authDomain.AuthenticatedUser{
 		ID:         1,
-		Name:       "John Doe",
-		Email:      "john@example.com",
+		Name:       testJWTJohnName,
+		Email:      testJWTJohnEmail,
 		GlobalRole: usersDomain.RoleProfessor,
 	}
 
@@ -63,8 +63,8 @@ func TestParseTokenRejectsInvalidSignature(t *testing.T) {
 	manager := authInfrastructure.NewTokenManager("secret", 10)
 	user := &authDomain.AuthenticatedUser{
 		ID:         1,
-		Name:       "John Doe",
-		Email:      "john@example.com",
+		Name:       testJWTJohnName,
+		Email:      testJWTJohnEmail,
 		GlobalRole: usersDomain.RoleProfessor,
 	}
 

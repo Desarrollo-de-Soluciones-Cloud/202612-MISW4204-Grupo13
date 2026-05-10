@@ -12,8 +12,8 @@ func TestValidateTokenSuccess(t *testing.T) {
 	tokenManager := NewMockTokenManager()
 	tokenManager.user = &authDomain.AuthenticatedUser{
 		ID:         7,
-		Name:       "Jane Doe",
-		Email:      "jane@example.com",
+		Name:       testAuthJaneName,
+		Email:      testAuthJaneEmail,
 		GlobalRole: usersDomain.RoleProfessor,
 	}
 	validateToken := applicationpkg.NewValidateToken(tokenManager)
@@ -23,8 +23,8 @@ func TestValidateTokenSuccess(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if output.Email != "jane@example.com" {
-		t.Fatalf("expected email jane@example.com, got %q", output.Email)
+	if output.Email != testAuthJaneEmail {
+		t.Fatalf("expected email %s, got %q", testAuthJaneEmail, output.Email)
 	}
 
 	if output.GlobalRole != string(usersDomain.RoleProfessor) {

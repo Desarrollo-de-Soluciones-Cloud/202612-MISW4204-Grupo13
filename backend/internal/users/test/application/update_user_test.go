@@ -13,9 +13,9 @@ func TestUpdateUserSuccess(t *testing.T) {
 	updateUser := applicationpkg.NewUpdateUser(mockRepo)
 
 	created, err := createUser.Execute(applicationpkg.CreateUserInput{
-		Name:       "John Doe",
-		Email:      "john@example.com",
-		Password:   "password123",
+		Name:       testUserJohnName,
+		Email:      testUserJohnEmail,
+		Password:   testUserPassword123,
 		GlobalRole: domain.RoleProfessor,
 	})
 	if err != nil {
@@ -24,18 +24,18 @@ func TestUpdateUserSuccess(t *testing.T) {
 
 	output, err := updateUser.Execute(applicationpkg.UpdateUserInput{
 		ID:         created.ID,
-		Name:       "Jane Doe",
-		Email:      "JANE@example.com",
+		Name:       testUserJaneName,
+		Email:      testUserJaneEmailCaps,
 		GlobalRole: domain.RoleAdmin,
 	})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if output.Name != "Jane Doe" {
-		t.Fatalf("expected updated name 'Jane Doe', got %q", output.Name)
+	if output.Name != testUserJaneName {
+		t.Fatalf("expected updated name %q, got %q", testUserJaneName, output.Name)
 	}
-	if output.Email != "jane@example.com" {
-		t.Fatalf("expected normalized email 'jane@example.com', got %q", output.Email)
+	if output.Email != testUserJaneEmail {
+		t.Fatalf("expected normalized email %q, got %q", testUserJaneEmail, output.Email)
 	}
 	if output.GlobalRole != domain.RoleAdmin {
 		t.Fatalf("expected role %q, got %q", domain.RoleAdmin, output.GlobalRole)
@@ -48,9 +48,9 @@ func TestUpdateUserRejectsDuplicateEmail(t *testing.T) {
 	updateUser := applicationpkg.NewUpdateUser(mockRepo)
 
 	first, err := createUser.Execute(applicationpkg.CreateUserInput{
-		Name:       "John Doe",
-		Email:      "john@example.com",
-		Password:   "password123",
+		Name:       testUserJohnName,
+		Email:      testUserJohnEmail,
+		Password:   testUserPassword123,
 		GlobalRole: domain.RoleProfessor,
 	})
 	if err != nil {
@@ -58,9 +58,9 @@ func TestUpdateUserRejectsDuplicateEmail(t *testing.T) {
 	}
 
 	_, err = createUser.Execute(applicationpkg.CreateUserInput{
-		Name:       "Jane Doe",
-		Email:      "jane@example.com",
-		Password:   "password123",
+		Name:       testUserJaneName,
+		Email:      testUserJaneEmail,
+		Password:   testUserPassword123,
 		GlobalRole: domain.RoleAdmin,
 	})
 	if err != nil {
@@ -69,8 +69,8 @@ func TestUpdateUserRejectsDuplicateEmail(t *testing.T) {
 
 	_, err = updateUser.Execute(applicationpkg.UpdateUserInput{
 		ID:         first.ID,
-		Name:       "John Doe",
-		Email:      "jane@example.com",
+		Name:       testUserJohnName,
+		Email:      testUserJaneEmail,
 		GlobalRole: domain.RoleProfessor,
 	})
 	if !errors.Is(err, domain.ErrUserEmailAlreadyInUse) {
@@ -84,8 +84,8 @@ func TestUpdateUserNotFound(t *testing.T) {
 
 	_, err := updateUser.Execute(applicationpkg.UpdateUserInput{
 		ID:         999,
-		Name:       "Jane Doe",
-		Email:      "jane@example.com",
+		Name:       testUserJaneName,
+		Email:      testUserJaneEmail,
 		GlobalRole: domain.RoleAdmin,
 	})
 	if !errors.Is(err, domain.ErrUserNotFound) {
@@ -99,9 +99,9 @@ func TestUpdateUserInvalidRole(t *testing.T) {
 	updateUser := applicationpkg.NewUpdateUser(mockRepo)
 
 	created, err := createUser.Execute(applicationpkg.CreateUserInput{
-		Name:       "John Doe",
-		Email:      "john@example.com",
-		Password:   "password123",
+		Name:       testUserJohnName,
+		Email:      testUserJohnEmail,
+		Password:   testUserPassword123,
 		GlobalRole: domain.RoleProfessor,
 	})
 	if err != nil {
@@ -110,8 +110,8 @@ func TestUpdateUserInvalidRole(t *testing.T) {
 
 	_, err = updateUser.Execute(applicationpkg.UpdateUserInput{
 		ID:         created.ID,
-		Name:       "John Doe",
-		Email:      "john@example.com",
+		Name:       testUserJohnName,
+		Email:      testUserJohnEmail,
 		GlobalRole: domain.UserRole("guest"),
 	})
 	if !errors.Is(err, domain.ErrUserRoleInvalid) {
@@ -125,9 +125,9 @@ func TestUpdateUserPreservesPasswordAndReplacesEmailLookup(t *testing.T) {
 	updateUser := applicationpkg.NewUpdateUser(mockRepo)
 
 	created, err := createUser.Execute(applicationpkg.CreateUserInput{
-		Name:       "John Doe",
-		Email:      "john@example.com",
-		Password:   "password123",
+		Name:       testUserJohnName,
+		Email:      testUserJohnEmail,
+		Password:   testUserPassword123,
 		GlobalRole: domain.RoleProfessor,
 	})
 	if err != nil {
@@ -142,8 +142,8 @@ func TestUpdateUserPreservesPasswordAndReplacesEmailLookup(t *testing.T) {
 
 	_, err = updateUser.Execute(applicationpkg.UpdateUserInput{
 		ID:         created.ID,
-		Name:       "Jane Doe",
-		Email:      "jane@example.com",
+		Name:       testUserJaneName,
+		Email:      testUserJaneEmail,
 		GlobalRole: domain.RoleAdmin,
 	})
 	if err != nil {
@@ -158,12 +158,12 @@ func TestUpdateUserPreservesPasswordAndReplacesEmailLookup(t *testing.T) {
 		t.Fatalf("expected password hash to remain unchanged")
 	}
 
-	_, err = mockRepo.FindByEmail("john@example.com")
+	_, err = mockRepo.FindByEmail(testUserJohnEmail)
 	if !errors.Is(err, domain.ErrUserNotFound) {
 		t.Fatalf("expected old email lookup to fail with ErrUserNotFound, got %v", err)
 	}
 
-	foundByNewEmail, err := mockRepo.FindByEmail("jane@example.com")
+	foundByNewEmail, err := mockRepo.FindByEmail(testUserJaneEmail)
 	if err != nil {
 		t.Fatalf("expected new email lookup to succeed, got %v", err)
 	}

@@ -13,21 +13,21 @@ func TestGetUserByEmailSuccess(t *testing.T) {
 	getUserByEmail := applicationpkg.NewGetUserByEmail(mockRepo)
 
 	_, err := createUser.Execute(applicationpkg.CreateUserInput{
-		Name:       "John Doe",
-		Email:      "john@example.com",
-		Password:   "password123",
+		Name:       testUserJohnName,
+		Email:      testUserJohnEmail,
+		Password:   testUserPassword123,
 		GlobalRole: domain.RoleProfessor,
 	})
 	if err != nil {
 		t.Fatalf("expected create user to succeed, got %v", err)
 	}
 
-	output, err := getUserByEmail.Execute(applicationpkg.GetUserByEmailInput{Email: "JOHN@example.com"})
+	output, err := getUserByEmail.Execute(applicationpkg.GetUserByEmailInput{Email: testUserJohnEmailCaps})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if output.Email != "john@example.com" {
-		t.Fatalf("expected normalized email 'john@example.com', got %q", output.Email)
+	if output.Email != testUserJohnEmail {
+		t.Fatalf("expected normalized email %q, got %q", testUserJohnEmail, output.Email)
 	}
 	if output.Password == "" {
 		t.Fatal("expected password hash to be available for internal use")

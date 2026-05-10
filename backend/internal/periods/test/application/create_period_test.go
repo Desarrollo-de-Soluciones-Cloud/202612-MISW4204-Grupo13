@@ -215,7 +215,7 @@ func TestCreatePeriodInvalidInitialDateFormat(t *testing.T) {
 	weeksCount := 8
 
 	input := applicationpkg.CreatePeriodInput{
-		Name:        "2026-10",
+		Name:        testPeriodName202610,
 		InitialDate: "2024",
 		WeeksCount:  weeksCount,
 		PeriodState: domain.ActivePeriod,
