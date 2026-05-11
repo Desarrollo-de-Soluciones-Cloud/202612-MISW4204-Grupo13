@@ -8,10 +8,16 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	usersDomain "backend/internal/users/domain"
+)
+
+const (
+	testJWTInvalidErr  = "expected ErrAuthTokenInvalid, got %v"
+	testJWTHeaderErr   = "expected header marshal, got %v"
 )
 
 func TestNewTokenManagerUsesDefaultExpiration(t *testing.T) {
@@ -25,8 +31,8 @@ func TestGenerateAndParseTokenSuccess(t *testing.T) {
 	manager := authInfrastructure.NewTokenManager("secret", 10)
 	user := &authDomain.AuthenticatedUser{
 		ID:         1,
-		Name:       "John Doe",
-		Email:      "john@example.com",
+		Name:       testJWTJohnName,
+		Email:      testJWTJohnEmail,
 		GlobalRole: usersDomain.RoleProfessor,
 	}
 
@@ -49,7 +55,7 @@ func TestParseTokenRejectsInvalidStructure(t *testing.T) {
 
 	_, err := manager.ParseToken("invalid-token")
 	if !errors.Is(err, authDomain.ErrAuthTokenInvalid) {
-		t.Fatalf("expected ErrAuthTokenInvalid, got %v", err)
+		t.Fatalf(testJWTInvalidErr, err)
 	}
 }
 
@@ -57,8 +63,8 @@ func TestParseTokenRejectsInvalidSignature(t *testing.T) {
 	manager := authInfrastructure.NewTokenManager("secret", 10)
 	user := &authDomain.AuthenticatedUser{
 		ID:         1,
-		Name:       "John Doe",
-		Email:      "john@example.com",
+		Name:       testJWTJohnName,
+		Email:      testJWTJohnEmail,
 		GlobalRole: usersDomain.RoleProfessor,
 	}
 
@@ -67,10 +73,15 @@ func TestParseTokenRejectsInvalidSignature(t *testing.T) {
 		t.Fatalf("expected token, got %v", err)
 	}
 
-	invalidToken := token.AccessToken[:len(token.AccessToken)-1] + "x"
+	parts := strings.Split(token.AccessToken, ".")
+	if len(parts) != 3 {
+		t.Fatalf("expected token with 3 parts, got %q", token.AccessToken)
+	}
+
+	invalidToken := parts[0] + "." + parts[1] + "." + base64.RawURLEncoding.EncodeToString([]byte("invalid-signature"))
 	_, err = manager.ParseToken(invalidToken)
 	if !errors.Is(err, authDomain.ErrAuthTokenInvalid) {
-		t.Fatalf("expected ErrAuthTokenInvalid, got %v", err)
+		t.Fatalf(testJWTInvalidErr, err)
 	}
 }
 
@@ -104,7 +115,7 @@ func TestParseTokenRejectsInvalidRole(t *testing.T) {
 
 	_, err := manager.ParseToken(invalidRoleToken)
 	if !errors.Is(err, authDomain.ErrAuthTokenInvalid) {
-		t.Fatalf("expected ErrAuthTokenInvalid, got %v", err)
+		t.Fatalf(testJWTInvalidErr, err)
 	}
 }
 
@@ -113,7 +124,7 @@ func TestParseTokenRejectsInvalidBase64Signature(t *testing.T) {
 
 	_, err := manager.ParseToken("a.b.invalid@@")
 	if !errors.Is(err, authDomain.ErrAuthTokenInvalid) {
-		t.Fatalf("expected ErrAuthTokenInvalid, got %v", err)
+		t.Fatalf(testJWTInvalidErr, err)
 	}
 }
 
@@ -123,7 +134,7 @@ func TestParseTokenRejectsInvalidClaimsPayload(t *testing.T) {
 
 	_, err := manager.ParseToken(token)
 	if !errors.Is(err, authDomain.ErrAuthTokenInvalid) {
-		t.Fatalf("expected ErrAuthTokenInvalid, got %v", err)
+		t.Fatalf(testJWTInvalidErr, err)
 	}
 }
 
@@ -133,7 +144,7 @@ func TestParseTokenRejectsInvalidClaimsBase64(t *testing.T) {
 
 	_, err := manager.ParseToken(token)
 	if !errors.Is(err, authDomain.ErrAuthTokenInvalid) {
-		t.Fatalf("expected ErrAuthTokenInvalid, got %v", err)
+		t.Fatalf(testJWTInvalidErr, err)
 	}
 }
 
@@ -159,7 +170,7 @@ func buildSignedToken(t *testing.T, secret string, claims tokenClaims) string {
 		Type:      "JWT",
 	})
 	if err != nil {
-		t.Fatalf("expected header marshal, got %v", err)
+		t.Fatalf(testJWTHeaderErr, err)
 	}
 
 	claimsBytes, err := json.Marshal(claims)
@@ -186,7 +197,7 @@ func buildMalformedClaimsToken(t *testing.T, secret string) string {
 		Type:      "JWT",
 	})
 	if err != nil {
-		t.Fatalf("expected header marshal, got %v", err)
+		t.Fatalf(testJWTHeaderErr, err)
 	}
 
 	encodedHeader := base64.RawURLEncoding.EncodeToString(headerBytes)
@@ -208,7 +219,7 @@ func buildTokenWithInvalidClaimsBase64(t *testing.T, secret string) string {
 		Type:      "JWT",
 	})
 	if err != nil {
-		t.Fatalf("expected header marshal, got %v", err)
+		t.Fatalf(testJWTHeaderErr, err)
 	}
 
 	encodedHeader := base64.RawURLEncoding.EncodeToString(headerBytes)

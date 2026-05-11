@@ -8,6 +8,8 @@ import (
 	"testing"
 )
 
+const testReaderEmailJohn = "john@example.com"
+
 type mockUserRepository struct {
 	users map[string]*usersDomain.User
 }
@@ -31,10 +33,10 @@ func (m *mockUserRepository) Update(user *usersDomain.User) error { return nil }
 func TestGetByEmailSuccess(t *testing.T) {
 	repo := &mockUserRepository{
 		users: map[string]*usersDomain.User{
-			"john@example.com": {
+			testReaderEmailJohn: {
 				ID:         1,
-				Name:       "John Doe",
-				Email:      "john@example.com",
+				Name:       testReaderNameJohn,
+				Email:      testReaderEmailJohn,
 				Password:   "hashed-password",
 				GlobalRole: usersDomain.RoleProfessor,
 			},
@@ -43,7 +45,7 @@ func TestGetByEmailSuccess(t *testing.T) {
 
 	getUserByEmail := usersApplication.NewGetUserByEmail(repo)
 	reader := authInfrastructure.NewUserReader(getUserByEmail)
-	user, err := reader.GetByEmail("john@example.com")
+	user, err := reader.GetByEmail(testReaderEmailJohn)
 	if err != nil {
 		t.Fatalf("expected user, got %v", err)
 	}

@@ -57,6 +57,14 @@ func (s *GCSStorage) Download(ctx context.Context, objectName string) (io.ReadCl
 	return s.client.Bucket(s.bucketName).Object(objectName).NewReader(ctx)
 }
 
+func (s *GCSStorage) Delete(ctx context.Context, objectName string) error {
+	if objectName == "" {
+		return errors.New("gcs object name is required")
+	}
+
+	return s.client.Bucket(s.bucketName).Object(objectName).Delete(ctx)
+}
+
 func (s *GCSStorage) Close() error {
 	return s.client.Close()
 }

@@ -6,5 +6,6 @@ type TaskRepository interface {
 	FindAll() ([]Task, error)
 	FindAllByUserID(userID uint) ([]Task, error)
 	Update(task *Task) error
+	UpdateAttachments(id uint, attachments []TaskAttachment) error
 	Delete(id uint) error
 }

@@ -18,6 +18,7 @@ import type {
   ListWorkspacesResponse,
   Period,
   Task,
+  TaskAttachment,
   User,
   Week,
   Workspace,
@@ -307,7 +308,7 @@ async function request<T>(
 ): Promise<T> {
   const headers = new Headers(init.headers ?? {});
 
-  if (init.body && !headers.has("Content-Type")) {
+  if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -432,6 +433,14 @@ export function listTasks(): Promise<ListTasksResponse> {
 }
 
 export function createTask(payload: CreateTaskPayload): Promise<Task> {
+  if (payload.attachments?.length || payload.existing_attachments?.length) {
+    const formData = buildTaskFormData(payload);
+    return request<Task>("/tasks", {
+      method: "POST",
+      body: formData,
+    });
+  }
+
   return request<Task>("/tasks", {
     method: "POST",
     body: JSON.stringify(payload),
@@ -439,6 +448,14 @@ export function createTask(payload: CreateTaskPayload): Promise<Task> {
 }
 
 export function updateTask(id: number, payload: UpdateTaskPayload): Promise<Task> {
+  if (payload.attachments?.length || payload.existing_attachments?.length) {
+    const formData = buildTaskFormData(payload);
+    return request<Task>(`/tasks/${id}`, {
+      method: "PUT",
+      body: formData,
+    });
+  }
+
   return request<Task>(`/tasks/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload),
@@ -476,10 +493,36 @@ export function downloadReport(id: number): Promise<Blob> {
   return requestBlob(`/reports/${id}/download`);
 }
 
+export function downloadTaskAttachment(taskId: number, attachmentId: string): Promise<Blob> {
+  return requestBlob(`/tasks/${taskId}/attachments/${attachmentId}/download`);
+}
+
+function buildTaskFormData(payload: CreateTaskPayload): FormData {
+  const formData = new FormData();
+  formData.append("assignment_id", String(payload.assignment_id));
+  formData.append("title", payload.title);
+  formData.append("description", payload.description);
+  formData.append("status", payload.status);
+  formData.append("spent_hours", String(payload.spent_hours));
+  formData.append("observations", payload.observations);
+  formData.append("week_start_date", payload.week_start_date);
+
+  for (const file of payload.attachments ?? []) {
+    formData.append("attachments", file);
+  }
+
+  if (payload.existing_attachments?.length) {
+    formData.append("existing_attachments", JSON.stringify(payload.existing_attachments));
+  }
+
+  return formData;
+}
+
 export type {
   Assignment,
   Period,
   Task,
+  TaskAttachment,
   User,
   Week,
   Workspace,

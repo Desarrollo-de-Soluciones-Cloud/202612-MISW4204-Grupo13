@@ -65,6 +65,15 @@ export interface Task {
   observations: string;
   week_start_date: string;
   late: boolean;
+  attachments: TaskAttachment[];
+}
+
+export interface TaskAttachment {
+  id: string;
+  name: string;
+  file_path: string;
+  content_type: string;
+  size: number;
 }
 
 export interface Report {
@@ -155,6 +164,8 @@ export interface CreateTaskPayload {
   spent_hours: number;
   observations: string;
   week_start_date: string;
+  attachments?: File[];
+  existing_attachments?: TaskAttachment[];
 }
 
 export type UpdateTaskPayload = CreateTaskPayload;

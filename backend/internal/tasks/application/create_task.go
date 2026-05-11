@@ -16,6 +16,7 @@ type CreateTaskInput struct {
 	SpentHours    int
 	Observations  string
 	WeekStartDate time.Time
+	Attachments   []domain.TaskAttachment
 }
 
 type CreateTask struct {
@@ -80,6 +81,7 @@ func (uc *CreateTask) Execute(input CreateTaskInput) (*TaskOutput, error) {
 		input.Observations,
 		normalizedWeekStartDate,
 		late,
+		input.Attachments,
 	)
 	if err != nil {
 		return nil, err

@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
+
 interface HelpTextProps {
-  children: string;
+  children: ReactNode;
 }
 
 export default function HelpText({ children }: HelpTextProps) {

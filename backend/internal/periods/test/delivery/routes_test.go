@@ -46,7 +46,7 @@ func TestRoutesIntegration(t *testing.T) {
 	handler := delivery.NewPeriodHandler(createPeriod, listPeriods, listPeriodsByState, getPeriodByID, updatePeriod, application.NewClosePeriod(repo))
 
 	// Register routes manually (since SetupRoutes requires database)
-	periods := router.Group("/periods")
+	periods := router.Group(testPeriodsPath)
 	{
 		periods.POST("", handler.CreatePeriod)
 		periods.GET("", handler.ListPeriods)
@@ -57,16 +57,16 @@ func TestRoutesIntegration(t *testing.T) {
 	// Test POST /periods (Create)
 	weeksCount := 8
 	body := delivery.CreatePeriodRequest{
-		Name:        "2026-10",
-		InitialDate: "2026-10-05",
+		Name:        testPeriod202610Name,
+		InitialDate: testPeriodInitialDate1005,
 		WeeksCount:  &weeksCount,
 		PeriodState: "active",
 	}
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/periods", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("POST", testPeriodsPath, bytes.NewBuffer(bodyJSON))
+	req.Header.Set(testHeaderContentType, testJSONContentType)
 
 	router.ServeHTTP(w, req)
 
@@ -76,7 +76,7 @@ func TestRoutesIntegration(t *testing.T) {
 
 	// Test GET /periods (List)
 	w = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET", "/periods", nil)
+	req, _ = http.NewRequest("GET", testPeriodsPath, nil)
 
 	router.ServeHTTP(w, req)
 
@@ -86,7 +86,7 @@ func TestRoutesIntegration(t *testing.T) {
 
 	// Test GET /periods/1 (Get by ID)
 	w = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET", "/periods/1", nil)
+	req, _ = http.NewRequest("GET", testPeriodByIDPath, nil)
 
 	router.ServeHTTP(w, req)
 
@@ -110,21 +110,21 @@ func TestRoutesPostCreatePeriod(t *testing.T) {
 		application.NewClosePeriod(repo),
 	)
 
-	periods := router.Group("/periods")
+	periods := router.Group(testPeriodsPath)
 	periods.POST("", handler.CreatePeriod)
 
 	weeksCount := 16
 	body := delivery.CreatePeriodRequest{
-		Name:        "2026-11",
-		InitialDate: "2026-10-12",
+		Name:        testPeriod202611Name,
+		InitialDate: testPeriodInitialDate1012,
 		WeeksCount:  &weeksCount,
 		PeriodState: "active",
 	}
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/periods", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("POST", testPeriodsPath, bytes.NewBuffer(bodyJSON))
+	req.Header.Set(testHeaderContentType, testJSONContentType)
 
 	router.ServeHTTP(w, req)
 
@@ -134,7 +134,7 @@ func TestRoutesPostCreatePeriod(t *testing.T) {
 
 	var resp delivery.CreatePeriodResponse
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp.Name != "2026-11" || resp.WeeksCount != 16 {
+	if resp.Name != testPeriod202611Name || resp.WeeksCount != 16 {
 		t.Errorf("POST /periods response incorrect")
 	}
 }
@@ -147,8 +147,8 @@ func TestRoutesGetPeriods(t *testing.T) {
 	repo := newMockPeriodRepository()
 	
 	// Add some test data
-	period1, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
-	period2, _ := domain.NewPeriod("2026-11", "2026-10-12", 16, domain.ClosedPeriod)
+	period1, _ := domain.NewPeriod(testPeriod202610Name, testPeriodInitialDate1005, 8, domain.ActivePeriod)
+	period2, _ := domain.NewPeriod(testPeriod202611Name, testPeriodInitialDate1012, 16, domain.ClosedPeriod)
 	repo.Create(period1)
 	repo.Create(period2)
 
@@ -161,11 +161,11 @@ func TestRoutesGetPeriods(t *testing.T) {
 		application.NewClosePeriod(repo),
 	)
 
-	periods := router.Group("/periods")
+	periods := router.Group(testPeriodsPath)
 	periods.GET("", handler.ListPeriods)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/periods", nil)
+	req, _ := http.NewRequest("GET", testPeriodsPath, nil)
 
 	router.ServeHTTP(w, req)
 
@@ -188,8 +188,8 @@ func TestRoutesGetPeriodsWithStateFilter(t *testing.T) {
 	repo := newMockPeriodRepository()
 	
 	// Add test data
-	period1, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
-	period2, _ := domain.NewPeriod("2026-11", "2026-10-12", 16, domain.ClosedPeriod)
+	period1, _ := domain.NewPeriod(testPeriod202610Name, testPeriodInitialDate1005, 8, domain.ActivePeriod)
+	period2, _ := domain.NewPeriod(testPeriod202611Name, testPeriodInitialDate1012, 16, domain.ClosedPeriod)
 	repo.Create(period1)
 	repo.Create(period2)
 
@@ -202,11 +202,11 @@ func TestRoutesGetPeriodsWithStateFilter(t *testing.T) {
 		application.NewClosePeriod(repo),
 	)
 
-	periods := router.Group("/periods")
+	periods := router.Group(testPeriodsPath)
 	periods.GET("", handler.ListPeriods)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/periods?state=active", nil)
+	req, _ := http.NewRequest("GET", testPeriodsPath+"?state=active", nil)
 
 	router.ServeHTTP(w, req)
 
@@ -231,7 +231,7 @@ func TestRoutesGetPeriodByID(t *testing.T) {
 
 	repo := newMockPeriodRepository()
 	
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriod202610Name, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 	repo.Create(period)
 
 	handler := delivery.NewPeriodHandler(
@@ -243,11 +243,11 @@ func TestRoutesGetPeriodByID(t *testing.T) {
 		application.NewClosePeriod(repo),
 	)
 
-	periods := router.Group("/periods")
+	periods := router.Group(testPeriodsPath)
 	periods.GET("/:id", handler.GetPeriodByID)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/periods/1", nil)
+	req, _ := http.NewRequest("GET", testPeriodByIDPath, nil)
 
 	router.ServeHTTP(w, req)
 
@@ -257,7 +257,7 @@ func TestRoutesGetPeriodByID(t *testing.T) {
 
 	var resp delivery.PeriodResponse
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp.Name != "2026-10" {
+	if resp.Name != testPeriod202610Name {
 		t.Errorf("GET /periods/1 returned wrong period")
 	}
 }
@@ -269,7 +269,7 @@ func TestRoutesPatchUpdatePeriod(t *testing.T) {
 
 	repo := newMockPeriodRepository()
 	
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriod202610Name, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 	repo.Create(period)
 
 	handler := delivery.NewPeriodHandler(
@@ -281,17 +281,17 @@ func TestRoutesPatchUpdatePeriod(t *testing.T) {
 		application.NewClosePeriod(repo),
 	)
 
-	periods := router.Group("/periods")
+	periods := router.Group(testPeriodsPath)
 	periods.PATCH("/:id", handler.UpdatePeriod)
 
 	body := delivery.UpdatePeriodRequest{
-		Name: "2026-11",
+		Name: testPeriod202611Name,
 	}
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("PATCH", "/periods/1", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("PATCH", testPeriodByIDPath, bytes.NewBuffer(bodyJSON))
+	req.Header.Set(testHeaderContentType, testJSONContentType)
 
 	router.ServeHTTP(w, req)
 
@@ -301,7 +301,7 @@ func TestRoutesPatchUpdatePeriod(t *testing.T) {
 
 	var resp delivery.PeriodResponse
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp.Name != "2026-11" {
+	if resp.Name != testPeriod202611Name {
 		t.Errorf("PATCH /periods/1 did not update correctly")
 	}
 }

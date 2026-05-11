@@ -30,7 +30,7 @@ func TestCreate(t *testing.T) {
 	setupTestDB(t)
 	repo := infrastructurepkg.NewPeriodRepository()
 
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriodName202610, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 
 	err := repo.Create(period)
 	if err != nil {
@@ -47,7 +47,7 @@ func TestFindByID(t *testing.T) {
 	setupTestDB(t)
 	repo := infrastructurepkg.NewPeriodRepository()
 
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriodName202610, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 	repo.Create(period)
 
 	found, err := repo.FindByID(period.ID)
@@ -55,8 +55,8 @@ func TestFindByID(t *testing.T) {
 		t.Fatalf("FindByID() error = %v, want nil", err)
 	}
 
-	if found.Name != "2026-10" {
-		t.Errorf("FindByID() name = %s, want 2026-10", found.Name)
+	if found.Name != testPeriodName202610 {
+		t.Errorf("FindByID() name = %s, want %s", found.Name, testPeriodName202610)
 	}
 	if found.WeeksCount != 8 {
 		t.Errorf("FindByID() weeks count = %d, want 8", found.WeeksCount)
@@ -79,16 +79,16 @@ func TestFindByName(t *testing.T) {
 	setupTestDB(t)
 	repo := infrastructurepkg.NewPeriodRepository()
 
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriodName202610, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 	repo.Create(period)
 
-	found, err := repo.FindByName("2026-10")
+	found, err := repo.FindByName(testPeriodName202610)
 	if err != nil {
 		t.Fatalf("FindByName() error = %v, want nil", err)
 	}
 
-	if found.Name != "2026-10" {
-		t.Errorf("FindByName() name = %s, want 2026-10", found.Name)
+	if found.Name != testPeriodName202610 {
+		t.Errorf("FindByName() name = %s, want %s", found.Name, testPeriodName202610)
 	}
 }
 
@@ -108,8 +108,8 @@ func TestFindAll(t *testing.T) {
 	setupTestDB(t)
 	repo := infrastructurepkg.NewPeriodRepository()
 
-	period1, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
-	period2, _ := domain.NewPeriod("2026-11", "2026-10-12", 16, domain.ClosedPeriod)
+	period1, _ := domain.NewPeriod(testPeriodName202610, testPeriodInitialDate1005, 8, domain.ActivePeriod)
+	period2, _ := domain.NewPeriod(testPeriodName202611, testPeriodInitialDate1012, 16, domain.ClosedPeriod)
 	repo.Create(period1)
 	repo.Create(period2)
 
@@ -143,8 +143,8 @@ func TestFindAllByState(t *testing.T) {
 	setupTestDB(t)
 	repo := infrastructurepkg.NewPeriodRepository()
 
-	period1, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
-	period2, _ := domain.NewPeriod("2026-11", "2026-10-12", 16, domain.ActivePeriod)
+	period1, _ := domain.NewPeriod(testPeriodName202610, testPeriodInitialDate1005, 8, domain.ActivePeriod)
+	period2, _ := domain.NewPeriod(testPeriodName202611, testPeriodInitialDate1012, 16, domain.ActivePeriod)
 	period3, _ := domain.NewPeriod("2026-12", "2026-11-09", 8, domain.ClosedPeriod)
 	repo.Create(period1)
 	repo.Create(period2)
@@ -174,7 +174,7 @@ func TestFindAllByStateEmpty(t *testing.T) {
 	setupTestDB(t)
 	repo := infrastructurepkg.NewPeriodRepository()
 
-	period1, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period1, _ := domain.NewPeriod(testPeriodName202610, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 	repo.Create(period1)
 
 	closedPeriods, err := repo.FindAllByState(domain.ClosedPeriod)
@@ -192,10 +192,10 @@ func TestUpdate(t *testing.T) {
 	setupTestDB(t)
 	repo := infrastructurepkg.NewPeriodRepository()
 
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriodName202610, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 	repo.Create(period)
 
-	err := period.UpdatePeriod("2026-10", "2026-10-12", 16, domain.ClosedPeriod)
+	err := period.UpdatePeriod(testPeriodName202610, testPeriodInitialDate1012, 16, domain.ClosedPeriod)
 	if err != nil {
 		t.Fatalf("UpdatePeriod() error = %v, want nil", err)
 	}
@@ -221,8 +221,8 @@ func TestUpdateNotFound(t *testing.T) {
 
 	fakePeriod := &domain.Period{
 		ID:                   999,
-		Name:                 "2026-10",
-		InitialDate:          "2026-10-05",
+		Name:                 testPeriodName202610,
+		InitialDate:          testPeriodInitialDate1005,
 		FinalDate:            "2026-11-29",
 		InscriptionFinalDate: "2026-10-04",
 		WeeksCount:           8,
@@ -240,7 +240,7 @@ func TestDelete(t *testing.T) {
 	setupTestDB(t)
 	repo := infrastructurepkg.NewPeriodRepository()
 
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriodName202610, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 	repo.Create(period)
 
 	err := repo.Delete(period.ID)

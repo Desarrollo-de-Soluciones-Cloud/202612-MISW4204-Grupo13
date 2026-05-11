@@ -12,7 +12,7 @@ func TestClosePeriodSuccess(t *testing.T) {
 	closePeriod := applicationpkg.NewClosePeriod(mockRepo)
 
 	// Create an active period
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriodName202610, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 	mockRepo.Create(period)
 
 	input := applicationpkg.ClosePeriodInput{
@@ -28,8 +28,8 @@ func TestClosePeriodSuccess(t *testing.T) {
 		t.Errorf("expected state %q, got %q", domain.ClosedPeriod, output.PeriodState)
 	}
 
-	if output.Name != "2026-10" {
-		t.Errorf("expected name '2026-10', got %q", output.Name)
+	if output.Name != testPeriodName202610 {
+		t.Errorf("expected name %q, got %q", testPeriodName202610, output.Name)
 	}
 
 	// Verify it was saved
@@ -58,7 +58,7 @@ func TestClosePeriodAlreadyClosed(t *testing.T) {
 	closePeriod := applicationpkg.NewClosePeriod(mockRepo)
 
 	// Create a closed period
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ClosedPeriod)
+	period, _ := domain.NewPeriod(testPeriodName202610, testPeriodInitialDate1005, 8, domain.ClosedPeriod)
 	mockRepo.Create(period)
 
 	input := applicationpkg.ClosePeriodInput{

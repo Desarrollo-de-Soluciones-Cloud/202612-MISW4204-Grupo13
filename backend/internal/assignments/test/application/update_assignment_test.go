@@ -7,16 +7,10 @@ import (
 	"testing"
 )
 
-const (
-	errCreateAssignmentMsg          = "expected no error creating assignment: %v"
-	errCreateAssistantAssignmentMsg = "expected no error creating assistant assignment, got %v"
-	errCreateMonitorToUpdateMsg     = "expected no error creating monitor assignment to update, got %v"
-)
-
 // TODO RF05: Reforzar RF05 con pruebas de delivery e integracion/E2E para respuestas HTTP bloqueantes en update admin.
 
 func TestUpdateAssignmentSuccess(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 	updateAssignment := applicationpkg.NewUpdateAssignment(mockRepo)
 
@@ -54,7 +48,7 @@ func TestUpdateAssignmentSuccess(t *testing.T) {
 }
 
 func TestUpdateAssignmentNotFound(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	updateAssignment := applicationpkg.NewUpdateAssignment(mockRepo)
 
 	_, err := updateAssignment.Execute(applicationpkg.UpdateAssignmentInput{
@@ -68,7 +62,7 @@ func TestUpdateAssignmentNotFound(t *testing.T) {
 }
 
 func TestUpdateAssignmentInvalidRole(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 	updateAssignment := applicationpkg.NewUpdateAssignment(mockRepo)
 
@@ -93,7 +87,7 @@ func TestUpdateAssignmentInvalidRole(t *testing.T) {
 }
 
 func TestUpdateAssignmentInvalidWeeklyHours(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 	updateAssignment := applicationpkg.NewUpdateAssignment(mockRepo)
 
@@ -118,7 +112,7 @@ func TestUpdateAssignmentInvalidWeeklyHours(t *testing.T) {
 }
 
 func TestUpdateAssignmentBlocksWhenAssistantHoursExceed22(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 	updateAssignment := applicationpkg.NewUpdateAssignment(mockRepo)
 
@@ -153,7 +147,7 @@ func TestUpdateAssignmentBlocksWhenAssistantHoursExceed22(t *testing.T) {
 }
 
 func TestUpdateAssignmentBlocksWhenMonitorAssignmentsExceed3(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 	updateAssignment := applicationpkg.NewUpdateAssignment(mockRepo)
 
@@ -190,7 +184,7 @@ func TestUpdateAssignmentBlocksWhenMonitorAssignmentsExceed3(t *testing.T) {
 }
 
 func TestUpdateAssignmentBlocksWhenMonitorHoursExceed12(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 	updateAssignment := applicationpkg.NewUpdateAssignment(mockRepo)
 
@@ -225,7 +219,7 @@ func TestUpdateAssignmentBlocksWhenMonitorHoursExceed12(t *testing.T) {
 }
 
 func TestUpdateAssignmentBlocksWhenMonitorExceedsFortyPercentOfAssistant(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 	updateAssignment := applicationpkg.NewUpdateAssignment(mockRepo)
 
@@ -260,7 +254,7 @@ func TestUpdateAssignmentBlocksWhenMonitorExceedsFortyPercentOfAssistant(t *test
 }
 
 func TestUpdateAssignmentAllowsMonitorHoursAtRoundedFortyPercentLimit(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 	updateAssignment := applicationpkg.NewUpdateAssignment(mockRepo)
 
@@ -298,7 +292,7 @@ func TestUpdateAssignmentAllowsMonitorHoursAtRoundedFortyPercentLimit(t *testing
 }
 
 func TestUpdateAssignmentValidCaseWithMixedRoles(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 	updateAssignment := applicationpkg.NewUpdateAssignment(mockRepo)
 
@@ -336,7 +330,7 @@ func TestUpdateAssignmentValidCaseWithMixedRoles(t *testing.T) {
 }
 
 func TestUpdateAssignmentBlocksExactDuplicate(t *testing.T) {
-	mockRepo := NewMockAssignmentRepository()
+	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)
 	updateAssignment := applicationpkg.NewUpdateAssignment(mockRepo)
 
