@@ -14,12 +14,12 @@ func TestValidatePeriodName(t *testing.T) {
 	}{
 		{
 			name:    "valid name",
-			input:   "2026-10",
+			input:   testPeriodName202610,
 			wantErr: false,
 		},
 		{
 			name:    "valid name with leading/trailing spaces",
-			input:   "  2026-10  ",
+			input:   "  " + testPeriodName202610 + "  ",
 			wantErr: false,
 		},
 		{
@@ -76,7 +76,7 @@ func TestValidatePeriodInitialDateIsMonday(t *testing.T) {
 	}{
 		{
 			name:    "valid Monday date",
-			input:   "2026-10-05",
+			input:   testPeriodInitialDate1005,
 			wantErr: false,
 		},
 		{
@@ -111,7 +111,7 @@ func TestValidatePeriodInitialDateIsMonday(t *testing.T) {
 		},
 		{
 			name:    "another valid Monday",
-			input:   "2026-10-12",
+			input:   testPeriodInitialDate1012,
 			wantErr: false,
 		},
 	}
@@ -137,7 +137,7 @@ func TestValidatePeriodInitialDateIsFuture(t *testing.T) {
 	}{
 		{
 			name:    "valid future date",
-			input:   "2026-10-05",
+			input:   testPeriodInitialDate1005,
 			wantErr: false,
 		},
 		{
@@ -226,21 +226,21 @@ func TestCalculatePeriodFinalDate(t *testing.T) {
 	}{
 		{
 			name:           "calculate final date for 8 weeks",
-			initialDate:    "2026-10-05",
+			initialDate:    testPeriodInitialDate1005,
 			weeksCount:     8,
 			expectedResult: "2026-11-29",
 			wantErr:        false,
 		},
 		{
 			name:           "calculate final date for 16 weeks",
-			initialDate:    "2026-10-05",
+			initialDate:    testPeriodInitialDate1005,
 			weeksCount:     16,
 			expectedResult: "2027-01-24",
 			wantErr:        false,
 		},
 		{
 			name:           "calculate final date starting from different date",
-			initialDate:    "2026-10-12",
+			initialDate:    testPeriodInitialDate1012,
 			weeksCount:     8,
 			expectedResult: "2026-12-06",
 			wantErr:        false,
@@ -269,13 +269,13 @@ func TestCalculatePeriodInscriptionFinalDate(t *testing.T) {
 	}{
 		{
 			name:           "calculate inscription date one day before",
-			initialDate:    "2026-10-05",
+			initialDate:    testPeriodInitialDate1005,
 			expectedResult: "2026-10-04",
 			wantErr:        false,
 		},
 		{
 			name:           "calculate inscription date for another date",
-			initialDate:    "2026-10-12",
+			initialDate:    testPeriodInitialDate1012,
 			expectedResult: "2026-10-11",
 			wantErr:        false,
 		},

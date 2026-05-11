@@ -8,7 +8,7 @@ import (
 )
 
 func TestListWeeksByPeriodSuccess(t *testing.T) {
-	repo := &MockWeekRepository{
+	repo := &mockWeekRepository{
 		weeks: []domain.Week{
 			{ID: 1, PeriodID: 1, Number: 1, InitialDate: "2026-01-12", FinalDate: "2026-01-18"},
 			{ID: 2, PeriodID: 1, Number: 2, InitialDate: "2026-01-19", FinalDate: "2026-01-25"},
@@ -27,7 +27,7 @@ func TestListWeeksByPeriodSuccess(t *testing.T) {
 }
 
 func TestListWeeksByPeriodRejectsInvalidPeriodID(t *testing.T) {
-	repo := &MockWeekRepository{}
+	repo := &mockWeekRepository{}
 	listWeeks := application.NewListWeeksByPeriod(repo)
 
 	_, err := listWeeks.Execute(application.ListWeeksByPeriodInput{PeriodID: 0})

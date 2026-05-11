@@ -10,10 +10,10 @@ import (
 func TestGetPeriodByIDSuccess(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
-	initialDate := "2026-10-05"
+	initialDate := testPeriodInitialDate1005
 	weeksCount := 8
 
-	period, _ := domain.NewPeriod("2026-10", initialDate, weeksCount, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriodName202610, initialDate, weeksCount, domain.ActivePeriod)
 	mockRepo.Create(period)
 
 	getPeriodByID := applicationpkg.NewGetPeriodByID(mockRepo)
@@ -22,8 +22,8 @@ func TestGetPeriodByIDSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if output.Name != "2026-10" {
-		t.Errorf("expected name '2026-10', got %q", output.Name)
+	if output.Name != testPeriodName202610 {
+		t.Errorf("expected name %q, got %q", testPeriodName202610, output.Name)
 	}
 	if output.PeriodState != domain.ActivePeriod {
 		t.Errorf("expected state %q, got %q", domain.ActivePeriod, output.PeriodState)

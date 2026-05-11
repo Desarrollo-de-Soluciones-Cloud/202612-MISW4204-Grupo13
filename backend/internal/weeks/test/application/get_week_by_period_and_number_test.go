@@ -8,7 +8,7 @@ import (
 )
 
 func TestGetWeekByPeriodAndNumberSuccess(t *testing.T) {
-	repo := &MockWeekRepository{
+	repo := &mockWeekRepository{
 		weeks: []domain.Week{
 			{ID: 1, PeriodID: 1, Number: 1, InitialDate: "2026-01-12", FinalDate: "2026-01-18"},
 		},
@@ -28,7 +28,7 @@ func TestGetWeekByPeriodAndNumberSuccess(t *testing.T) {
 }
 
 func TestGetWeekByPeriodAndNumberNotFound(t *testing.T) {
-	repo := &MockWeekRepository{}
+	repo := &mockWeekRepository{}
 	getWeek := application.NewGetWeekByPeriodAndNumber(repo)
 
 	_, err := getWeek.Execute(application.GetWeekByPeriodAndNumberInput{
@@ -41,7 +41,7 @@ func TestGetWeekByPeriodAndNumberNotFound(t *testing.T) {
 }
 
 func TestGetWeekByPeriodAndNumberRejectsInvalidNumber(t *testing.T) {
-	repo := &MockWeekRepository{}
+	repo := &mockWeekRepository{}
 	getWeek := application.NewGetWeekByPeriodAndNumber(repo)
 
 	_, err := getWeek.Execute(application.GetWeekByPeriodAndNumberInput{

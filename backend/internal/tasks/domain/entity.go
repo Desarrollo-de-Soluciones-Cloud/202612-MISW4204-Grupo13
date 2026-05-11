@@ -1,6 +1,17 @@
 package domain
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
+
+type TaskAttachment struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	FilePath    string `json:"file_path"`
+	ContentType string `json:"content_type"`
+	Size        int64  `json:"size"`
+}
 
 type Task struct {
 	ID            uint       `gorm:"primaryKey" json:"id"`
@@ -14,6 +25,7 @@ type Task struct {
 	Observations  string     `gorm:"type:text;not null" json:"observations"`
 	WeekStartDate time.Time  `gorm:"type:date;not null" json:"week_start_date"`
 	Late          bool       `gorm:"not null;default:false" json:"late"`
+	Attachments   []TaskAttachment `gorm:"serializer:json;type:text" json:"attachments"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
 }
@@ -28,6 +40,7 @@ func NewTask(
 	observations string,
 	weekStartDate time.Time,
 	late bool,
+	attachments []TaskAttachment,
 ) (*Task, error) {
 	normalizedTitle := NormalizeTaskTitle(title)
 	normalizedDescription := NormalizeTaskDescription(description)
@@ -65,6 +78,7 @@ func NewTask(
 		Observations:  normalizedObservations,
 		WeekStartDate: normalizedWeekStartDate,
 		Late:          late,
+		Attachments:   normalizeTaskAttachments(attachments),
 	}, nil
 }
 
@@ -76,6 +90,7 @@ func (t *Task) UpdateTask(
 	observations string,
 	weekStartDate time.Time,
 	late bool,
+	attachments []TaskAttachment,
 ) error {
 	if t.Late {
 		return ErrTaskLateUpdateForbidden
@@ -114,6 +129,7 @@ func (t *Task) UpdateTask(
 	t.Observations = normalizedObservations
 	t.WeekStartDate = normalizedWeekStartDate
 	t.Late = late
+	t.Attachments = normalizeTaskAttachments(attachments)
 
 	return nil
 }
@@ -123,4 +139,32 @@ func (t *Task) CanDelete(now time.Time) error {
 		return ErrTaskDeleteForbidden
 	}
 	return nil
+}
+
+func normalizeTaskAttachments(attachments []TaskAttachment) []TaskAttachment {
+	if len(attachments) == 0 {
+		return []TaskAttachment{}
+	}
+
+	result := make([]TaskAttachment, 0, len(attachments))
+	for _, attachment := range attachments {
+		attachmentID := attachment.ID
+		if attachmentID == "" {
+			attachmentID = fmt.Sprintf("legacy_%s", attachment.FilePath)
+		}
+
+		result = append(result, TaskAttachment{
+			ID:          attachmentID,
+			Name:        attachment.Name,
+			FilePath:    attachment.FilePath,
+			ContentType: attachment.ContentType,
+			Size:        attachment.Size,
+		})
+	}
+
+	return result
+}
+
+func NormalizeTaskAttachmentsForPersistence(attachments []TaskAttachment) []TaskAttachment {
+	return normalizeTaskAttachments(attachments)
 }

@@ -8,7 +8,7 @@ import (
 )
 
 func TestValidateAuthEmail(t *testing.T) {
-	if err := authDomain.ValidateAuthEmail("john@example.com"); err != nil {
+	if err := authDomain.ValidateAuthEmail(testAuthDomainEmail); err != nil {
 		t.Fatalf("expected valid email, got %v", err)
 	}
 }
@@ -49,7 +49,7 @@ func TestValidateAuthPasswordTooLong(t *testing.T) {
 }
 
 func TestValidateAuthPasswordValid(t *testing.T) {
-	err := authDomain.ValidateAuthPassword("password123")
+	err := authDomain.ValidateAuthPassword(testAuthDomainPassword)
 	if err != nil {
 		t.Fatalf("expected valid password, got %v", err)
 	}

@@ -9,14 +9,14 @@ import (
 func TestListPeriodsSuccess(t *testing.T) {
 	mockRepo := NewMockPeriodRepository()
 
-	initialDate1 := "2026-10-05"
+	initialDate1 := testPeriodInitialDate1005
 	weeksCount1 := 8
 
-	initialDate2 := "2026-10-12"
+	initialDate2 := testPeriodInitialDate1012
 	weeksCount2 := 16
 
-	period1, _ := domain.NewPeriod("2026-10", initialDate1, weeksCount1, domain.ActivePeriod)
-	period2, _ := domain.NewPeriod("2026-11", initialDate2, weeksCount2, domain.ClosedPeriod)
+	period1, _ := domain.NewPeriod(testPeriodName202610, initialDate1, weeksCount1, domain.ActivePeriod)
+	period2, _ := domain.NewPeriod(testPeriodName202611, initialDate2, weeksCount2, domain.ClosedPeriod)
 
 	mockRepo.Create(period1)
 	mockRepo.Create(period2)
@@ -36,12 +36,12 @@ func TestListPeriodsSuccess(t *testing.T) {
 		periodsByName[period.Name] = period
 	}
 
-	if periodsByName["2026-10"].WeeksCount != weeksCount1 {
-		t.Errorf("expected period 2026-10 weeks count %d, got %d", weeksCount1, periodsByName["2026-10"].WeeksCount)
+	if periodsByName[testPeriodName202610].WeeksCount != weeksCount1 {
+		t.Errorf("expected period %s weeks count %d, got %d", testPeriodName202610, weeksCount1, periodsByName[testPeriodName202610].WeeksCount)
 	}
 
-	if periodsByName["2026-11"].WeeksCount != weeksCount2 {
-		t.Errorf("expected period 2026-11 weeks count %d, got %d", weeksCount2, periodsByName["2026-11"].WeeksCount)
+	if periodsByName[testPeriodName202611].WeeksCount != weeksCount2 {
+		t.Errorf("expected period %s weeks count %d, got %d", testPeriodName202611, weeksCount2, periodsByName[testPeriodName202611].WeeksCount)
 	}
 }
 

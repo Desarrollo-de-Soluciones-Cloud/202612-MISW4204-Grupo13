@@ -15,7 +15,7 @@ func TestValidateUserNameRequired(t *testing.T) {
 }
 
 func TestValidateUserNameValid(t *testing.T) {
-	err := domainpkg.ValidateUserName("John Doe")
+	err := domainpkg.ValidateUserName(testDomainUserJohnName)
 	if err != nil {
 		t.Fatalf("expected valid name, got %v", err)
 	}

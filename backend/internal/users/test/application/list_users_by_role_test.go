@@ -8,13 +8,13 @@ import (
 )
 
 func TestListUsersByRoleSuccess(t *testing.T) {
-	mockRepo := &MockListUsersRepository{
-		users: []domain.User{
-			{ID: 1, Name: "John Doe", Email: "john@example.com", Password: "hash", GlobalRole: domain.RoleProfessor},
-			{ID: 2, Name: "Jane Doe", Email: "jane@example.com", Password: "hash", GlobalRole: domain.RoleAdmin},
-			{ID: 3, Name: "Mike Doe", Email: "mike@example.com", Password: "hash", GlobalRole: domain.RoleProfessor},
-		},
-	}
+	mockRepo := newMockUserRepository()
+	mockRepo.byID[1] = &domain.User{ID: 1, Name: testUserJohnName, Email: testUserJohnEmail, Password: "hash", GlobalRole: domain.RoleProfessor}
+	mockRepo.byID[2] = &domain.User{ID: 2, Name: testUserJaneName, Email: testUserJaneEmail, Password: "hash", GlobalRole: domain.RoleAdmin}
+	mockRepo.byID[3] = &domain.User{ID: 3, Name: "Mike Doe", Email: "mike@example.com", Password: "hash", GlobalRole: domain.RoleProfessor}
+	mockRepo.users[testUserJohnEmail] = mockRepo.byID[1]
+	mockRepo.users[testUserJaneEmail] = mockRepo.byID[2]
+	mockRepo.users["mike@example.com"] = mockRepo.byID[3]
 
 	useCase := applicationpkg.NewListUsersByRole(mockRepo)
 	output, err := useCase.Execute(applicationpkg.ListUsersByRoleInput{GlobalRole: domain.RoleProfessor})
@@ -32,7 +32,7 @@ func TestListUsersByRoleSuccess(t *testing.T) {
 }
 
 func TestListUsersByRoleInvalidRole(t *testing.T) {
-	mockRepo := &MockListUsersRepository{users: []domain.User{}}
+	mockRepo := newMockUserRepository()
 	useCase := applicationpkg.NewListUsersByRole(mockRepo)
 
 	_, err := useCase.Execute(applicationpkg.ListUsersByRoleInput{GlobalRole: domain.UserRole("guest")})
@@ -42,11 +42,9 @@ func TestListUsersByRoleInvalidRole(t *testing.T) {
 }
 
 func TestListUsersByRoleEmptyResult(t *testing.T) {
-	mockRepo := &MockListUsersRepository{
-		users: []domain.User{
-			{ID: 1, Name: "Jane Doe", Email: "jane@example.com", Password: "hash", GlobalRole: domain.RoleAdmin},
-		},
-	}
+	mockRepo := newMockUserRepository()
+	mockRepo.byID[1] = &domain.User{ID: 1, Name: testUserJaneName, Email: testUserJaneEmail, Password: "hash", GlobalRole: domain.RoleAdmin}
+	mockRepo.users[testUserJaneEmail] = mockRepo.byID[1]
 
 	useCase := applicationpkg.NewListUsersByRole(mockRepo)
 	output, err := useCase.Execute(applicationpkg.ListUsersByRoleInput{GlobalRole: domain.RoleProfessor})

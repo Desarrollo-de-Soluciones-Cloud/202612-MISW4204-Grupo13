@@ -7,60 +7,8 @@ import (
 	"testing"
 )
 
-type MockWeekRepository struct {
-	weeks []domain.Week
-}
-
-func (m *MockWeekRepository) CreateMany(weeks []domain.Week) error {
-	startID := uint(len(m.weeks) + 1)
-	for i := range weeks {
-		weeks[i].ID = startID + uint(i)
-		m.weeks = append(m.weeks, weeks[i])
-	}
-	return nil
-}
-
-func (m *MockWeekRepository) FindAllByPeriodID(periodID uint) ([]domain.Week, error) {
-	result := make([]domain.Week, 0)
-	for _, week := range m.weeks {
-		if week.PeriodID == periodID {
-			result = append(result, week)
-		}
-	}
-	return result, nil
-}
-
-func (m *MockWeekRepository) FindByPeriodIDAndNumber(periodID uint, number int) (*domain.Week, error) {
-	for _, week := range m.weeks {
-		if week.PeriodID == periodID && week.Number == number {
-			copy := week
-			return &copy, nil
-		}
-	}
-	return nil, domain.ErrWeekNotFound
-}
-
-func (m *MockWeekRepository) FindByPeriodIDAndStartDate(periodID uint, startDate string) (*domain.Week, error) {
-	for _, week := range m.weeks {
-		if week.PeriodID == periodID && week.InitialDate == startDate {
-			copy := week
-			return &copy, nil
-		}
-	}
-	return nil, domain.ErrWeekNotFound
-}
-
-func (m *MockWeekRepository) ExistsByPeriodID(periodID uint) (bool, error) {
-	for _, week := range m.weeks {
-		if week.PeriodID == periodID {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 func TestCreateWeeksForPeriodSuccess(t *testing.T) {
-	repo := &MockWeekRepository{}
+	repo := &mockWeekRepository{}
 	createWeeks := application.NewCreateWeeksForPeriod(repo)
 
 	output, err := createWeeks.Execute(application.CreateWeeksForPeriodInput{
@@ -84,7 +32,7 @@ func TestCreateWeeksForPeriodSuccess(t *testing.T) {
 }
 
 func TestCreateWeeksForPeriodRejectsDuplicateGeneration(t *testing.T) {
-	repo := &MockWeekRepository{
+	repo := &mockWeekRepository{
 		weeks: []domain.Week{
 			{ID: 1, PeriodID: 1, Number: 1, InitialDate: "2026-01-12", FinalDate: "2026-01-18"},
 		},
@@ -103,7 +51,7 @@ func TestCreateWeeksForPeriodRejectsDuplicateGeneration(t *testing.T) {
 }
 
 func TestCreateWeeksForPeriodRejectsInvalidInitialDate(t *testing.T) {
-	repo := &MockWeekRepository{}
+	repo := &mockWeekRepository{}
 	createWeeks := application.NewCreateWeeksForPeriod(repo)
 
 	_, err := createWeeks.Execute(application.CreateWeeksForPeriodInput{
@@ -118,7 +66,7 @@ func TestCreateWeeksForPeriodRejectsInvalidInitialDate(t *testing.T) {
 }
 
 func TestCreateWeeksForPeriodRejectsInvalidWeeksCount(t *testing.T) {
-	repo := &MockWeekRepository{}
+	repo := &mockWeekRepository{}
 	createWeeks := application.NewCreateWeeksForPeriod(repo)
 
 	_, err := createWeeks.Execute(application.CreateWeeksForPeriodInput{
@@ -133,7 +81,7 @@ func TestCreateWeeksForPeriodRejectsInvalidWeeksCount(t *testing.T) {
 }
 
 func TestCreateWeeksForPeriodRejectsFinalDateMismatch(t *testing.T) {
-	repo := &MockWeekRepository{}
+	repo := &mockWeekRepository{}
 	createWeeks := application.NewCreateWeeksForPeriod(repo)
 
 	_, err := createWeeks.Execute(application.CreateWeeksForPeriodInput{
@@ -148,7 +96,7 @@ func TestCreateWeeksForPeriodRejectsFinalDateMismatch(t *testing.T) {
 }
 
 func TestCreateWeeksForPeriodRejectsFinalDateThatIsNotSunday(t *testing.T) {
-	repo := &MockWeekRepository{}
+	repo := &mockWeekRepository{}
 	createWeeks := application.NewCreateWeeksForPeriod(repo)
 
 	_, err := createWeeks.Execute(application.CreateWeeksForPeriodInput{

@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+var emptyAttachments = []domainpkg.TaskAttachment{}
+
 func TestNewTaskSuccess(t *testing.T) {
 	weekDate := time.Date(2026, 4, 8, 10, 0, 0, 0, time.UTC)
 
@@ -21,6 +23,7 @@ func TestNewTaskSuccess(t *testing.T) {
 		" bring examples ",
 		weekDate,
 		false,
+		emptyAttachments,
 	)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -56,6 +59,7 @@ func TestNewTaskRejectsMissingAssignmentID(t *testing.T) {
 		"",
 		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
 		false,
+		emptyAttachments,
 	)
 	if !errors.Is(err, domainpkg.ErrTaskAssignmentIDRequired) {
 		t.Fatalf("expected ErrTaskAssignmentIDRequired, got %v", err)
@@ -81,6 +85,7 @@ func TestNewTaskAcceptsOfficialStatuses(t *testing.T) {
 			"",
 			time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
 			false,
+			emptyAttachments,
 		)
 		if err != nil {
 			t.Fatalf("expected status %q to be valid, got %v", status, err)
@@ -103,6 +108,7 @@ func TestNewTaskRejectsLegacyStatus(t *testing.T) {
 		"",
 		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
 		false,
+		emptyAttachments,
 	)
 	if !errors.Is(err, domainpkg.ErrTaskStatusInvalid) {
 		t.Fatalf("expected ErrTaskStatusInvalid, got %v", err)
@@ -121,6 +127,7 @@ func TestNewTaskRejectsSpentHoursBelowOne(t *testing.T) {
 		"",
 		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
 		false,
+		emptyAttachments,
 	)
 	if !errors.Is(err, domainpkg.ErrTaskSpentHoursInvalid) {
 		t.Fatalf("expected ErrTaskSpentHoursInvalid, got %v", err)
@@ -159,6 +166,7 @@ func TestUpdateTaskRejectsLateTask(t *testing.T) {
 		"",
 		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
 		true,
+		emptyAttachments,
 	)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -173,6 +181,7 @@ func TestUpdateTaskRejectsLateTask(t *testing.T) {
 		"",
 		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
 		true,
+		emptyAttachments,
 	)
 	if !errors.Is(err, domainpkg.ErrTaskLateUpdateForbidden) {
 		t.Fatalf("expected ErrTaskLateUpdateForbidden, got %v", err)
@@ -191,6 +200,7 @@ func TestCanDeleteRejectsInactiveWeek(t *testing.T) {
 		"",
 		time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC),
 		false,
+		emptyAttachments,
 	)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -214,6 +224,7 @@ func TestUpdateTaskAllowsOfficialStatusChange(t *testing.T) {
 		"",
 		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
 		false,
+		emptyAttachments,
 	)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -228,6 +239,7 @@ func TestUpdateTaskAllowsOfficialStatusChange(t *testing.T) {
 		"",
 		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
 		false,
+		emptyAttachments,
 	)
 	if err != nil {
 		t.Fatalf("expected status update to succeed, got %v", err)

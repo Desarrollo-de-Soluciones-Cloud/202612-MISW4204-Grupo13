@@ -1,4 +1,15 @@
 services:
+  seneprojects_cloudsql:
+    image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.15.3
+    container_name: seneprojects_cloudsql
+    command:
+      - "--address=0.0.0.0"
+      - "--port=5432"
+      - "${CLOUD_SQL_CONNECTION_NAME}"
+    expose:
+      - "5432"
+    restart: on-failure
+
   seneprojects_backend:
     build: ./backend
     container_name: seneprojects_backend
@@ -7,6 +18,8 @@ services:
       - .env.admin
     expose:
       - "8080"
+    depends_on:
+      - seneprojects_cloudsql
     restart: on-failure
 
   seneprojects_frontend:

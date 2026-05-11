@@ -112,16 +112,16 @@ func TestCreatePeriodSuccess(t *testing.T) {
 
 	weeksCount := 8
 	body := delivery.CreatePeriodRequest{
-		Name:        "2026-10",
-		InitialDate: "2026-10-05",
+		Name:        testPeriod202610Name,
+		InitialDate: testPeriodInitialDate1005,
 		WeeksCount:  &weeksCount,
 		PeriodState: "active",
 	}
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/periods", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("POST", testPeriodsPath, bytes.NewBuffer(bodyJSON))
+	req.Header.Set(testHeaderContentType, testJSONContentType)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -129,13 +129,13 @@ func TestCreatePeriodSuccess(t *testing.T) {
 	handler.CreatePeriod(c)
 
 	if w.Code != http.StatusCreated {
-		t.Errorf("CreatePeriod() status = %d, want %d", w.Code, http.StatusCreated)
+		t.Errorf(errCreatePeriodStatus, w.Code, http.StatusCreated)
 	}
 
 	var resp delivery.CreatePeriodResponse
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp.Name != "2026-10" {
-		t.Errorf("CreatePeriod() name = %s, want 2026-10", resp.Name)
+	if resp.Name != testPeriod202610Name {
+		t.Errorf("CreatePeriod() name = %s, want %s", resp.Name, testPeriod202610Name)
 	}
 	if resp.WeeksCount != weeksCount {
 		t.Errorf("CreatePeriod() weeks count = %d, want %d", resp.WeeksCount, weeksCount)
@@ -150,15 +150,15 @@ func TestCreatePeriodBadRequest(t *testing.T) {
 	weeksCount := 8
 	body := delivery.CreatePeriodRequest{
 		Name:        "", // Missing name
-		InitialDate: "2026-10-05",
+		InitialDate: testPeriodInitialDate1005,
 		WeeksCount:  &weeksCount,
 		PeriodState: "active",
 	}
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/periods", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("POST", testPeriodsPath, bytes.NewBuffer(bodyJSON))
+	req.Header.Set(testHeaderContentType, testJSONContentType)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -177,7 +177,7 @@ func TestCreatePeriodInvalidDate(t *testing.T) {
 
 	weeksCount := 8
 	body := delivery.CreatePeriodRequest{
-		Name:        "2026-10",
+		Name:        testPeriod202610Name,
 		InitialDate: "invalid-date",
 		WeeksCount:  &weeksCount,
 		PeriodState: "active",
@@ -185,8 +185,8 @@ func TestCreatePeriodInvalidDate(t *testing.T) {
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/periods", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("POST", testPeriodsPath, bytes.NewBuffer(bodyJSON))
+	req.Header.Set(testHeaderContentType, testJSONContentType)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -203,11 +203,11 @@ func TestListPeriodsSuccess(t *testing.T) {
 	repo := newMockPeriodRepository()
 	handler := setupTestHandler(repo)
 
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriod202610Name, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 	repo.Create(period)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/periods", nil)
+	req, _ := http.NewRequest("GET", testPeriodsPath, nil)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -215,7 +215,7 @@ func TestListPeriodsSuccess(t *testing.T) {
 	handler.ListPeriods(c)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("ListPeriods() status = %d, want %d", w.Code, http.StatusOK)
+		t.Errorf(errListPeriodsStatus, w.Code, http.StatusOK)
 	}
 
 	var resp delivery.ListPeriodsResponse
@@ -234,7 +234,7 @@ func TestListPeriodsEmpty(t *testing.T) {
 	handler := setupTestHandler(repo)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/periods", nil)
+	req, _ := http.NewRequest("GET", testPeriodsPath, nil)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -242,7 +242,7 @@ func TestListPeriodsEmpty(t *testing.T) {
 	handler.ListPeriods(c)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("ListPeriods() status = %d, want %d", w.Code, http.StatusOK)
+		t.Errorf(errListPeriodsStatus, w.Code, http.StatusOK)
 	}
 
 	var resp delivery.ListPeriodsResponse
@@ -257,11 +257,11 @@ func TestGetPeriodByIDSuccess(t *testing.T) {
 	repo := newMockPeriodRepository()
 	handler := setupTestHandler(repo)
 
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriod202610Name, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 	repo.Create(period)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/periods/1", nil)
+	req, _ := http.NewRequest("GET", testPeriodByIDPath, nil)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -275,8 +275,8 @@ func TestGetPeriodByIDSuccess(t *testing.T) {
 
 	var resp delivery.PeriodResponse
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp.Name != "2026-10" {
-		t.Errorf("GetPeriodByID() name = %s, want 2026-10", resp.Name)
+	if resp.Name != testPeriod202610Name {
+		t.Errorf("GetPeriodByID() name = %s, want %s", resp.Name, testPeriod202610Name)
 	}
 	if resp.WeeksCount != 8 {
 		t.Errorf("GetPeriodByID() weeks count = %d, want 8", resp.WeeksCount)
@@ -307,17 +307,17 @@ func TestUpdatePeriodSuccess(t *testing.T) {
 	repo := newMockPeriodRepository()
 	handler := setupTestHandler(repo)
 
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriod202610Name, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 	repo.Create(period)
 
 	body := delivery.UpdatePeriodRequest{
-		Name: "2026-11",
+		Name: testPeriod202611Name,
 	}
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("PUT", "/periods/1", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("PUT", testPeriodByIDPath, bytes.NewBuffer(bodyJSON))
+	req.Header.Set(testHeaderContentType, testJSONContentType)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -331,8 +331,8 @@ func TestUpdatePeriodSuccess(t *testing.T) {
 
 	var resp delivery.PeriodResponse
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp.Name != "2026-11" {
-		t.Errorf("UpdatePeriod() name = %s, want 2026-11", resp.Name)
+	if resp.Name != testPeriod202611Name {
+		t.Errorf("UpdatePeriod() name = %s, want %s", resp.Name, testPeriod202611Name)
 	}
 	// State and other fields should remain unchanged
 	if resp.PeriodState != "active" {
@@ -346,13 +346,13 @@ func TestUpdatePeriodNotFound(t *testing.T) {
 	handler := setupTestHandler(repo)
 
 	body := delivery.UpdatePeriodRequest{
-		Name: "2026-10",
+		Name: testPeriod202610Name,
 	}
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("PUT", "/periods/999", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(testHeaderContentType, testJSONContentType)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -370,15 +370,15 @@ func TestListPeriodsByState(t *testing.T) {
 	repo := newMockPeriodRepository()
 	handler := setupTestHandler(repo)
 
-	period1, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
-	period2, _ := domain.NewPeriod("2026-11", "2026-10-12", 16, domain.ActivePeriod)
+	period1, _ := domain.NewPeriod(testPeriod202610Name, testPeriodInitialDate1005, 8, domain.ActivePeriod)
+	period2, _ := domain.NewPeriod(testPeriod202611Name, testPeriodInitialDate1012, 16, domain.ActivePeriod)
 	period3, _ := domain.NewPeriod("2026-12", "2026-11-09", 8, domain.ClosedPeriod)
 	repo.Create(period1)
 	repo.Create(period2)
 	repo.Create(period3)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/periods?state=active", nil)
+	req, _ := http.NewRequest("GET", testPeriodsPath+"?state=active", nil)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -408,7 +408,7 @@ func TestListPeriodsByStateInvalid(t *testing.T) {
 	handler := setupTestHandler(repo)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/periods?state=invalidstate", nil)
+	req, _ := http.NewRequest("GET", testPeriodsPath+"?state=invalidstate", nil)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -447,16 +447,16 @@ func TestCreatePeriodWithNilWeeksCount(t *testing.T) {
 	handler := setupTestHandler(repo)
 
 	body := delivery.CreatePeriodRequest{
-		Name:        "2026-10",
-		InitialDate: "2026-10-05",
+		Name:        testPeriod202610Name,
+		InitialDate: testPeriodInitialDate1005,
 		WeeksCount:  nil, // Missing WeeksCount
 		PeriodState: "active",
 	}
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/periods", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("POST", testPeriodsPath, bytes.NewBuffer(bodyJSON))
+	req.Header.Set(testHeaderContentType, testJSONContentType)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -476,15 +476,15 @@ func TestCreatePeriodInvalidName(t *testing.T) {
 	weeksCount := 8
 	body := delivery.CreatePeriodRequest{
 		Name:        "",
-		InitialDate: "2026-10-05",
+		InitialDate: testPeriodInitialDate1005,
 		WeeksCount:  &weeksCount,
 		PeriodState: "active",
 	}
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/periods", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("POST", testPeriodsPath, bytes.NewBuffer(bodyJSON))
+	req.Header.Set(testHeaderContentType, testJSONContentType)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -504,16 +504,16 @@ func TestCreatePeriodInvalidState(t *testing.T) {
 
 	weeksCount := 8
 	body := delivery.CreatePeriodRequest{
-		Name:        "2026-10",
-		InitialDate: "2026-10-05",
+		Name:        testPeriod202610Name,
+		InitialDate: testPeriodInitialDate1005,
 		WeeksCount:  &weeksCount,
 		PeriodState: "invalidstate",
 	}
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/periods", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("POST", testPeriodsPath, bytes.NewBuffer(bodyJSON))
+	req.Header.Set(testHeaderContentType, testJSONContentType)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -533,16 +533,16 @@ func TestCreatePeriodInvalidWeeksCount(t *testing.T) {
 
 	weeksCount := 10 // Only 8 or 16 allowed
 	body := delivery.CreatePeriodRequest{
-		Name:        "2026-10",
-		InitialDate: "2026-10-05",
+		Name:        testPeriod202610Name,
+		InitialDate: testPeriodInitialDate1005,
 		WeeksCount:  &weeksCount,
 		PeriodState: "active",
 	}
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/periods", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("POST", testPeriodsPath, bytes.NewBuffer(bodyJSON))
+	req.Header.Set(testHeaderContentType, testJSONContentType)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -560,7 +560,7 @@ func TestUpdatePeriodInvalidState(t *testing.T) {
 	repo := newMockPeriodRepository()
 	handler := setupTestHandler(repo)
 
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriod202610Name, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 	repo.Create(period)
 
 	body := delivery.UpdatePeriodRequest{
@@ -569,8 +569,8 @@ func TestUpdatePeriodInvalidState(t *testing.T) {
 
 	bodyJSON, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("PUT", "/periods/1", bytes.NewBuffer(bodyJSON))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("PUT", testPeriodByIDPath, bytes.NewBuffer(bodyJSON))
+	req.Header.Set(testHeaderContentType, testJSONContentType)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -589,11 +589,11 @@ func TestClosePeriodSuccess(t *testing.T) {
 	repo := newMockPeriodRepository()
 	handler := setupTestHandler(repo)
 
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ActivePeriod)
+	period, _ := domain.NewPeriod(testPeriod202610Name, testPeriodInitialDate1005, 8, domain.ActivePeriod)
 	repo.Create(period)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("PATCH", "/periods/1/close", nil)
+	req, _ := http.NewRequest("PATCH", testPeriodByIDPath+"/close", nil)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -638,11 +638,11 @@ func TestClosePeriodAlreadyClosed(t *testing.T) {
 	repo := newMockPeriodRepository()
 	handler := setupTestHandler(repo)
 
-	period, _ := domain.NewPeriod("2026-10", "2026-10-05", 8, domain.ClosedPeriod)
+	period, _ := domain.NewPeriod(testPeriod202610Name, testPeriodInitialDate1005, 8, domain.ClosedPeriod)
 	repo.Create(period)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("PATCH", "/periods/1/close", nil)
+	req, _ := http.NewRequest("PATCH", testPeriodByIDPath+"/close", nil)
 
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
