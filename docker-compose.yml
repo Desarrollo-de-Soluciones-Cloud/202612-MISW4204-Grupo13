@@ -8,7 +8,7 @@ services:
       - "${CLOUD_SQL_CONNECTION_NAME}"
     expose:
       - "5432"
-    restart: on-failure
+    restart: always
 
   seneprojects_backend:
     build: ./backend
@@ -20,7 +20,7 @@ services:
       - "8080"
     depends_on:
       - seneprojects_cloudsql
-    restart: on-failure
+    restart: always
 
   seneprojects_frontend:
     build:
@@ -28,7 +28,7 @@ services:
     container_name: seneprojects_frontend
     expose:
       - "5173"
-    restart: on-failure
+    restart: always
 
   seneprojects_nginx:
     build: ./nginx
@@ -38,4 +38,4 @@ services:
     depends_on:
       - seneprojects_backend
       - seneprojects_frontend
-    restart: on-failure
+    restart: always
