@@ -61,3 +61,35 @@ func TestCreateWorkspaceRejectsNonProfessorOwner(t *testing.T) {
 		t.Fatalf("expected %v, got %v", workspacesDomain.ErrWorkspaceUserNotProfessor, err)
 	}
 }
+
+func TestCreateWorkspaceSuccess(t *testing.T) {
+	workspaceRepo := &workspaceRepoStub{}
+	periodRepo := &periodRepoStub{
+		period: &periodsDomain.Period{
+			ID:                   1,
+			PeriodState:          periodsDomain.ActivePeriod,
+			InitialDate:          "2026-06-01",
+			FinalDate:            "2026-06-30",
+			InscriptionFinalDate: time.Now().AddDate(0, 0, 1).Format("2006-01-02"),
+		},
+	}
+	userRepo := &userRepoStub{user: &usersDomain.User{ID: 10, GlobalRole: usersDomain.RoleProfessor}}
+
+	uc := workspacesApplication.NewCreateWorkspace(workspaceRepo, periodRepo, userRepo)
+	output, err := uc.Execute(workspacesApplication.CreateWorkspaceInput{
+		PeriodID:     1,
+		UserID:       10,
+		Name:         "Algorithms",
+		Type:         "course",
+		InitialDate:  "2026-06-02",
+		FinalDate:    "2026-06-30",
+		Observations: "obs",
+		State:        "active",
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if output.ID == 0 {
+		t.Fatal("expected persisted workspace id")
+	}
+}
