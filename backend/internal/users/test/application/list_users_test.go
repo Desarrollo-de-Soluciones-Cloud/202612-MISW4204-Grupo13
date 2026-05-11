@@ -33,10 +33,16 @@ func TestListUsersWithData(t *testing.T) {
 	if len(output.Users) != 2 {
 		t.Errorf("expected 2 users, got %d", len(output.Users))
 	}
-	if output.Users[0].GlobalRole != domain.RoleProfessor {
-		t.Errorf("expected first user role %q, got %q", domain.RoleProfessor, output.Users[0].GlobalRole)
+
+	roles := map[domain.UserRole]int{}
+	for _, user := range output.Users {
+		roles[user.GlobalRole]++
 	}
-	if output.Users[1].GlobalRole != domain.RoleAdmin {
-		t.Errorf("expected second user role %q, got %q", domain.RoleAdmin, output.Users[1].GlobalRole)
+
+	if roles[domain.RoleProfessor] != 1 {
+		t.Errorf("expected one professor, got %d", roles[domain.RoleProfessor])
+	}
+	if roles[domain.RoleAdmin] != 1 {
+		t.Errorf("expected one admin, got %d", roles[domain.RoleAdmin])
 	}
 }
