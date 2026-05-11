@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"encoding/json"
 	"errors"
 
 	"backend/internal/shared/database"
@@ -50,7 +51,13 @@ func (r *TaskRepository) Update(task *domain.Task) error {
 }
 
 func (r *TaskRepository) UpdateAttachments(id uint, attachments []domain.TaskAttachment) error {
-	result := database.DB.Model(&domain.Task{}).Where("id = ?", id).Update("attachments", attachments)
+	normalizedAttachments := domain.NormalizeTaskAttachmentsForPersistence(attachments)
+	rawAttachments, err := json.Marshal(normalizedAttachments)
+	if err != nil {
+		return err
+	}
+
+	result := database.DB.Model(&domain.Task{}).Where("id = ?", id).Update("attachments", string(rawAttachments))
 	if result.Error != nil {
 		return result.Error
 	}
