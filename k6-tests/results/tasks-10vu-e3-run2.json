@@ -1,0 +1,204 @@
+{
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "setup": {
+                "id": "5c0f8025f7e0b6654089e5b00e950f1a",
+                "groups": {},
+                "checks": {
+                        "task creator sign-in status is 200": {
+                            "name": "task creator sign-in status is 200",
+                            "path": "::setup::task creator sign-in status is 200",
+                            "id": "d07ebf250b6538278d99a85f80120ead",
+                            "passes": 4,
+                            "fails": 0
+                        }
+                    },
+                "name": "setup",
+                "path": "::setup"
+            }
+        },
+        "checks": {
+            "task create status is 201": {
+                "path": "::task create status is 201",
+                "id": "5bc8d27fe806be23db4d66c22b76ac9c",
+                "passes": 1579,
+                "fails": 0,
+                "name": "task create status is 201"
+            }
+        }
+    },
+    "metrics": {
+        "http_req_connecting": {
+            "avg": 0.495273531269741,
+            "min": 0,
+            "med": 0,
+            "max": 72.628,
+            "p(95)": 0,
+            "p(99)": 0
+        },
+        "http_req_duration{name:task_create}": {
+            "p(99)": 218.74328,
+            "avg": 143.42981063964498,
+            "min": 108.544,
+            "med": 128.012,
+            "max": 1813.452,
+            "p(95)": 206.3911,
+            "thresholds": {
+                "p(95)<2500": false,
+                "p(99)<5000": false
+            }
+        },
+        "data_received": {
+            "count": 695614,
+            "rate": 3816.7236322419812
+        },
+        "vus": {
+            "value": 6,
+            "min": 0,
+            "max": 10
+        },
+        "http_reqs": {
+            "count": 1583,
+            "rate": 8.685669796523728
+        },
+        "iterations": {
+            "count": 1579,
+            "rate": 8.663722431276668
+        },
+        "http_req_waiting": {
+            "avg": 143.53448452305736,
+            "min": 107.848,
+            "med": 127.862,
+            "max": 1813.199,
+            "p(95)": 206.3448,
+            "p(99)": 219.03228
+        },
+        "checks": {
+            "passes": 1583,
+            "fails": 0,
+            "value": 1
+        },
+        "http_req_blocked": {
+            "avg": 0.5117365761212841,
+            "min": 0.003,
+            "med": 0.012,
+            "max": 73.82,
+            "p(95)": 0.021,
+            "p(99)": 0.20989999999999992
+        },
+        "http_req_receiving": {
+            "avg": 0.1458982943777637,
+            "min": 0.02,
+            "med": 0.134,
+            "max": 2.638,
+            "p(95)": 0.25889999999999996,
+            "p(99)": 0.5708999999999999
+        },
+        "http_req_sending": {
+            "max": 6.449,
+            "p(95)": 0.092,
+            "p(99)": 0.19318,
+            "avg": 0.061053063802905996,
+            "min": 0.009,
+            "med": 0.051
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 1583,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "http_req_duration{expected_response:true}": {
+            "min": 108.544,
+            "med": 128.079,
+            "max": 1813.452,
+            "p(95)": 206.4604,
+            "p(99)": 219.24908,
+            "avg": 143.74143588123778
+        },
+        "data_sent": {
+            "count": 1005382,
+            "rate": 5516.371491704749
+        },
+        "vus_max": {
+            "value": 10,
+            "min": 10,
+            "max": 10
+        },
+        "http_req_duration": {
+            "avg": 143.74143588123778,
+            "min": 108.544,
+            "med": 128.079,
+            "max": 1813.452,
+            "p(95)": 206.4604,
+            "p(99)": 219.24908,
+            "thresholds": {
+                "p(95)<2000": false,
+                "p(99)<4000": false
+            }
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(95)": 0,
+            "p(99)": 0
+        },
+        "iteration_duration": {
+            "avg": 1145.1859246694123,
+            "min": 1109.9495,
+            "med": 1129.349333,
+            "max": 2814.916375,
+            "p(95)": 1209.3136083000002,
+            "p(99)": 1227.8493077599999
+        }
+    },
+    "setup_data": [
+        {
+            "password": "Seneprojects2026!",
+            "spent_hours": 1,
+            "status": "abierto",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjMsIm5hbWUiOiJDYW1pbGEgVG9ycmVzIFPDoW5jaGV6IiwiZW1haWwiOiJjYW1pbGEudG9ycmVzLnNAdW5pYW5kZXMuZWR1LmNvIiwiZ2xvYmFsX3JvbGUiOiJtb25pdG9yIiwiaWF0IjoxNzc4NDgxMzk5LCJleHAiOjE3Nzg0ODQ5OTl9.bU-ZtWmX35oz8AfZb56qTgALcwXUWXezyhK4kc90Z5o",
+            "week_start_date": "2026-05-04",
+            "assignment_id": 1,
+            "email": "camila.torres.s@uniandes.edu.co",
+            "observations": "Carga monitor 1"
+        },
+        {
+            "week_start_date": "2026-05-04",
+            "assignment_id": 2,
+            "email": "nicolas.herrera@uniandes.edu.co",
+            "observations": "Carga monitor 2",
+            "password": "Seneprojects2026!",
+            "spent_hours": 2,
+            "status": "en desarrollo",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjQsIm5hbWUiOiJOaWNvbMOhcyBIZXJyZXJhIFLDrW9zIiwiZW1haWwiOiJuaWNvbGFzLmhlcnJlcmFAdW5pYW5kZXMuZWR1LmNvIiwiZ2xvYmFsX3JvbGUiOiJtb25pdG9yIiwiaWF0IjoxNzc4NDgxMzk5LCJleHAiOjE3Nzg0ODQ5OTl9.wWuhcZzJuwL24WJ-9lvRbM5yue4Tv72SQehYmBgWDRs"
+        },
+        {
+            "spent_hours": 2,
+            "status": "abierto",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjUsIm5hbWUiOiJNYXJpYW5hIExlw7NuIFZhcmdhcyIsImVtYWlsIjoibWFyaWFuYS5sZW9uQHVuaWFuZGVzLmVkdS5jbyIsImdsb2JhbF9yb2xlIjoiYXNzaXN0YW50IiwiaWF0IjoxNzc4NDgxMzk5LCJleHAiOjE3Nzg0ODQ5OTl9.4WYY7getUYAO0nn4-WnJHSm8sTwdAlRZ6-Gi63ZiAHc",
+            "week_start_date": "2026-05-04",
+            "assignment_id": 3,
+            "email": "mariana.leon@uniandes.edu.co",
+            "observations": "Carga assistant 1",
+            "password": "Seneprojects2026!"
+        },
+        {
+            "observations": "Carga assistant 2",
+            "password": "Seneprojects2026!",
+            "spent_hours": 1,
+            "status": "finalizado",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjYsIm5hbWUiOiJTYW50aWFnbyDDgWx2YXJleiBHw7NtZXoiLCJlbWFpbCI6InNhbnRpYWdvLmFsdmFyZXouZ0B1bmlhbmRlcy5lZHUuY28iLCJnbG9iYWxfcm9sZSI6ImFzc2lzdGFudCIsImlhdCI6MTc3ODQ4MTM5OSwiZXhwIjoxNzc4NDg0OTk5fQ.U8l6N8xCI4F-d1c1ZatTmSdOxY0MV61CgInmAtpYj-0",
+            "week_start_date": "2026-05-04",
+            "assignment_id": 4,
+            "email": "santiago.alvarez.g@uniandes.edu.co"
+        }
+    ]
+}
