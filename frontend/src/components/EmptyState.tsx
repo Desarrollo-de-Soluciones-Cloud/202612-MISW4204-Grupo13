@@ -1,7 +1,7 @@
-interface EmptyStateProps {
+type EmptyStateProps = Readonly<{
   colSpan: number;
   message?: string;
-}
+}>;
 
 export default function EmptyState({
   colSpan,
