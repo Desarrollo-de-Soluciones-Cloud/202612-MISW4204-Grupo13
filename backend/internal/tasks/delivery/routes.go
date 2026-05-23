@@ -41,7 +41,12 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer, cfg *sharedConfig.Co
 	updateTask := application.NewUpdateTask(repo, assignmentRepo, nil)
 	setTaskAttachments := application.NewSetTaskAttachments(repo)
 	deleteTask := application.NewDeleteTask(repo, nil)
-	handler := NewTaskHandler(createTask, listTasks, getTaskByID, updateTask, setTaskAttachments, deleteTask, assignmentRepo, workspaceRepo, taskFileStorage, cfg.GCSAttachmentsPrefix)
+	handler := NewTaskHandler(createTask, listTasks, getTaskByID, updateTask, setTaskAttachments, deleteTask, TaskHandlerDependencies{
+		AssignmentReader:  assignmentRepo,
+		WorkspaceReader:   workspaceRepo,
+		FileStorage:       taskFileStorage,
+		AttachmentsPrefix: cfg.GCSAttachmentsPrefix,
+	})
 
 	tasks := r.Group("/tasks")
 	{

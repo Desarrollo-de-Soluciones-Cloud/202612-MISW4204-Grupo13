@@ -241,10 +241,12 @@ func newTaskHandlerForTest(t *testing.T) (*deliverypkg.TaskHandler, *mockTaskRep
 		applicationpkg.NewUpdateTask(taskRepo, assignmentRepo, now),
 		applicationpkg.NewSetTaskAttachments(taskRepo),
 		applicationpkg.NewDeleteTask(taskRepo, now),
-		assignmentRepo,
-		workspaceRepo,
-		fileStorage,
-		"attachments",
+		deliverypkg.TaskHandlerDependencies{
+			AssignmentReader:  assignmentRepo,
+			WorkspaceReader:   workspaceRepo,
+			FileStorage:       fileStorage,
+			AttachmentsPrefix: "attachments",
+		},
 	)
 
 	return handler, taskRepo, fileStorage

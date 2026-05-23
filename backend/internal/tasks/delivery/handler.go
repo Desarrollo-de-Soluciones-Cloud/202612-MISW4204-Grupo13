@@ -40,6 +40,15 @@ type TaskFileStorage interface {
 	Delete(ctx context.Context, objectName string) error
 }
 
+const headerContentType = "Content-Type"
+
+type TaskHandlerDependencies struct {
+	AssignmentReader  TaskAssignmentReader
+	WorkspaceReader   TaskWorkspaceReader
+	FileStorage       TaskFileStorage
+	AttachmentsPrefix string
+}
+
 type TaskHandler struct {
 	createTask      *application.CreateTask
 	listTasks       *application.ListTasks
@@ -60,10 +69,7 @@ func NewTaskHandler(
 	updateTask *application.UpdateTask,
 	setTaskAttachments *application.SetTaskAttachments,
 	deleteTask *application.DeleteTask,
-	assignmentReader TaskAssignmentReader,
-	workspaceReader TaskWorkspaceReader,
-	fileStorage TaskFileStorage,
-	attachmentsPrefix string,
+	deps TaskHandlerDependencies,
 ) *TaskHandler {
 	return &TaskHandler{
 		createTask:      createTask,
@@ -72,41 +78,20 @@ func NewTaskHandler(
 		updateTask:      updateTask,
 		setTaskAttachments: setTaskAttachments,
 		deleteTask:      deleteTask,
-		assignmentReader: assignmentReader,
-		workspaceReader:  workspaceReader,
-		fileStorage:      fileStorage,
-		attachmentsPrefix: strings.Trim(attachmentsPrefix, "/"),
+		assignmentReader: deps.AssignmentReader,
+		workspaceReader:  deps.WorkspaceReader,
+		fileStorage:      deps.FileStorage,
+		attachmentsPrefix: strings.Trim(deps.AttachmentsPrefix, "/"),
 	}
 }
 
 func (h *TaskHandler) CreateTask(c *gin.Context) {
-	currentUser, ok := authDelivery.GetCurrentUser(c)
+	currentUser, req, existingAttachments, files, weekStartDate, ok := h.prepareTaskWriteRequest(c)
 	if !ok {
-		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
 		return
 	}
 
-	req, existingAttachments, files, err := h.bindTaskRequest(c)
-	if err != nil {
-		if isTaskValidationError(err) {
-			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-		} else {
-			sharedHelpers.RespondWithErrors(c, http.StatusBadRequest, mapBindingErrors(err))
-		}
-		return
-	}
-
-	if currentUser.GlobalRole != usersDomain.RoleAdmin {
-		assignment, err := h.assignmentReader.FindByID(req.AssignmentID)
-		if err == nil && !h.canAccessTask(currentUser.GlobalRole, currentUser.ID, assignment.UserID, req.AssignmentID) {
-			sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
-			return
-		}
-	}
-
-	weekStartDate, err := parseWeekStartDate(req.WeekStartDate)
-	if err != nil {
-		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+	if !h.authorizeTaskCreation(c, currentUser, req.AssignmentID) {
 		return
 	}
 
@@ -121,38 +106,13 @@ func (h *TaskHandler) CreateTask(c *gin.Context) {
 		Attachments:   existingAttachments,
 	})
 	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrTaskAssignmentNotFound),
-			errors.Is(err, domain.ErrTaskNotFound),
-			errors.Is(err, domain.ErrTaskWorkspaceNotFound):
-			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
-		case errors.Is(err, domain.ErrTaskWorkspaceClosed),
-			errors.Is(err, domain.ErrTaskWeekInactive):
-			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
-		case isTaskValidationError(err):
-			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-		default:
-			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-		}
+		h.respondCreateTaskError(c, err)
 		return
 	}
 
-	if len(files) > 0 {
-		attachments, uploadErr := h.uploadAttachments(output.ID, len(output.Attachments)+1, files)
-		if uploadErr != nil {
-			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-			return
-		}
-
-		output, err = h.setTaskAttachments.Execute(application.SetTaskAttachmentsInput{
-			ID:          output.ID,
-			Attachments: append(output.Attachments, attachments...),
-		})
-		if err != nil {
-			_ = h.deleteAttachmentsFromBucket(attachments)
-			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-			return
-		}
+	output, ok = h.appendUploadedAttachments(c, output, files)
+	if !ok {
+		return
 	}
 
 	c.JSON(http.StatusCreated, toTaskResponse(output))
@@ -216,48 +176,13 @@ func (h *TaskHandler) GetTaskByID(c *gin.Context) {
 }
 
 func (h *TaskHandler) UpdateTask(c *gin.Context) {
-	currentUser, ok := authDelivery.GetCurrentUser(c)
+	currentUser, id, existing, ok := h.authorizeExistingTaskAccess(c)
 	if !ok {
-		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
 		return
 	}
 
-	id, err := sharedHelpers.ParseResourceID(c.Param("id"))
-	if err != nil {
-		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-		return
-	}
-
-	existing, err := h.getTaskByID.Execute(application.GetTaskByIDInput{ID: id})
-	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrTaskNotFound),
-			errors.Is(err, domain.ErrTaskAssignmentNotFound):
-			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
-		default:
-			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-		}
-		return
-	}
-
-	if !h.canAccessTask(currentUser.GlobalRole, currentUser.ID, existing.UserID, existing.AssignmentID) {
-		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
-		return
-	}
-
-	req, existingAttachments, files, err := h.bindTaskRequest(c)
-	if err != nil {
-		if isTaskValidationError(err) {
-			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-		} else {
-			sharedHelpers.RespondWithErrors(c, http.StatusBadRequest, mapBindingErrors(err))
-		}
-		return
-	}
-
-	weekStartDate, err := parseWeekStartDate(req.WeekStartDate)
-	if err != nil {
-		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+	_, req, existingAttachments, files, weekStartDate, ok := h.prepareTaskWriteRequest(c)
+	if !ok {
 		return
 	}
 
@@ -273,36 +198,13 @@ func (h *TaskHandler) UpdateTask(c *gin.Context) {
 		Attachments:   existingAttachments,
 	})
 	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrTaskNotFound),
-			errors.Is(err, domain.ErrTaskAssignmentNotFound):
-			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
-		case isTaskValidationError(err):
-			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-		case errors.Is(err, domain.ErrTaskLateUpdateForbidden):
-			sharedHelpers.RespondWithError(c, http.StatusForbidden, err)
-		default:
-			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-		}
+		h.respondUpdateTaskError(c, err)
 		return
 	}
 
-	if len(files) > 0 {
-		newAttachments, uploadErr := h.uploadAttachments(output.ID, len(output.Attachments)+1, files)
-		if uploadErr != nil {
-			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-			return
-		}
-
-		output, err = h.setTaskAttachments.Execute(application.SetTaskAttachmentsInput{
-			ID:          output.ID,
-			Attachments: append(output.Attachments, newAttachments...),
-		})
-		if err != nil {
-			_ = h.deleteAttachmentsFromBucket(newAttachments)
-			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-			return
-		}
+	output, ok = h.appendUploadedAttachments(c, output, files)
+	if !ok {
+		return
 	}
 
 	if err := h.deleteAttachmentsFromBucket(diffRemovedAttachments(existing.Attachments, output.Attachments)); err != nil {
@@ -366,7 +268,7 @@ func (h *TaskHandler) DeleteTask(c *gin.Context) {
 }
 
 func (h *TaskHandler) bindTaskRequest(c *gin.Context) (CreateTaskRequest, []domain.TaskAttachment, []*multipart.FileHeader, error) {
-	if strings.Contains(c.GetHeader("Content-Type"), "multipart/form-data") {
+	if strings.Contains(c.GetHeader(headerContentType), "multipart/form-data") {
 		return h.bindMultipartTaskRequest(c)
 	}
 
@@ -444,7 +346,7 @@ func (h *TaskHandler) uploadAttachment(
 
 	fileName := sanitizeFileName(fileHeader.Filename)
 	objectName := buildAttachmentObjectName(h.attachmentsPrefix, taskID, fileNumber, fileName)
-	contentType := fileHeader.Header.Get("Content-Type")
+	contentType := fileHeader.Header.Get(headerContentType)
 	if strings.TrimSpace(contentType) == "" {
 		contentType = "application/octet-stream"
 	}
@@ -509,10 +411,145 @@ func (h *TaskHandler) DownloadAttachment(c *gin.Context) {
 		contentType = "application/octet-stream"
 	}
 
-	c.Header("Content-Type", contentType)
+	c.Header(headerContentType, contentType)
 	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(attachment.Name)))
 
 	if _, err := io.Copy(c.Writer, reader); err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+	}
+}
+
+func (h *TaskHandler) prepareTaskWriteRequest(c *gin.Context) (*authDomain.AuthenticatedUser, CreateTaskRequest, []domain.TaskAttachment, []*multipart.FileHeader, time.Time, bool) {
+	currentUser, ok := authDelivery.GetCurrentUser(c)
+	if !ok {
+		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
+		return nil, CreateTaskRequest{}, nil, nil, time.Time{}, false
+	}
+
+	req, existingAttachments, files, err := h.bindTaskRequest(c)
+	if err != nil {
+		h.respondTaskBindingError(c, err)
+		return nil, CreateTaskRequest{}, nil, nil, time.Time{}, false
+	}
+
+	weekStartDate, err := parseWeekStartDate(req.WeekStartDate)
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+		return nil, CreateTaskRequest{}, nil, nil, time.Time{}, false
+	}
+
+	return currentUser, req, existingAttachments, files, weekStartDate, true
+}
+
+func (h *TaskHandler) authorizeTaskCreation(c *gin.Context, currentUser *authDomain.AuthenticatedUser, assignmentID uint) bool {
+	if currentUser.GlobalRole == usersDomain.RoleAdmin {
+		return true
+	}
+
+	assignment, err := h.assignmentReader.FindByID(assignmentID)
+	if err == nil && !h.canAccessTask(currentUser.GlobalRole, currentUser.ID, assignment.UserID, assignmentID) {
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+		return false
+	}
+
+	return true
+}
+
+func (h *TaskHandler) authorizeExistingTaskAccess(c *gin.Context) (*authDomain.AuthenticatedUser, uint, *application.TaskOutput, bool) {
+	currentUser, ok := authDelivery.GetCurrentUser(c)
+	if !ok {
+		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
+		return nil, 0, nil, false
+	}
+
+	id, err := sharedHelpers.ParseResourceID(c.Param("id"))
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+		return nil, 0, nil, false
+	}
+
+	existing, err := h.getTaskByID.Execute(application.GetTaskByIDInput{ID: id})
+	if err != nil {
+		h.respondTaskLookupError(c, err)
+		return nil, 0, nil, false
+	}
+
+	if !h.canAccessTask(currentUser.GlobalRole, currentUser.ID, existing.UserID, existing.AssignmentID) {
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+		return nil, 0, nil, false
+	}
+
+	return currentUser, id, existing, true
+}
+
+func (h *TaskHandler) appendUploadedAttachments(c *gin.Context, output *application.TaskOutput, files []*multipart.FileHeader) (*application.TaskOutput, bool) {
+	if len(files) == 0 {
+		return output, true
+	}
+
+	attachments, uploadErr := h.uploadAttachments(output.ID, len(output.Attachments)+1, files)
+	if uploadErr != nil {
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		return nil, false
+	}
+
+	updatedOutput, err := h.setTaskAttachments.Execute(application.SetTaskAttachmentsInput{
+		ID:          output.ID,
+		Attachments: append(output.Attachments, attachments...),
+	})
+	if err != nil {
+		_ = h.deleteAttachmentsFromBucket(attachments)
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		return nil, false
+	}
+
+	return updatedOutput, true
+}
+
+func (h *TaskHandler) respondTaskBindingError(c *gin.Context, err error) {
+	if isTaskValidationError(err) {
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+		return
+	}
+
+	sharedHelpers.RespondWithErrors(c, http.StatusBadRequest, mapBindingErrors(err))
+}
+
+func (h *TaskHandler) respondTaskLookupError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, domain.ErrTaskNotFound), errors.Is(err, domain.ErrTaskAssignmentNotFound):
+		sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+	default:
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+	}
+}
+
+func (h *TaskHandler) respondCreateTaskError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, domain.ErrTaskAssignmentNotFound),
+		errors.Is(err, domain.ErrTaskNotFound),
+		errors.Is(err, domain.ErrTaskWorkspaceNotFound):
+		sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+	case errors.Is(err, domain.ErrTaskWorkspaceClosed),
+		errors.Is(err, domain.ErrTaskWeekInactive):
+		sharedHelpers.RespondWithError(c, http.StatusConflict, err)
+	case isTaskValidationError(err):
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+	default:
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+	}
+}
+
+func (h *TaskHandler) respondUpdateTaskError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, domain.ErrTaskNotFound),
+		errors.Is(err, domain.ErrTaskAssignmentNotFound):
+		sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+	case isTaskValidationError(err):
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+	case errors.Is(err, domain.ErrTaskLateUpdateForbidden):
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, err)
+	default:
 		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
 	}
 }
