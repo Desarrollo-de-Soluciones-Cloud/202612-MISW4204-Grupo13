@@ -6,14 +6,19 @@ import (
 	"testing"
 )
 
+const (
+	testDomainWorkspaceStartDate = "2026-06-01"
+	testDomainWorkspaceEndDate   = "2026-06-30"
+)
+
 func TestNewWorkspaceSuccess(t *testing.T) {
 	workspace, err := workspacesDomain.NewWorkspace(
 		1,
 		2,
 		" Algorithms ",
 		workspacesDomain.WorkspaceType("course"),
-		"2026-06-01",
-		"2026-06-30",
+		testDomainWorkspaceStartDate,
+		testDomainWorkspaceEndDate,
 		"notes",
 		workspacesDomain.ActiveState,
 	)
@@ -31,8 +36,8 @@ func TestNewWorkspaceRejectsMissingProfessorID(t *testing.T) {
 		0,
 		"Algorithms",
 		workspacesDomain.WorkspaceType("course"),
-		"2026-06-01",
-		"2026-06-30",
+		testDomainWorkspaceStartDate,
+		testDomainWorkspaceEndDate,
 		"notes",
 		workspacesDomain.ActiveState,
 	)
@@ -47,8 +52,8 @@ func TestUpdateWorkspaceRejectsInvalidDateSequence(t *testing.T) {
 		2,
 		"Algorithms",
 		workspacesDomain.WorkspaceType("course"),
-		"2026-06-01",
-		"2026-06-30",
+		testDomainWorkspaceStartDate,
+		testDomainWorkspaceEndDate,
 		"notes",
 		workspacesDomain.ActiveState,
 	)

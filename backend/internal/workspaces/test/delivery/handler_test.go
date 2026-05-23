@@ -11,12 +11,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	testWorkspacesPath      = "/workspaces"
+	testExpected200Msg      = "expected 200, got %d"
+)
+
 func TestCreateWorkspaceUnauthorized(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newWorkspaceHandlerForTest()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodPost, "/workspaces", nil)
+	c.Request = httptest.NewRequest(http.MethodPost, testWorkspacesPath, nil)
 
 	handler.CreateWorkspace(c)
 
@@ -33,7 +38,7 @@ func TestCreateWorkspaceProfessorForbiddenForOtherOwner(t *testing.T) {
 		"period_id": 1, "user_id": 99, "name": "Algorithms", "type": "course",
 		"initial_date": "2026-06-02", "final_date": "2026-06-30", "observations": "obs", "state": "active",
 	})
-	req := httptest.NewRequest(http.MethodPost, "/workspaces", bytes.NewBuffer(body))
+	req := httptest.NewRequest(http.MethodPost, testWorkspacesPath, bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -50,7 +55,7 @@ func TestListWorkspacesProfessorFiltersOwnRecords(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newWorkspaceHandlerForTest()
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/workspaces", nil)
+	req := httptest.NewRequest(http.MethodGet, testWorkspacesPath, nil)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Set("current_user", authenticatedUser(10, usersDomain.RoleProfessor))
@@ -58,7 +63,7 @@ func TestListWorkspacesProfessorFiltersOwnRecords(t *testing.T) {
 	handler.ListWorkspaces(c)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf(testExpected200Msg, w.Code)
 	}
 	var response struct {
 		Workspaces []any `json:"workspaces"`
@@ -117,7 +122,7 @@ func TestCloseWorkspaceSuccess(t *testing.T) {
 	handler.CloseWorkspace(c)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf(testExpected200Msg, w.Code)
 	}
 }
 
@@ -147,6 +152,6 @@ func TestListWorkspaceMonitorsAndAssistantsSuccess(t *testing.T) {
 	handler.ListWorkspaceMonitorsAndAssistants(c)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf(testExpected200Msg, w.Code)
 	}
 }
