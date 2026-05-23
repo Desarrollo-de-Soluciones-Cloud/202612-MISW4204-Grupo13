@@ -176,7 +176,7 @@ func (h *TaskHandler) GetTaskByID(c *gin.Context) {
 }
 
 func (h *TaskHandler) UpdateTask(c *gin.Context) {
-	currentUser, id, existing, ok := h.authorizeExistingTaskAccess(c)
+	_, id, existing, ok := h.authorizeExistingTaskAccess(c)
 	if !ok {
 		return
 	}
@@ -419,29 +419,29 @@ func (h *TaskHandler) DownloadAttachment(c *gin.Context) {
 	}
 }
 
-func (h *TaskHandler) prepareTaskWriteRequest(c *gin.Context) (*authDomain.AuthenticatedUser, CreateTaskRequest, []domain.TaskAttachment, []*multipart.FileHeader, time.Time, bool) {
+func (h *TaskHandler) prepareTaskWriteRequest(c *gin.Context) (authDomain.AuthenticatedUser, CreateTaskRequest, []domain.TaskAttachment, []*multipart.FileHeader, time.Time, bool) {
 	currentUser, ok := authDelivery.GetCurrentUser(c)
 	if !ok {
 		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
-		return nil, CreateTaskRequest{}, nil, nil, time.Time{}, false
+		return authDomain.AuthenticatedUser{}, CreateTaskRequest{}, nil, nil, time.Time{}, false
 	}
 
 	req, existingAttachments, files, err := h.bindTaskRequest(c)
 	if err != nil {
 		h.respondTaskBindingError(c, err)
-		return nil, CreateTaskRequest{}, nil, nil, time.Time{}, false
+		return authDomain.AuthenticatedUser{}, CreateTaskRequest{}, nil, nil, time.Time{}, false
 	}
 
 	weekStartDate, err := parseWeekStartDate(req.WeekStartDate)
 	if err != nil {
 		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-		return nil, CreateTaskRequest{}, nil, nil, time.Time{}, false
+		return authDomain.AuthenticatedUser{}, CreateTaskRequest{}, nil, nil, time.Time{}, false
 	}
 
 	return currentUser, req, existingAttachments, files, weekStartDate, true
 }
 
-func (h *TaskHandler) authorizeTaskCreation(c *gin.Context, currentUser *authDomain.AuthenticatedUser, assignmentID uint) bool {
+func (h *TaskHandler) authorizeTaskCreation(c *gin.Context, currentUser authDomain.AuthenticatedUser, assignmentID uint) bool {
 	if currentUser.GlobalRole == usersDomain.RoleAdmin {
 		return true
 	}
@@ -455,28 +455,28 @@ func (h *TaskHandler) authorizeTaskCreation(c *gin.Context, currentUser *authDom
 	return true
 }
 
-func (h *TaskHandler) authorizeExistingTaskAccess(c *gin.Context) (*authDomain.AuthenticatedUser, uint, *application.TaskOutput, bool) {
+func (h *TaskHandler) authorizeExistingTaskAccess(c *gin.Context) (authDomain.AuthenticatedUser, uint, *application.TaskOutput, bool) {
 	currentUser, ok := authDelivery.GetCurrentUser(c)
 	if !ok {
 		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
-		return nil, 0, nil, false
+		return authDomain.AuthenticatedUser{}, 0, nil, false
 	}
 
 	id, err := sharedHelpers.ParseResourceID(c.Param("id"))
 	if err != nil {
 		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-		return nil, 0, nil, false
+		return authDomain.AuthenticatedUser{}, 0, nil, false
 	}
 
 	existing, err := h.getTaskByID.Execute(application.GetTaskByIDInput{ID: id})
 	if err != nil {
 		h.respondTaskLookupError(c, err)
-		return nil, 0, nil, false
+		return authDomain.AuthenticatedUser{}, 0, nil, false
 	}
 
 	if !h.canAccessTask(currentUser.GlobalRole, currentUser.ID, existing.UserID, existing.AssignmentID) {
 		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
-		return nil, 0, nil, false
+		return authDomain.AuthenticatedUser{}, 0, nil, false
 	}
 
 	return currentUser, id, existing, true
