@@ -45,7 +45,6 @@ func NewUpdateWorkspace(workspaceRepo workspacesDomain.WorkspaceRepository, peri
 }
 
 func (uc *UpdateWorkspace) Execute(input UpdateWorkspaceInput) (*UpdateWorkspaceOutput, error) {
-	// Verify that workspace initial date is not greater than final date
 	if input.InitialDate > input.FinalDate {
 		return nil, workspacesDomain.ErrWorkspaceDateSequenceInvalid
 	}
@@ -58,47 +57,27 @@ func (uc *UpdateWorkspace) Execute(input UpdateWorkspaceInput) (*UpdateWorkspace
 		return nil, workspacesDomain.ErrWorkspaceClosedUpdateForbidden
 	}
 
-	// Verify that user_id cannot be changed
 	if input.UserID > 0 && input.UserID != workspace.UserID {
 		return nil, workspacesDomain.ErrWorkspaceUserIDChangeNotAllowed
 	}
 
-	// Verify that the user still has professor role (validate existing user)
-	user, err := uc.userRepository.FindByID(workspace.UserID)
-	if err != nil {
-		return nil, workspacesDomain.ErrWorkspaceUserNotFound
-	}
-	if user.GlobalRole != usersDomain.RoleProfessor {
-		return nil, workspacesDomain.ErrWorkspaceUserNotProfessor
+	if err := uc.validateWorkspaceOwner(workspace.UserID); err != nil {
+		return nil, err
 	}
 
-	// Verify that the period exists if PeriodID is provided
+	periodID := workspace.PeriodID
 	if input.PeriodID > 0 {
-		period, err := uc.periodRepository.FindByID(input.PeriodID)
-		if err != nil {
-			return nil, workspacesDomain.ErrWorkspacePeriodNotFound
-		}
-		if period.PeriodState == periodsDomain.ClosedPeriod {
-			return nil, workspacesDomain.ErrWorkspacePeriodClosed
-		}
-		workspace.PeriodID = input.PeriodID
+		periodID = input.PeriodID
 	}
 
-	// Get the period to validate workspace dates are within period range
-	period, err := uc.periodRepository.FindByID(workspace.PeriodID)
+	period, err := uc.findOpenPeriod(periodID)
 	if err != nil {
-		return nil, workspacesDomain.ErrWorkspacePeriodNotFound
+		return nil, err
 	}
-	if period.PeriodState == periodsDomain.ClosedPeriod {
-		return nil, workspacesDomain.ErrWorkspacePeriodClosed
-	}
+	workspace.PeriodID = periodID
 
-	// Verify that workspace dates are within period date range
-	if input.InitialDate < period.InitialDate {
-		return nil, workspacesDomain.ErrWorkspaceInitialDateOutOfRange
-	}
-	if input.FinalDate > period.FinalDate {
-		return nil, workspacesDomain.ErrWorkspaceFinalDateOutOfRange
+	if err := validateWorkspaceDatesWithinPeriod(input, period); err != nil {
+		return nil, err
 	}
 
 	if err := workspace.UpdateWorkspace(
@@ -127,4 +106,36 @@ func (uc *UpdateWorkspace) Execute(input UpdateWorkspaceInput) (*UpdateWorkspace
 		Observations: workspace.Observations,
 		State:        string(workspace.State),
 	}, nil
+}
+
+func (uc *UpdateWorkspace) validateWorkspaceOwner(userID uint) error {
+	user, err := uc.userRepository.FindByID(userID)
+	if err != nil {
+		return workspacesDomain.ErrWorkspaceUserNotFound
+	}
+	if user.GlobalRole != usersDomain.RoleProfessor {
+		return workspacesDomain.ErrWorkspaceUserNotProfessor
+	}
+	return nil
+}
+
+func (uc *UpdateWorkspace) findOpenPeriod(periodID uint) (*periodsDomain.Period, error) {
+	period, err := uc.periodRepository.FindByID(periodID)
+	if err != nil {
+		return nil, workspacesDomain.ErrWorkspacePeriodNotFound
+	}
+	if period.PeriodState == periodsDomain.ClosedPeriod {
+		return nil, workspacesDomain.ErrWorkspacePeriodClosed
+	}
+	return period, nil
+}
+
+func validateWorkspaceDatesWithinPeriod(input UpdateWorkspaceInput, period *periodsDomain.Period) error {
+	if input.InitialDate < period.InitialDate {
+		return workspacesDomain.ErrWorkspaceInitialDateOutOfRange
+	}
+	if input.FinalDate > period.FinalDate {
+		return workspacesDomain.ErrWorkspaceFinalDateOutOfRange
+	}
+	return nil
 }

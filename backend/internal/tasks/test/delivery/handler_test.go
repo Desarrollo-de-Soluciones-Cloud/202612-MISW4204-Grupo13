@@ -14,12 +14,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	testTasksPath          = "/tasks"
+	testHeaderContentType  = "Content-Type"
+	testAttachmentFilePath = "attachments/task_1/file_1_evidence.pdf"
+)
+
 func TestCreateTaskUnauthorized(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler, _, _ := newTaskHandlerForTest(t)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodPost, "/tasks", nil)
+	c.Request = httptest.NewRequest(http.MethodPost, testTasksPath, nil)
 
 	handler.CreateTask(c)
 
@@ -32,8 +38,8 @@ func TestCreateTaskBadRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler, _, _ := newTaskHandlerForTest(t)
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/tasks", bytes.NewBufferString(`{"assignment_id":"bad"}`))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, testTasksPath, bytes.NewBufferString(`{"assignment_id":"bad"}`))
+	req.Header.Set(testHeaderContentType, "application/json")
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Set("current_user", authenticatedUser(1, usersDomain.RoleAdmin))
@@ -58,8 +64,8 @@ func TestCreateTaskSuccess(t *testing.T) {
 		"observations":    "",
 		"week_start_date": "2026-04-06",
 	})
-	req := httptest.NewRequest(http.MethodPost, "/tasks", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, testTasksPath, bytes.NewBuffer(body))
+	req.Header.Set(testHeaderContentType, "application/json")
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Set("current_user", authenticatedUser(99, usersDomain.RoleAdmin))
@@ -82,7 +88,7 @@ func TestListTasksFiltersByAccess(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/tasks", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, testTasksPath, nil)
 	c.Set("current_user", authenticatedUser(10, usersDomain.RoleMonitor))
 
 	handler.ListTasks(c)
@@ -138,9 +144,9 @@ func TestDeleteTaskSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler, repo, storage := newTaskHandlerForTest(t)
 	task := seedTask(t, repo, 10, 1, time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC), []tasksDomain.TaskAttachment{
-		{ID: "att_1", Name: "evidence.pdf", FilePath: "attachments/task_1/file_1_evidence.pdf", ContentType: "application/pdf", Size: 4},
+		{ID: "att_1", Name: "evidence.pdf", FilePath: testAttachmentFilePath, ContentType: "application/pdf", Size: 4},
 	})
-	storage.uploaded["attachments/task_1/file_1_evidence.pdf"] = []byte("test")
+	storage.uploaded[testAttachmentFilePath] = []byte("test")
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -165,9 +171,9 @@ func TestDownloadAttachmentSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler, repo, storage := newTaskHandlerForTest(t)
 	task := seedTask(t, repo, 10, 1, time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC), []tasksDomain.TaskAttachment{
-		{ID: "att_1", Name: "evidence.pdf", FilePath: "attachments/task_1/file_1_evidence.pdf", ContentType: "application/pdf", Size: 4},
+		{ID: "att_1", Name: "evidence.pdf", FilePath: testAttachmentFilePath, ContentType: "application/pdf", Size: 4},
 	})
-	storage.uploaded["attachments/task_1/file_1_evidence.pdf"] = []byte("test")
+	storage.uploaded[testAttachmentFilePath] = []byte("test")
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -213,8 +219,8 @@ func TestCreateTaskMultipartWithAttachment(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/tasks", &body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req := httptest.NewRequest(http.MethodPost, testTasksPath, &body)
+	req.Header.Set(testHeaderContentType, writer.FormDataContentType())
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Set("current_user", authenticatedUser(99, usersDomain.RoleAdmin))

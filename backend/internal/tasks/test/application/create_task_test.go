@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+const (
+	testCreateTaskTitle       = "Prepare class"
+	testCreateTaskDescription = "Review slides"
+)
+
 func TestCreateTaskRejectsInactiveWeek(t *testing.T) {
 	taskRepo := newMockTaskRepository()
 	assignmentRepo := newMockAssignmentRepository()
@@ -22,8 +27,8 @@ func TestCreateTaskRejectsInactiveWeek(t *testing.T) {
 
 	_, err := createTask.Execute(applicationpkg.CreateTaskInput{
 		AssignmentID:  10,
-		Title:         "Prepare class",
-		Description:   "Review slides",
+		Title:         testCreateTaskTitle,
+		Description:   testCreateTaskDescription,
 		Status:        domain.TaskStatusAbierto,
 		SpentHours:    2,
 		Observations:  "",
@@ -43,8 +48,8 @@ func TestCreateTaskRejectsMissingAssignment(t *testing.T) {
 
 	_, err := createTask.Execute(applicationpkg.CreateTaskInput{
 		AssignmentID:  10,
-		Title:         "Prepare class",
-		Description:   "Review slides",
+		Title:         testCreateTaskTitle,
+		Description:   testCreateTaskDescription,
 		Status:        domain.TaskStatusAbierto,
 		SpentHours:    2,
 		Observations:  "",
@@ -69,8 +74,8 @@ func TestCreateTaskRejectsLegacyEnglishStatus(t *testing.T) {
 
 	_, err := createTask.Execute(applicationpkg.CreateTaskInput{
 		AssignmentID:  10,
-		Title:         "Prepare class",
-		Description:   "Review slides",
+		Title:         testCreateTaskTitle,
+		Description:   testCreateTaskDescription,
 		Status:        domain.TaskStatus("open"),
 		SpentHours:    2,
 		Observations:  "",
@@ -94,8 +99,8 @@ func TestCreateTaskRejectsClosedWorkspace(t *testing.T) {
 
 	_, err := createTask.Execute(applicationpkg.CreateTaskInput{
 		AssignmentID:  10,
-		Title:         "Prepare class",
-		Description:   "Review slides",
+		Title:         testCreateTaskTitle,
+		Description:   testCreateTaskDescription,
 		Status:        domain.TaskStatusAbierto,
 		SpentHours:    2,
 		Observations:  "",

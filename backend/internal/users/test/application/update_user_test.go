@@ -7,6 +7,8 @@ import (
 	"testing"
 )
 
+const testCreateUserSuccessMsg = "expected create user to succeed, got %v"
+
 func TestUpdateUserSuccess(t *testing.T) {
 	mockRepo := newMockUserRepository()
 	createUser := applicationpkg.NewCreateUser(mockRepo)
@@ -19,7 +21,7 @@ func TestUpdateUserSuccess(t *testing.T) {
 		GlobalRole: domain.RoleProfessor,
 	})
 	if err != nil {
-		t.Fatalf("expected create user to succeed, got %v", err)
+		t.Fatalf(testCreateUserSuccessMsg, err)
 	}
 
 	output, err := updateUser.Execute(applicationpkg.UpdateUserInput{
@@ -105,7 +107,7 @@ func TestUpdateUserInvalidRole(t *testing.T) {
 		GlobalRole: domain.RoleProfessor,
 	})
 	if err != nil {
-		t.Fatalf("expected create user to succeed, got %v", err)
+		t.Fatalf(testCreateUserSuccessMsg, err)
 	}
 
 	_, err = updateUser.Execute(applicationpkg.UpdateUserInput{
@@ -131,7 +133,7 @@ func TestUpdateUserPreservesPasswordAndReplacesEmailLookup(t *testing.T) {
 		GlobalRole: domain.RoleProfessor,
 	})
 	if err != nil {
-		t.Fatalf("expected create user to succeed, got %v", err)
+		t.Fatalf(testCreateUserSuccessMsg, err)
 	}
 
 	originalUser, err := mockRepo.FindByID(created.ID)

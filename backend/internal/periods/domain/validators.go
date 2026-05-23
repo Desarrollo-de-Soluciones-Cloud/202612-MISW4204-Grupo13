@@ -9,6 +9,7 @@ const (
 	PeriodNameLength = 7
 	WeeksCount8      = 8
 	WeeksCount16     = 16
+	periodDateLayout = "2006-01-02"
 )
 
 func NormalizePeriodName(name string) string {
@@ -29,7 +30,7 @@ func ValidatePeriodName(name string) error {
 func ValidatePeriodInitialDate(date string) error {
 	timmedDate := strings.TrimSpace(date)
 
-	_, err := time.Parse("2006-01-02", date)
+	_, err := time.Parse(periodDateLayout, date)
 	if err != nil {
 		return ErrPeriodInitialDateWrongFormat
 	}
@@ -44,7 +45,7 @@ func ValidatePeriodInitialDate(date string) error {
 }
 
 func ValidatePeriodInitialDateIsMonday(date string) error {
-	parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(date))
+	parsedDate, err := time.Parse(periodDateLayout, strings.TrimSpace(date))
 	if err != nil {
 		return ErrPeriodInitialDateWrongFormat
 	}
@@ -57,13 +58,13 @@ func ValidatePeriodInitialDateIsMonday(date string) error {
 }
 
 func ValidatePeriodInitialDateIsFuture(date string) error {
-	parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(date))
+	parsedDate, err := time.Parse(periodDateLayout, strings.TrimSpace(date))
 	if err != nil {
 		return ErrPeriodInitialDateWrongFormat
 	}
 
 	now := time.Now()
-	if parsedDate.Before(now) || parsedDate.Format("2006-01-02") == now.Format("2006-01-02") {
+	if parsedDate.Before(now) || parsedDate.Format(periodDateLayout) == now.Format(periodDateLayout) {
 		return ErrPeriodInitialDateMustBeFuture
 	}
 
@@ -101,24 +102,24 @@ func CalculatePeriodFinalDate(initialDate string, weeksCount int) (string, error
 		return "", err
 	}
 
-	parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(initialDate))
+	parsedDate, err := time.Parse(periodDateLayout, strings.TrimSpace(initialDate))
 	if err != nil {
 		return "", ErrPeriodInitialDateWrongFormat
 	}
 
 	// final_date = initial_date + (weeks_count * 7) - 1 day (to make it Sunday)
 	finalDate := parsedDate.AddDate(0, 0, (weeksCount*7)-1)
-	return finalDate.Format("2006-01-02"), nil
+	return finalDate.Format(periodDateLayout), nil
 }
 
 func CalculatePeriodInscriptionFinalDate(initialDate string) (string, error) {
-	parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(initialDate))
+	parsedDate, err := time.Parse(periodDateLayout, strings.TrimSpace(initialDate))
 	if err != nil {
 		return "", ErrPeriodInitialDateWrongFormat
 	}
 
 	// inscription_final_date = initial_date - 1 day
 	inscriptionFinalDate := parsedDate.AddDate(0, 0, -1)
-	return inscriptionFinalDate.Format("2006-01-02"), nil
+	return inscriptionFinalDate.Format(periodDateLayout), nil
 }
 

@@ -8,6 +8,8 @@ import (
 	"cloud.google.com/go/storage"
 )
 
+const errGCSObjectNameRequired = "gcs object name is required"
+
 type GCSStorage struct {
 	client     *storage.Client
 	bucketName string
@@ -31,7 +33,7 @@ func NewGCSStorage(ctx context.Context, bucketName string) (*GCSStorage, error) 
 
 func (s *GCSStorage) Upload(ctx context.Context, objectName string, reader io.Reader, contentType string) error {
 	if objectName == "" {
-		return errors.New("gcs object name is required")
+		return errors.New(errGCSObjectNameRequired)
 	}
 
 	if contentType == "" {
@@ -51,7 +53,7 @@ func (s *GCSStorage) Upload(ctx context.Context, objectName string, reader io.Re
 
 func (s *GCSStorage) Download(ctx context.Context, objectName string) (io.ReadCloser, error) {
 	if objectName == "" {
-		return nil, errors.New("gcs object name is required")
+		return nil, errors.New(errGCSObjectNameRequired)
 	}
 
 	return s.client.Bucket(s.bucketName).Object(objectName).NewReader(ctx)
@@ -59,7 +61,7 @@ func (s *GCSStorage) Download(ctx context.Context, objectName string) (io.ReadCl
 
 func (s *GCSStorage) Delete(ctx context.Context, objectName string) error {
 	if objectName == "" {
-		return errors.New("gcs object name is required")
+		return errors.New(errGCSObjectNameRequired)
 	}
 
 	return s.client.Bucket(s.bucketName).Object(objectName).Delete(ctx)

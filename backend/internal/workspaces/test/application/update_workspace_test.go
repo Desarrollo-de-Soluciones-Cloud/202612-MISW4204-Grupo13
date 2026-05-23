@@ -10,13 +10,19 @@ import (
 	"time"
 )
 
+const (
+	testWorkspaceDateLayout = "2006-01-02"
+	testWorkspaceStartDate  = "2026-06-01"
+	testWorkspaceEndDate    = "2026-06-30"
+)
+
 func TestUpdateWorkspaceRejectsClosedWorkspace(t *testing.T) {
-	workspaceRepo := &workspaceRepoStub{workspace: &workspacesDomain.Workspace{ID: 1, PeriodID: 1, UserID: 10, Name: "WS", Type: workspacesDomain.CourseType, InitialDate: "2026-06-01", FinalDate: "2026-06-30", Observations: "obs", State: workspacesDomain.ClosedState}}
-	periodRepo := &periodRepoStub{period: &periodsDomain.Period{ID: 1, PeriodState: periodsDomain.ActivePeriod, InscriptionFinalDate: time.Now().AddDate(0, 0, 1).Format("2006-01-02")}}
+	workspaceRepo := &workspaceRepoStub{workspace: &workspacesDomain.Workspace{ID: 1, PeriodID: 1, UserID: 10, Name: "WS", Type: workspacesDomain.CourseType, InitialDate: testWorkspaceStartDate, FinalDate: testWorkspaceEndDate, Observations: "obs", State: workspacesDomain.ClosedState}}
+	periodRepo := &periodRepoStub{period: &periodsDomain.Period{ID: 1, PeriodState: periodsDomain.ActivePeriod, InscriptionFinalDate: time.Now().AddDate(0, 0, 1).Format(testWorkspaceDateLayout)}}
 	userRepo := &userRepoStub{user: &usersDomain.User{ID: 10, GlobalRole: usersDomain.RoleProfessor}}
 
 	uc := workspacesApplication.NewUpdateWorkspace(workspaceRepo, periodRepo, userRepo)
-	_, err := uc.Execute(workspacesApplication.UpdateWorkspaceInput{ID: 1, PeriodID: 1, Name: "Updated", Type: "course", InitialDate: "2026-06-01", FinalDate: "2026-06-30", Observations: "obs", State: "active"})
+	_, err := uc.Execute(workspacesApplication.UpdateWorkspaceInput{ID: 1, PeriodID: 1, Name: "Updated", Type: "course", InitialDate: testWorkspaceStartDate, FinalDate: testWorkspaceEndDate, Observations: "obs", State: "active"})
 
 	if !errors.Is(err, workspacesDomain.ErrWorkspaceClosedUpdateForbidden) {
 		t.Fatalf("expected %v, got %v", workspacesDomain.ErrWorkspaceClosedUpdateForbidden, err)
@@ -31,8 +37,8 @@ func TestUpdateWorkspaceSuccess(t *testing.T) {
 			UserID:       10,
 			Name:         "WS",
 			Type:         workspacesDomain.CourseType,
-			InitialDate:  "2026-06-01",
-			FinalDate:    "2026-06-30",
+			InitialDate:  testWorkspaceStartDate,
+			FinalDate:    testWorkspaceEndDate,
 			Observations: "obs",
 			State:        workspacesDomain.ActiveState,
 		},
@@ -41,9 +47,9 @@ func TestUpdateWorkspaceSuccess(t *testing.T) {
 		period: &periodsDomain.Period{
 			ID:                   1,
 			PeriodState:          periodsDomain.ActivePeriod,
-			InitialDate:          "2026-06-01",
-			FinalDate:            "2026-06-30",
-			InscriptionFinalDate: time.Now().AddDate(0, 0, 1).Format("2006-01-02"),
+			InitialDate:          testWorkspaceStartDate,
+			FinalDate:            testWorkspaceEndDate,
+			InscriptionFinalDate: time.Now().AddDate(0, 0, 1).Format(testWorkspaceDateLayout),
 		},
 	}
 	userRepo := &userRepoStub{user: &usersDomain.User{ID: 10, GlobalRole: usersDomain.RoleProfessor}}

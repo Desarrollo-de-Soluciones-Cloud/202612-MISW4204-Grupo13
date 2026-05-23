@@ -7,6 +7,22 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+var assignmentBindingErrors = map[string]map[string]error{
+	"UserID": {
+		"required": domain.ErrAssignmentUserIDRequired,
+	},
+	"WorkspaceID": {
+		"required": domain.ErrAssignmentWorkspaceIDRequired,
+	},
+	"Role": {
+		"required": domain.ErrAssignmentRoleRequired,
+	},
+	"WeeklyHours": {
+		"required": domain.ErrAssignmentWeeklyHoursInvalid,
+		"min":      domain.ErrAssignmentWeeklyHoursInvalid,
+	},
+}
+
 func mapBindingErrors(err error) []error {
 	var validationErrors validator.ValidationErrors
 	if !errors.As(err, &validationErrors) {
@@ -15,27 +31,8 @@ func mapBindingErrors(err error) []error {
 
 	result := make([]error, 0, len(validationErrors))
 	for _, validationError := range validationErrors {
-		switch validationError.StructField() {
-		case "UserID":
-			switch validationError.Tag() {
-			case "required":
-				result = append(result, domain.ErrAssignmentUserIDRequired)
-			}
-		case "WorkspaceID":
-			switch validationError.Tag() {
-			case "required":
-				result = append(result, domain.ErrAssignmentWorkspaceIDRequired)
-			}
-		case "Role":
-			switch validationError.Tag() {
-			case "required":
-				result = append(result, domain.ErrAssignmentRoleRequired)
-			}
-		case "WeeklyHours":
-			switch validationError.Tag() {
-			case "required", "min":
-				result = append(result, domain.ErrAssignmentWeeklyHoursInvalid)
-			}
+		if mappedErr := mapAssignmentBindingError(validationError); mappedErr != nil {
+			result = append(result, mappedErr)
 		}
 	}
 
@@ -44,6 +41,15 @@ func mapBindingErrors(err error) []error {
 	}
 
 	return result
+}
+
+func mapAssignmentBindingError(validationError validator.FieldError) error {
+	fieldErrors, ok := assignmentBindingErrors[validationError.StructField()]
+	if !ok {
+		return nil
+	}
+
+	return fieldErrors[validationError.Tag()]
 }
 
 func isAssignmentValidationError(err error) bool {

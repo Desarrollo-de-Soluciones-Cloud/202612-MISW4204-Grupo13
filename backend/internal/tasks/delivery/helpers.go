@@ -11,36 +11,43 @@ import (
 
 const dateLayout = "2006-01-02"
 
+var taskBindingErrors = map[string]map[string]error{
+	"AssignmentID": {
+		"required": domain.ErrTaskAssignmentIDRequired,
+	},
+	"Title": {
+		"required": domain.ErrTaskTitleRequired,
+	},
+	"Description": {
+		"required": domain.ErrTaskDescriptionRequired,
+	},
+	"Status": {
+		"required": domain.ErrTaskStatusRequired,
+	},
+	"SpentHours": {
+		"required": domain.ErrTaskSpentHoursRequired,
+	},
+	"WeekStartDate": {
+		"required": domain.ErrTaskWeekStartDateRequired,
+	},
+}
+
+var taskUnmarshalTypeErrors = map[string]error{
+	"assignment_id":  domain.ErrTaskAssignmentIDRequired,
+	"AssignmentID":   domain.ErrTaskAssignmentIDRequired,
+	"spent_hours":    domain.ErrTaskSpentHoursInvalid,
+	"SpentHours":     domain.ErrTaskSpentHoursInvalid,
+	"week_start_date": domain.ErrTaskWeekStartDateInvalid,
+	"WeekStartDate":  domain.ErrTaskWeekStartDateInvalid,
+}
+
 func mapBindingErrors(err error) []error {
 	var validationErrors validator.ValidationErrors
 	if errors.As(err, &validationErrors) {
 		result := make([]error, 0, len(validationErrors))
 		for _, validationError := range validationErrors {
-			switch validationError.StructField() {
-			case "AssignmentID":
-				if validationError.Tag() == "required" {
-					result = append(result, domain.ErrTaskAssignmentIDRequired)
-				}
-			case "Title":
-				if validationError.Tag() == "required" {
-					result = append(result, domain.ErrTaskTitleRequired)
-				}
-			case "Description":
-				if validationError.Tag() == "required" {
-					result = append(result, domain.ErrTaskDescriptionRequired)
-				}
-			case "Status":
-				if validationError.Tag() == "required" {
-					result = append(result, domain.ErrTaskStatusRequired)
-				}
-			case "SpentHours":
-				if validationError.Tag() == "required" {
-					result = append(result, domain.ErrTaskSpentHoursRequired)
-				}
-			case "WeekStartDate":
-				if validationError.Tag() == "required" {
-					result = append(result, domain.ErrTaskWeekStartDateRequired)
-				}
+			if mappedErr := mapTaskBindingError(validationError); mappedErr != nil {
+				result = append(result, mappedErr)
 			}
 		}
 
@@ -51,19 +58,22 @@ func mapBindingErrors(err error) []error {
 
 	var unmarshalTypeError *json.UnmarshalTypeError
 	if errors.As(err, &unmarshalTypeError) {
-		switch unmarshalTypeError.Field {
-		case "assignment_id", "AssignmentID":
-			return []error{domain.ErrTaskAssignmentIDRequired}
-		case "spent_hours", "SpentHours":
-			return []error{domain.ErrTaskSpentHoursInvalid}
-		case "week_start_date", "WeekStartDate":
-			return []error{domain.ErrTaskWeekStartDateInvalid}
-		default:
-			return []error{domain.ErrInvalidInput}
+		if mappedErr := taskUnmarshalTypeErrors[unmarshalTypeError.Field]; mappedErr != nil {
+			return []error{mappedErr}
 		}
+		return []error{domain.ErrInvalidInput}
 	}
 
 	return []error{domain.ErrInvalidInput}
+}
+
+func mapTaskBindingError(validationError validator.FieldError) error {
+	fieldErrors, ok := taskBindingErrors[validationError.StructField()]
+	if !ok {
+		return nil
+	}
+
+	return fieldErrors[validationError.Tag()]
 }
 
 func parseWeekStartDate(rawDate string) (time.Time, error) {

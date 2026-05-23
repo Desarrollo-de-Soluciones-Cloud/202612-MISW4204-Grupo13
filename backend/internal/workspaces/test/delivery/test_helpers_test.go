@@ -10,6 +10,11 @@ import (
 	workspacesDomain "backend/internal/workspaces/domain"
 )
 
+const (
+	testDeliveryWorkspaceInitialDate = "2026-06-02"
+	testDeliveryWorkspaceFinalDate   = "2026-06-30"
+)
+
 type workspaceRepoStub struct {
 	workspace  *workspacesDomain.Workspace
 	workspaces []workspacesDomain.Workspace
@@ -144,17 +149,17 @@ func (r *assignmentRepoStub) Update(assignment *assignmentsDomain.Assignment) er
 func newWorkspaceHandlerForTest() *deliverypkg.WorkspaceHandler {
 	workspaceRepo := &workspaceRepoStub{
 		workspaces: []workspacesDomain.Workspace{
-			{ID: 1, PeriodID: 1, UserID: 10, Name: "Algorithms", Type: workspacesDomain.CourseType, InitialDate: "2026-06-02", FinalDate: "2026-06-30", Observations: "obs", State: workspacesDomain.ActiveState},
-			{ID: 2, PeriodID: 1, UserID: 99, Name: "AI Lab", Type: workspacesDomain.ProjectType, InitialDate: "2026-06-02", FinalDate: "2026-06-30", Observations: "obs", State: workspacesDomain.ActiveState},
+			{ID: 1, PeriodID: 1, UserID: 10, Name: "Algorithms", Type: workspacesDomain.CourseType, InitialDate: testDeliveryWorkspaceInitialDate, FinalDate: testDeliveryWorkspaceFinalDate, Observations: "obs", State: workspacesDomain.ActiveState},
+			{ID: 2, PeriodID: 1, UserID: 99, Name: "AI Lab", Type: workspacesDomain.ProjectType, InitialDate: testDeliveryWorkspaceInitialDate, FinalDate: testDeliveryWorkspaceFinalDate, Observations: "obs", State: workspacesDomain.ActiveState},
 		},
-		workspace: &workspacesDomain.Workspace{ID: 1, PeriodID: 1, UserID: 10, Name: "Algorithms", Type: workspacesDomain.CourseType, InitialDate: "2026-06-02", FinalDate: "2026-06-30", Observations: "obs", State: workspacesDomain.ActiveState},
+		workspace: &workspacesDomain.Workspace{ID: 1, PeriodID: 1, UserID: 10, Name: "Algorithms", Type: workspacesDomain.CourseType, InitialDate: testDeliveryWorkspaceInitialDate, FinalDate: testDeliveryWorkspaceFinalDate, Observations: "obs", State: workspacesDomain.ActiveState},
 	}
 	periodRepo := &periodRepoStub{
 		period: &periodsDomain.Period{
 			ID:                   1,
 			PeriodState:          periodsDomain.ActivePeriod,
 			InitialDate:          "2026-06-01",
-			FinalDate:            "2026-06-30",
+			FinalDate:            testDeliveryWorkspaceFinalDate,
 			InscriptionFinalDate: "2099-06-01",
 		},
 	}
@@ -173,16 +178,16 @@ func newWorkspaceHandlerForTest() *deliverypkg.WorkspaceHandler {
 		},
 	}
 
-	return deliverypkg.NewWorkspaceHandler(
-		applicationpkg.NewCreateWorkspace(workspaceRepo, periodRepo, userRepo),
-		applicationpkg.NewListWorkspaces(workspaceRepo),
-		applicationpkg.NewListWorkspacesByPeriod(workspaceRepo),
-		applicationpkg.NewGetWorkspaceByID(workspaceRepo),
-		applicationpkg.NewUpdateWorkspace(workspaceRepo, periodRepo, userRepo),
-		applicationpkg.NewDeleteWorkspace(workspaceRepo),
-		applicationpkg.NewCloseWorkspace(workspaceRepo, userRepo),
-		applicationpkg.NewListWorkspaceMonitorsAndAssistants(workspaceRepo, assignmentRepo, userRepo),
-	)
+	return deliverypkg.NewWorkspaceHandler(deliverypkg.WorkspaceHandlerUseCases{
+		CreateWorkspace:                    applicationpkg.NewCreateWorkspace(workspaceRepo, periodRepo, userRepo),
+		ListWorkspaces:                     applicationpkg.NewListWorkspaces(workspaceRepo),
+		ListWorkspacesByPeriod:             applicationpkg.NewListWorkspacesByPeriod(workspaceRepo),
+		GetWorkspaceByID:                   applicationpkg.NewGetWorkspaceByID(workspaceRepo),
+		UpdateWorkspace:                    applicationpkg.NewUpdateWorkspace(workspaceRepo, periodRepo, userRepo),
+		DeleteWorkspace:                    applicationpkg.NewDeleteWorkspace(workspaceRepo),
+		CloseWorkspace:                     applicationpkg.NewCloseWorkspace(workspaceRepo, userRepo),
+		ListWorkspaceMonitorsAndAssistants: applicationpkg.NewListWorkspaceMonitorsAndAssistants(workspaceRepo, assignmentRepo, userRepo),
+	})
 }
 
 func authenticatedUser(id uint, role usersDomain.UserRole) authDomain.AuthenticatedUser {

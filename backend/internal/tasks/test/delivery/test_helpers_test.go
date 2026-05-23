@@ -195,19 +195,19 @@ func seedWeek(repo *mockWeekRepository, periodID uint, initialDate string) {
 
 func seedTask(t *testing.T, repo *mockTaskRepository, userID, assignmentID uint, weekStartDate time.Time, attachments []tasksDomain.TaskAttachment) *tasksDomain.Task {
 	t.Helper()
-	task, err := tasksDomain.NewTask(
-		userID,
-		assignmentID,
-		nil,
-		"Prepare class",
-		"Review slides",
-		tasksDomain.TaskStatusAbierto,
-		2,
-		"",
-		weekStartDate,
-		false,
-		attachments,
-	)
+	task, err := tasksDomain.NewTask(tasksDomain.TaskInput{
+		UserID:        userID,
+		AssignmentID:  assignmentID,
+		WeekID:        nil,
+		Title:         "Prepare class",
+		Description:   "Review slides",
+		Status:        tasksDomain.TaskStatusAbierto,
+		SpentHours:    2,
+		Observations:  "",
+		WeekStartDate: weekStartDate,
+		Late:          false,
+		Attachments:   attachments,
+	})
 	if err != nil {
 		t.Fatalf("expected seed task, got %v", err)
 	}
@@ -241,10 +241,12 @@ func newTaskHandlerForTest(t *testing.T) (*deliverypkg.TaskHandler, *mockTaskRep
 		applicationpkg.NewUpdateTask(taskRepo, assignmentRepo, now),
 		applicationpkg.NewSetTaskAttachments(taskRepo),
 		applicationpkg.NewDeleteTask(taskRepo, now),
-		assignmentRepo,
-		workspaceRepo,
-		fileStorage,
-		"attachments",
+		deliverypkg.TaskHandlerDependencies{
+			AssignmentReader:  assignmentRepo,
+			WorkspaceReader:   workspaceRepo,
+			FileStorage:       fileStorage,
+			AttachmentsPrefix: "attachments",
+		},
 	)
 
 	return handler, taskRepo, fileStorage

@@ -25,25 +25,35 @@ type WorkspaceHandler struct {
 	listWorkspaceMonitorsAndAssistants       *application.ListWorkspaceMonitorsAndAssistants
 }
 
+type WorkspaceHandlerUseCases struct {
+	CreateWorkspace                    *application.CreateWorkspace
+	ListWorkspaces                     *application.ListWorkspaces
+	ListWorkspacesByPeriod             *application.ListWorkspacesByPeriod
+	GetWorkspaceByID                   *application.GetWorkspaceByID
+	UpdateWorkspace                    *application.UpdateWorkspace
+	DeleteWorkspace                    *application.DeleteWorkspace
+	CloseWorkspace                     *application.CloseWorkspace
+	ListWorkspaceMonitorsAndAssistants *application.ListWorkspaceMonitorsAndAssistants
+}
+
+type workspaceFilters struct {
+	requestedUserID uint
+	typeFilter      string
+	stateFilter     string
+}
+
 func NewWorkspaceHandler(
-	createWorkspace *application.CreateWorkspace,
-	listWorkspaces *application.ListWorkspaces,
-	listWorkspacesByPeriod *application.ListWorkspacesByPeriod,
-	getWorkspaceByID *application.GetWorkspaceByID,
-	updateWorkspace *application.UpdateWorkspace,
-	deleteWorkspace *application.DeleteWorkspace,
-	closeWorkspace *application.CloseWorkspace,
-	listWorkspaceMonitorsAndAssistants *application.ListWorkspaceMonitorsAndAssistants,
+	useCases WorkspaceHandlerUseCases,
 ) *WorkspaceHandler {
 	return &WorkspaceHandler{
-		createWorkspace:                          createWorkspace,
-		listWorkspaces:                           listWorkspaces,
-		listWorkspacesByPeriod:                   listWorkspacesByPeriod,
-		getWorkspaceByID:                         getWorkspaceByID,
-		updateWorkspace:                          updateWorkspace,
-		deleteWorkspace:                          deleteWorkspace,
-		closeWorkspace:                           closeWorkspace,
-		listWorkspaceMonitorsAndAssistants:       listWorkspaceMonitorsAndAssistants,
+		createWorkspace:                          useCases.CreateWorkspace,
+		listWorkspaces:                           useCases.ListWorkspaces,
+		listWorkspacesByPeriod:                   useCases.ListWorkspacesByPeriod,
+		getWorkspaceByID:                         useCases.GetWorkspaceByID,
+		updateWorkspace:                          useCases.UpdateWorkspace,
+		deleteWorkspace:                          useCases.DeleteWorkspace,
+		closeWorkspace:                           useCases.CloseWorkspace,
+		listWorkspaceMonitorsAndAssistants:       useCases.ListWorkspaceMonitorsAndAssistants,
 	}
 }
 
@@ -119,31 +129,14 @@ func (h *WorkspaceHandler) ListWorkspaces(c *gin.Context) {
 		return
 	}
 
-	// Check for user_id filter
-	userIDQuery := c.Query("user_id")
-	if userIDQuery != "" {
-		// Professors cannot filter by a different user_id
-		if currentUser.GlobalRole == usersDomain.RoleProfessor {
-			requestedUserID, err := sharedHelpers.ParseResourceID(userIDQuery)
-			if err != nil {
-				sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-				return
-			}
-			if requestedUserID != currentUser.ID {
-				sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
-				return
-			}
-		}
-		// Admin can filter by any user_id - this will be handled in filtering below
+	filters, ok := h.buildWorkspaceFilters(c, currentUser)
+	if !ok {
+		return
 	}
-
-	// Get type and state filters
-	typeFilter := c.Query("type")
-	stateFilter := c.Query("state")
 
 	periodID := c.Query("period_id")
 	if periodID != "" {
-		h.listWorkspacesByPeriodHandler(c, currentUser, periodID, userIDQuery, typeFilter, stateFilter)
+		h.listWorkspacesByPeriodHandler(c, currentUser, periodID, filters)
 		return
 	}
 
@@ -153,61 +146,12 @@ func (h *WorkspaceHandler) ListWorkspaces(c *gin.Context) {
 		return
 	}
 
-	var requestedUserID uint
-	if userIDQuery != "" {
-		var err error
-		requestedUserID, err = sharedHelpers.ParseResourceID(userIDQuery)
-		if err != nil {
-			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-			return
-		}
-	}
-
-	workspaces := make([]WorkspaceResponse, 0, len(output.Workspaces))
-	for _, w := range output.Workspaces {
-		if !canAccessWorkspace(currentUser.GlobalRole, currentUser.ID, w.UserID) {
-			continue
-		}
-
-		// Apply user_id filter if provided
-		if requestedUserID > 0 && w.UserID != requestedUserID {
-			continue
-		}
-
-		// For professors without explicit user_id filter, only show their own workspaces
-		if currentUser.GlobalRole == usersDomain.RoleProfessor && requestedUserID == 0 {
-			if w.UserID != currentUser.ID {
-				continue
-			}
-		}
-
-		// Apply type filter if provided
-		if typeFilter != "" && w.Type != typeFilter {
-			continue
-		}
-
-		// Apply state filter if provided
-		if stateFilter != "" && w.State != stateFilter {
-			continue
-		}
-
-		workspaces = append(workspaces, WorkspaceResponse{
-			ID:           w.ID,
-			PeriodID:     w.PeriodID,
-			UserID:       w.UserID,
-			Name:         w.Name,
-			Type:         w.Type,
-			InitialDate:  w.InitialDate,
-			FinalDate:    w.FinalDate,
-			Observations: w.Observations,
-			State:        w.State,
-		})
-	}
+	workspaces := h.filterWorkspaceResponses(output.Workspaces, currentUser, filters)
 
 	c.JSON(http.StatusOK, ListWorkspacesResponse{Workspaces: workspaces})
 }
 
-func (h *WorkspaceHandler) listWorkspacesByPeriodHandler(c *gin.Context, currentUser authDomain.AuthenticatedUser, rawPeriodID string, userIDQuery string, typeFilter string, stateFilter string) {
+func (h *WorkspaceHandler) listWorkspacesByPeriodHandler(c *gin.Context, currentUser authDomain.AuthenticatedUser, rawPeriodID string, filters workspaceFilters) {
 	periodID, err := sharedHelpers.ParseResourceID(rawPeriodID)
 	if err != nil {
 		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
@@ -222,58 +166,91 @@ func (h *WorkspaceHandler) listWorkspacesByPeriodHandler(c *gin.Context, current
 		return
 	}
 
-	var requestedUserID uint
-	if userIDQuery != "" {
-		var err error
-		requestedUserID, err = sharedHelpers.ParseResourceID(userIDQuery)
-		if err != nil {
-			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-			return
-		}
-	}
-
-	workspaces := make([]WorkspaceResponse, 0, len(output.Workspaces))
-	for _, w := range output.Workspaces {
-		if !canAccessWorkspace(currentUser.GlobalRole, currentUser.ID, w.UserID) {
-			continue
-		}
-
-		// Apply user_id filter if provided
-		if requestedUserID > 0 && w.UserID != requestedUserID {
-			continue
-		}
-
-		// For professors without explicit user_id filter, only show their own workspaces
-		if currentUser.GlobalRole == usersDomain.RoleProfessor && requestedUserID == 0 {
-			if w.UserID != currentUser.ID {
-				continue
-			}
-		}
-
-		// Apply type filter if provided
-		if typeFilter != "" && w.Type != typeFilter {
-			continue
-		}
-
-		// Apply state filter if provided
-		if stateFilter != "" && w.State != stateFilter {
-			continue
-		}
-
-		workspaces = append(workspaces, WorkspaceResponse{
-			ID:           w.ID,
-			PeriodID:     w.PeriodID,
-			UserID:       w.UserID,
-			Name:         w.Name,
-			Type:         w.Type,
-			InitialDate:  w.InitialDate,
-			FinalDate:    w.FinalDate,
-			Observations: w.Observations,
-			State:        w.State,
-		})
-	}
+	workspaces := h.filterWorkspaceResponses(output.Workspaces, currentUser, filters)
 
 	c.JSON(http.StatusOK, ListWorkspacesResponse{Workspaces: workspaces})
+}
+
+func (h *WorkspaceHandler) buildWorkspaceFilters(c *gin.Context, currentUser authDomain.AuthenticatedUser) (workspaceFilters, bool) {
+	userIDQuery := c.Query("user_id")
+	requestedUserID, ok := h.parseRequestedWorkspaceUserID(c, currentUser, userIDQuery)
+	if !ok {
+		return workspaceFilters{}, false
+	}
+
+	return workspaceFilters{
+		requestedUserID: requestedUserID,
+		typeFilter:      c.Query("type"),
+		stateFilter:     c.Query("state"),
+	}, true
+}
+
+func (h *WorkspaceHandler) parseRequestedWorkspaceUserID(c *gin.Context, currentUser authDomain.AuthenticatedUser, userIDQuery string) (uint, bool) {
+	if userIDQuery == "" {
+		return 0, true
+	}
+
+	requestedUserID, err := sharedHelpers.ParseResourceID(userIDQuery)
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+		return 0, false
+	}
+
+	if currentUser.GlobalRole == usersDomain.RoleProfessor && requestedUserID != currentUser.ID {
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+		return 0, false
+	}
+
+	return requestedUserID, true
+}
+
+func (h *WorkspaceHandler) filterWorkspaceResponses(items []application.WorkspaceDTO, currentUser authDomain.AuthenticatedUser, filters workspaceFilters) []WorkspaceResponse {
+	workspaces := make([]WorkspaceResponse, 0, len(items))
+	for _, w := range items {
+		if !h.shouldIncludeWorkspace(currentUser, w, filters) {
+			continue
+		}
+		workspaces = append(workspaces, toWorkspaceResponse(w))
+	}
+	return workspaces
+}
+
+func (h *WorkspaceHandler) shouldIncludeWorkspace(currentUser authDomain.AuthenticatedUser, workspace application.WorkspaceDTO, filters workspaceFilters) bool {
+	if !canAccessWorkspace(currentUser.GlobalRole, currentUser.ID, workspace.UserID) {
+		return false
+	}
+
+	if filters.requestedUserID > 0 && workspace.UserID != filters.requestedUserID {
+		return false
+	}
+
+	if currentUser.GlobalRole == usersDomain.RoleProfessor && filters.requestedUserID == 0 && workspace.UserID != currentUser.ID {
+		return false
+	}
+
+	if filters.typeFilter != "" && workspace.Type != filters.typeFilter {
+		return false
+	}
+
+	if filters.stateFilter != "" && workspace.State != filters.stateFilter {
+		return false
+	}
+
+	return true
+}
+
+func toWorkspaceResponse(w application.WorkspaceDTO) WorkspaceResponse {
+	return WorkspaceResponse{
+		ID:           w.ID,
+		PeriodID:     w.PeriodID,
+		UserID:       w.UserID,
+		Name:         w.Name,
+		Type:         w.Type,
+		InitialDate:  w.InitialDate,
+		FinalDate:    w.FinalDate,
+		Observations: w.Observations,
+		State:        w.State,
+	}
 }
 
 func (h *WorkspaceHandler) GetWorkspaceByID(c *gin.Context) {

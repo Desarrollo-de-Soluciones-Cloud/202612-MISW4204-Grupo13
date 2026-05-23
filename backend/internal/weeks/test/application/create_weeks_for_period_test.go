@@ -7,14 +7,22 @@ import (
 	"testing"
 )
 
+const (
+	testWeeksInitialDate      = "2026-01-12"
+	testWeeksFinalDate        = "2026-03-08"
+	testWeeksFirstFinalDate   = "2026-01-18"
+	testWeeksMismatchEndDate  = "2026-03-15"
+	testWeeksNonSundayEndDate = "2026-03-09"
+)
+
 func TestCreateWeeksForPeriodSuccess(t *testing.T) {
 	repo := &mockWeekRepository{}
 	createWeeks := application.NewCreateWeeksForPeriod(repo)
 
 	output, err := createWeeks.Execute(application.CreateWeeksForPeriodInput{
 		PeriodID:    1,
-		InitialDate: "2026-01-12",
-		FinalDate:   "2026-03-08",
+		InitialDate: testWeeksInitialDate,
+		FinalDate:   testWeeksFinalDate,
 		WeeksCount:  8,
 	})
 	if err != nil {
@@ -23,7 +31,7 @@ func TestCreateWeeksForPeriodSuccess(t *testing.T) {
 	if len(output.Weeks) != 8 {
 		t.Fatalf("expected 8 weeks, got %d", len(output.Weeks))
 	}
-	if output.Weeks[0].Number != 1 || output.Weeks[0].InitialDate != "2026-01-12" || output.Weeks[0].FinalDate != "2026-01-18" {
+	if output.Weeks[0].Number != 1 || output.Weeks[0].InitialDate != testWeeksInitialDate || output.Weeks[0].FinalDate != testWeeksFirstFinalDate {
 		t.Fatalf("unexpected first week: %+v", output.Weeks[0])
 	}
 	if output.Weeks[7].Number != 8 {
@@ -34,15 +42,15 @@ func TestCreateWeeksForPeriodSuccess(t *testing.T) {
 func TestCreateWeeksForPeriodRejectsDuplicateGeneration(t *testing.T) {
 	repo := &mockWeekRepository{
 		weeks: []domain.Week{
-			{ID: 1, PeriodID: 1, Number: 1, InitialDate: "2026-01-12", FinalDate: "2026-01-18"},
+			{ID: 1, PeriodID: 1, Number: 1, InitialDate: testWeeksInitialDate, FinalDate: testWeeksFirstFinalDate},
 		},
 	}
 	createWeeks := application.NewCreateWeeksForPeriod(repo)
 
 	_, err := createWeeks.Execute(application.CreateWeeksForPeriodInput{
 		PeriodID:    1,
-		InitialDate: "2026-01-12",
-		FinalDate:   "2026-03-08",
+		InitialDate: testWeeksInitialDate,
+		FinalDate:   testWeeksFinalDate,
 		WeeksCount:  8,
 	})
 	if !errors.Is(err, domain.ErrWeeksAlreadyExistForPeriod) {
@@ -57,7 +65,7 @@ func TestCreateWeeksForPeriodRejectsInvalidInitialDate(t *testing.T) {
 	_, err := createWeeks.Execute(application.CreateWeeksForPeriodInput{
 		PeriodID:    1,
 		InitialDate: "2026-01-13",
-		FinalDate:   "2026-03-08",
+		FinalDate:   testWeeksFinalDate,
 		WeeksCount:  8,
 	})
 	if !errors.Is(err, domain.ErrWeekInitialDateMustBeMonday) {
@@ -71,8 +79,8 @@ func TestCreateWeeksForPeriodRejectsInvalidWeeksCount(t *testing.T) {
 
 	_, err := createWeeks.Execute(application.CreateWeeksForPeriodInput{
 		PeriodID:    1,
-		InitialDate: "2026-01-12",
-		FinalDate:   "2026-03-08",
+		InitialDate: testWeeksInitialDate,
+		FinalDate:   testWeeksFinalDate,
 		WeeksCount:  12,
 	})
 	if !errors.Is(err, domain.ErrWeekCountInvalid) {
@@ -86,8 +94,8 @@ func TestCreateWeeksForPeriodRejectsFinalDateMismatch(t *testing.T) {
 
 	_, err := createWeeks.Execute(application.CreateWeeksForPeriodInput{
 		PeriodID:    1,
-		InitialDate: "2026-01-12",
-		FinalDate:   "2026-03-15",
+		InitialDate: testWeeksInitialDate,
+		FinalDate:   testWeeksMismatchEndDate,
 		WeeksCount:  8,
 	})
 	if !errors.Is(err, domain.ErrWeekFinalDateMismatch) {
@@ -101,8 +109,8 @@ func TestCreateWeeksForPeriodRejectsFinalDateThatIsNotSunday(t *testing.T) {
 
 	_, err := createWeeks.Execute(application.CreateWeeksForPeriodInput{
 		PeriodID:    1,
-		InitialDate: "2026-01-12",
-		FinalDate:   "2026-03-09",
+		InitialDate: testWeeksInitialDate,
+		FinalDate:   testWeeksNonSundayEndDate,
 		WeeksCount:  8,
 	})
 	if !errors.Is(err, domain.ErrWeekFinalDateMustBeSunday) {

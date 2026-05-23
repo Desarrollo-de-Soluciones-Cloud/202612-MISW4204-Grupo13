@@ -13,6 +13,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const testUsersPath = "/users"
+
 type mockUserRepository struct {
 	users map[string]*usersDomain.User
 	byID  map[uint]*usersDomain.User
@@ -92,7 +94,7 @@ func TestCreateUserBadRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newUserHandlerForTest()
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(`{"name":1}`))
+	req := httptest.NewRequest(http.MethodPost, testUsersPath, bytes.NewBufferString(`{"name":1}`))
 	req.Header.Set("Content-Type", "application/json")
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
@@ -109,7 +111,7 @@ func TestListUsersUnauthorized(t *testing.T) {
 	handler := newUserHandlerForTest()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/users", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, testUsersPath, nil)
 
 	handler.ListUsers(c)
 
@@ -123,7 +125,7 @@ func TestListUsersProfessorForbidden(t *testing.T) {
 	handler := newUserHandlerForTest()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/users", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, testUsersPath, nil)
 	c.Set("current_user", authDomain.AuthenticatedUser{
 		ID:         1,
 		GlobalRole: usersDomain.RoleProfessor,

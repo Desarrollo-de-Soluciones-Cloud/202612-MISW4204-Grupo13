@@ -9,9 +9,6 @@ import (
 	"testing"
 )
 
-//nolint:godox // TODO RF04: Agregar tests de delivery e infrastructure para fortalecer la cobertura del modulo.
-// TODO RF05: Reforzar RF05 con pruebas de delivery e integracion/E2E para respuestas HTTP bloqueantes en create.
-
 func TestCreateAssignmentSuccess(t *testing.T) {
 	mockRepo := newMockAssignmentRepository()
 	userRepo := newMockUserRepository()

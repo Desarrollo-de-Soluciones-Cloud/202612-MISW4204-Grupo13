@@ -7,6 +7,26 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+var userBindingErrors = map[string]map[string]error{
+	"Name": {
+		"required": domain.ErrUserNameRequired,
+		"min":      domain.ErrUserNameTooShort,
+		"max":      domain.ErrUserNameTooLong,
+	},
+	"Email": {
+		"required": domain.ErrUserEmailRequired,
+		"email":    domain.ErrUserEmailInvalid,
+	},
+	"Password": {
+		"required": domain.ErrUserPasswordRequired,
+		"min":      domain.ErrUserPasswordTooShort,
+		"max":      domain.ErrUserPasswordTooLong,
+	},
+	"GlobalRole": {
+		"required": domain.ErrUserRoleRequired,
+	},
+}
+
 func mapBindingErrors(err error) []error {
 	var validationErrors validator.ValidationErrors
 	if !errors.As(err, &validationErrors) {
@@ -15,37 +35,8 @@ func mapBindingErrors(err error) []error {
 
 	result := make([]error, 0, len(validationErrors))
 	for _, validationError := range validationErrors {
-		switch validationError.StructField() {
-		case "Name":
-			switch validationError.Tag() {
-			case "required":
-				result = append(result, domain.ErrUserNameRequired)
-			case "min":
-				result = append(result, domain.ErrUserNameTooShort)
-			case "max":
-				result = append(result, domain.ErrUserNameTooLong)
-			}
-		case "Email":
-			switch validationError.Tag() {
-			case "required":
-				result = append(result, domain.ErrUserEmailRequired)
-			case "email":
-				result = append(result, domain.ErrUserEmailInvalid)
-			}
-		case "Password":
-			switch validationError.Tag() {
-			case "required":
-				result = append(result, domain.ErrUserPasswordRequired)
-			case "min":
-				result = append(result, domain.ErrUserPasswordTooShort)
-			case "max":
-				result = append(result, domain.ErrUserPasswordTooLong)
-			}
-		case "GlobalRole":
-			switch validationError.Tag() {
-			case "required":
-				result = append(result, domain.ErrUserRoleRequired)
-			}
+		if mappedErr := mapUserBindingError(validationError); mappedErr != nil {
+			result = append(result, mappedErr)
 		}
 	}
 
@@ -54,4 +45,13 @@ func mapBindingErrors(err error) []error {
 	}
 
 	return result
+}
+
+func mapUserBindingError(validationError validator.FieldError) error {
+	fieldErrors, ok := userBindingErrors[validationError.StructField()]
+	if !ok {
+		return nil
+	}
+
+	return fieldErrors[validationError.Tag()]
 }

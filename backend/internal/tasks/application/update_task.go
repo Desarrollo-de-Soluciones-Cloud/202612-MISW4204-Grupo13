@@ -61,17 +61,17 @@ func (uc *UpdateTask) Execute(input UpdateTaskInput) (*TaskOutput, error) {
 		return nil, domain.ErrTaskLateUpdateForbidden
 	}
 
-	if err := task.UpdateTask(
-		assignment.ID,
-		input.Title,
-		input.Description,
-		input.Status,
-		input.SpentHours,
-		input.Observations,
-		normalizedWeekStartDate,
-		false,
-		input.Attachments,
-	); err != nil {
+	if err := task.UpdateTask(domain.TaskInput{
+		AssignmentID:  assignment.ID,
+		Title:         input.Title,
+		Description:   input.Description,
+		Status:        input.Status,
+		SpentHours:    input.SpentHours,
+		Observations:  input.Observations,
+		WeekStartDate: normalizedWeekStartDate,
+		Late:          false,
+		Attachments:   input.Attachments,
+	}); err != nil {
 		return nil, err
 	}
 	task.UserID = assignment.UserID

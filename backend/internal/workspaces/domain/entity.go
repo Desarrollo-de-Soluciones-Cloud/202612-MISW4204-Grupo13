@@ -18,43 +18,54 @@ type Workspace struct {
 	UpdatedAt    time.Time      `json:"updated_at"`
 }
 
-func NewWorkspace(periodID, userID uint, name string, workspaceType WorkspaceType, initialDate, finalDate, observations string, state WorkspaceState) (*Workspace, error) {
-	normalizedName := NormalizeWorkspaceName(name)
+type WorkspaceInput struct {
+	PeriodID     uint
+	UserID       uint
+	Name         string
+	Type         WorkspaceType
+	InitialDate  string
+	FinalDate    string
+	Observations string
+	State        WorkspaceState
+}
+
+func NewWorkspace(input WorkspaceInput) (*Workspace, error) {
+	normalizedName := NormalizeWorkspaceName(input.Name)
 
 	if err := ValidateWorkspaceName(normalizedName); err != nil {
 		return nil, err
 	}
-	if err := ValidateWorkspacePeriodID(periodID); err != nil {
+	if err := ValidateWorkspacePeriodID(input.PeriodID); err != nil {
 		return nil, err
 	}
-	if err := ValidateWorkspaceUserID(userID); err != nil {
+	if err := ValidateWorkspaceUserID(input.UserID); err != nil {
 		return nil, err
 	}
-	if err := ValidateWorkspaceType(workspaceType); err != nil {
+	if err := ValidateWorkspaceType(input.Type); err != nil {
 		return nil, err
 	}
-	if err := ValidateWorkspaceInitialDate(initialDate); err != nil {
+	if err := ValidateWorkspaceInitialDate(input.InitialDate); err != nil {
 		return nil, err
 	}
-	if err := ValidateWorkspaceFinalDate(finalDate); err != nil {
+	if err := ValidateWorkspaceFinalDate(input.FinalDate); err != nil {
 		return nil, err
 	}
-	if err := ValidateWorkspaceDateSequence(initialDate, finalDate); err != nil {
+	if err := ValidateWorkspaceDateSequence(input.InitialDate, input.FinalDate); err != nil {
 		return nil, err
 	}
-	if err := ValidateWorkspaceState(state); err != nil {
+	if err := ValidateWorkspaceState(input.State); err != nil {
 		return nil, err
 	}
 
 	return &Workspace{
-		PeriodID:     periodID,
-		UserID:       userID,
+		PeriodID:     input.PeriodID,
+		UserID:       input.UserID,
 		Name:         normalizedName,
-		Type:         workspaceType,
-		InitialDate:  initialDate,
-		FinalDate:    finalDate,
-		Observations: observations,
-		State:        state,
+		Type:         input.Type,
+		InitialDate:  input.InitialDate,
+		FinalDate:    input.FinalDate,
+		Observations: input.Observations,
+		State:        input.State,
 	}, nil
 }
 
