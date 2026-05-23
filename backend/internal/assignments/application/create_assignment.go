@@ -63,40 +63,68 @@ func mapWorkspaceNotFoundError(err error) bool {
 }
 
 func (uc *CreateAssignment) validateUserAndWorkspace(userID, workspaceID uint) error {
-	if uc.userRepository != nil {
-		if _, err := uc.userRepository.FindByID(userID); err != nil {
-			if errors.Is(err, usersDomain.ErrUserNotFound) {
-				return domain.ErrAssignmentUserNotFound
-			}
-			return err
-		}
+	if err := uc.validateUser(userID); err != nil {
+		return err
 	}
 
-	if uc.workspaceRepository != nil {
-		workspace, err := uc.workspaceRepository.FindByID(workspaceID)
-		if err != nil {
-			if mapWorkspaceNotFoundError(err) {
-				return domain.ErrAssignmentWorkspaceNotFound
-			}
-			return err
-		}
-		if workspace.State == workspacesDomain.ClosedState {
-			return domain.ErrAssignmentWorkspaceClosed
-		}
+	workspace, err := uc.validateWorkspace(workspaceID)
+	if err != nil || workspace == nil {
+		return err
+	}
 
-		// Validate period is not closed
-		if uc.periodRepository != nil {
-			period, err := uc.periodRepository.FindByID(workspace.PeriodID)
-			if err != nil {
-				if errors.Is(err, periodsDomain.ErrPeriodNotFound) {
-					return domain.ErrAssignmentWorkspaceNotFound
-				}
-				return err
-			}
-			if period.PeriodState == periodsDomain.ClosedPeriod {
-				return domain.ErrAssignmentPeriodClosed
-			}
+	return uc.validateWorkspacePeriod(workspace.PeriodID)
+}
+
+func (uc *CreateAssignment) validateUser(userID uint) error {
+	if uc.userRepository == nil {
+		return nil
+	}
+
+	if _, err := uc.userRepository.FindByID(userID); err != nil {
+		if errors.Is(err, usersDomain.ErrUserNotFound) {
+			return domain.ErrAssignmentUserNotFound
 		}
+		return err
+	}
+
+	return nil
+}
+
+func (uc *CreateAssignment) validateWorkspace(workspaceID uint) (*workspacesDomain.Workspace, error) {
+	if uc.workspaceRepository == nil {
+		return nil, nil
+	}
+
+	workspace, err := uc.workspaceRepository.FindByID(workspaceID)
+	if err != nil {
+		if mapWorkspaceNotFoundError(err) {
+			return nil, domain.ErrAssignmentWorkspaceNotFound
+		}
+		return nil, err
+	}
+
+	if workspace.State == workspacesDomain.ClosedState {
+		return nil, domain.ErrAssignmentWorkspaceClosed
+	}
+
+	return workspace, nil
+}
+
+func (uc *CreateAssignment) validateWorkspacePeriod(periodID uint) error {
+	if uc.periodRepository == nil {
+		return nil
+	}
+
+	period, err := uc.periodRepository.FindByID(periodID)
+	if err != nil {
+		if errors.Is(err, periodsDomain.ErrPeriodNotFound) {
+			return domain.ErrAssignmentWorkspaceNotFound
+		}
+		return err
+	}
+
+	if period.PeriodState == periodsDomain.ClosedPeriod {
+		return domain.ErrAssignmentPeriodClosed
 	}
 
 	return nil
@@ -141,10 +169,6 @@ func (uc *CreateAssignment) buildNextWorkload(userID uint, role domain.Assignmen
 }
 
 func (uc *CreateAssignment) Execute(input CreateAssignmentInput) (*CreateAssignmentOutput, error) {
-	//nolint:godox // TODO RF04: Validar que user_id exista realmente cuando se defina la integracion con users.
-	//nolint:godox // TODO RF04: Validar que workspace_id exista realmente cuando el modulo de workspaces este terminado.
-	// TODO RF05: Validar RF05 usando solo vinculaciones activas cuando workspaces exponga estados activos/cerrados.
-	// TODO RF05: Confirmar si RF05 debe ejecutarse con filtros por periodo academico cuando periodos y workspaces esten integrados.
 	if err := uc.validateUserAndWorkspace(input.UserID, input.WorkspaceID); err != nil {
 		return nil, err
 	}
