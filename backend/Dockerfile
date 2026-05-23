@@ -10,7 +10,9 @@ COPY go.mod go.sum ./
 # Download dependencies
 RUN go mod download
 # Copy source code
-COPY . .
+COPY cmd ./cmd
+COPY internal ./internal
+COPY Makefile ./
 # Compile binary (CGO_ENABLED=0 for smaller final image)
 RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/api
 # ============================================

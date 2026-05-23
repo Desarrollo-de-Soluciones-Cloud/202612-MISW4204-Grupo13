@@ -34,7 +34,7 @@ services:
     build: ./nginx
     container_name: seneprojects_nginx
     ports:
-      - "80:80"
+      - "80:8080"
     depends_on:
       - seneprojects_backend
       - seneprojects_frontend
