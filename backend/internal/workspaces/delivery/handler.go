@@ -204,7 +204,7 @@ func (h *WorkspaceHandler) parseRequestedWorkspaceUserID(c *gin.Context, current
 	return requestedUserID, true
 }
 
-func (h *WorkspaceHandler) filterWorkspaceResponses(items []application.WorkspaceOutput, currentUser authDomain.AuthenticatedUser, filters workspaceFilters) []WorkspaceResponse {
+func (h *WorkspaceHandler) filterWorkspaceResponses(items []application.WorkspaceDTO, currentUser authDomain.AuthenticatedUser, filters workspaceFilters) []WorkspaceResponse {
 	workspaces := make([]WorkspaceResponse, 0, len(items))
 	for _, w := range items {
 		if !h.shouldIncludeWorkspace(currentUser, w, filters) {
@@ -215,7 +215,7 @@ func (h *WorkspaceHandler) filterWorkspaceResponses(items []application.Workspac
 	return workspaces
 }
 
-func (h *WorkspaceHandler) shouldIncludeWorkspace(currentUser authDomain.AuthenticatedUser, workspace application.WorkspaceOutput, filters workspaceFilters) bool {
+func (h *WorkspaceHandler) shouldIncludeWorkspace(currentUser authDomain.AuthenticatedUser, workspace application.WorkspaceDTO, filters workspaceFilters) bool {
 	if !canAccessWorkspace(currentUser.GlobalRole, currentUser.ID, workspace.UserID) {
 		return false
 	}
@@ -239,7 +239,7 @@ func (h *WorkspaceHandler) shouldIncludeWorkspace(currentUser authDomain.Authent
 	return true
 }
 
-func toWorkspaceResponse(w application.WorkspaceOutput) WorkspaceResponse {
+func toWorkspaceResponse(w application.WorkspaceDTO) WorkspaceResponse {
 	return WorkspaceResponse{
 		ID:           w.ID,
 		PeriodID:     w.PeriodID,
