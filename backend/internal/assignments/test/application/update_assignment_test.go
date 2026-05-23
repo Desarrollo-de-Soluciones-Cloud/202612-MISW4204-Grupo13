@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-// TODO RF05: Reforzar RF05 con pruebas de delivery e integracion/E2E para respuestas HTTP bloqueantes en update admin.
-
 func TestUpdateAssignmentSuccess(t *testing.T) {
 	mockRepo := newMockAssignmentRepository()
 	createAssignment := applicationpkg.NewCreateAssignment(mockRepo)

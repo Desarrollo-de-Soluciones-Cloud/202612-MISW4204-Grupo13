@@ -30,8 +30,6 @@ func (uc *ListAssignmentsByUserID) Execute(input ListAssignmentsByUserIDInput) (
 	if err := domain.ValidateAssignmentUserID(input.UserID); err != nil {
 		return nil, err
 	}
-
-	//nolint:godox // TODO RF04: Restringir resultados por contexto del profesor cuando exista autenticacion y relacion con workspaces.
 	assignments, err := uc.repository.FindAllByUserID(input.UserID)
 	if err != nil {
 		return nil, err
