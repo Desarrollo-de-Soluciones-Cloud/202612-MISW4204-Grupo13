@@ -30,7 +30,10 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 	listAssignmentsByUserID := application.NewListAssignmentsByUserID(repo)
 	updateAssignment := application.NewUpdateAssignment(repo).WithWorkspaceRepository(workspaceRepo).WithPeriodRepository(periodRepo)
 
-	handler := NewAssignmentHandler(createAssignment, getAssignmentByID, listAllAssignments, listAssignmentsByWorkspace, listAssignmentsByUserID, updateAssignment, workspaceRepo, userRepo)
+	handler := NewAssignmentHandler(createAssignment, getAssignmentByID, listAllAssignments, listAssignmentsByWorkspace, listAssignmentsByUserID, updateAssignment, AssignmentHandlerDependencies{
+		WorkspaceReader: workspaceRepo,
+		UserReader:      userRepo,
+	})
 
 	assignments := r.Group("/assignments")
 	{

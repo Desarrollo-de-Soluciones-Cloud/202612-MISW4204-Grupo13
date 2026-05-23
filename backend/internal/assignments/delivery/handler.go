@@ -34,6 +34,11 @@ type AssignmentUserReader interface {
 	FindByID(id uint) (*usersDomain.User, error)
 }
 
+type AssignmentHandlerDependencies struct {
+	WorkspaceReader AssignmentWorkspaceReader
+	UserReader      AssignmentUserReader
+}
+
 func NewAssignmentHandler(
 	createAssignment *application.CreateAssignment,
 	getAssignmentByID *application.GetAssignmentByID,
@@ -41,8 +46,7 @@ func NewAssignmentHandler(
 	listAssignmentsByWorkspace *application.ListAssignmentsByWorkspace,
 	listAssignmentsByUserID *application.ListAssignmentsByUserID,
 	updateAssignment *application.UpdateAssignment,
-	workspaceReader AssignmentWorkspaceReader,
-	userReader AssignmentUserReader,
+	deps AssignmentHandlerDependencies,
 ) *AssignmentHandler {
 	return &AssignmentHandler{
 		createAssignment:          createAssignment,
@@ -51,8 +55,8 @@ func NewAssignmentHandler(
 		listAssignmentsByWorkspace: listAssignmentsByWorkspace,
 		listAssignmentsByUserID:   listAssignmentsByUserID,
 		updateAssignment:          updateAssignment,
-		workspaceReader:           workspaceReader,
-		userReader:                userReader,
+		workspaceReader:           deps.WorkspaceReader,
+		userReader:                deps.UserReader,
 	}
 }
 
@@ -69,74 +73,18 @@ func (h *AssignmentHandler) CreateAssignment(c *gin.Context) {
 		return
 	}
 
-	switch currentUser.GlobalRole {
-	case usersDomain.RoleAdmin:
-		// Admin can create assignments on any workspace.
-	case usersDomain.RoleProfessor:
-		workspace, err := h.workspaceReader.FindByID(req.WorkspaceID)
-		if err != nil {
-			switch {
-			case isWorkspaceNotFoundError(err):
-				sharedHelpers.RespondWithError(c, http.StatusNotFound, domain.ErrAssignmentWorkspaceNotFound)
-			default:
-				sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-			}
-			return
-		}
-
-		if workspace.UserID != currentUser.ID {
-			sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
-			return
-		}
-	default:
-		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+	if !h.authorizeAssignmentCreation(c, currentUser, req.WorkspaceID) {
 		return
 	}
 
-	// Additional validation: Professors can only assign to monitor or assistant users
-	var userGlobalRole usersDomain.UserRole
-	if currentUser.GlobalRole == usersDomain.RoleProfessor {
-		// We need to fetch the user to validate their global role
-		role, err := h.validateUserRoleForAssignment(req.UserID)
-		if err != nil {
-			switch {
-			case errors.Is(err, domain.ErrAssignmentUserNotFound):
-				sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
-			case errors.Is(err, domain.ErrAssignmentUserInvalidRole):
-				sharedHelpers.RespondWithError(c, http.StatusForbidden, err)
-			default:
-				sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-			}
-			return
-		}
-		userGlobalRole = role
-	} else {
-		// For admin, we still need to get the user's global role
-		role, err := h.validateUserRoleForAssignment(req.UserID)
-		if err != nil {
-			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
-			return
-		}
-		userGlobalRole = role
+	userGlobalRole, ok := h.validateAssignmentTargetUser(c, currentUser.GlobalRole, req.UserID)
+	if !ok {
+		return
 	}
 
-	// Professors can only assign to monitor or assistant users
-	if currentUser.GlobalRole == usersDomain.RoleProfessor {
-		if userGlobalRole != usersDomain.RoleMonitor && userGlobalRole != usersDomain.RoleAssistant {
-			sharedHelpers.RespondWithError(c, http.StatusForbidden, domain.ErrAssignmentUserInvalidRole)
-			return
-		}
+	if !h.validateAssignmentRoleCompatibility(c, userGlobalRole, req.Role) {
+		return
 	}
-
-	// Validate assignment role is compatible with user's global role
-	// If user is monitor, assignment role must be monitor
-	if userGlobalRole == usersDomain.RoleMonitor {
-		if req.Role != string(domain.RoleMonitor) {
-			sharedHelpers.RespondWithError(c, http.StatusBadRequest, domain.ErrAssignmentRoleNotAllowedForUser)
-			return
-		}
-	}
-	// If user is assistant, assignment role can be monitor or assistant (no additional check needed)
 
 	output, err := h.createAssignment.Execute(application.CreateAssignmentInput{
 		UserID:      req.UserID,
@@ -145,19 +93,7 @@ func (h *AssignmentHandler) CreateAssignment(c *gin.Context) {
 		WeeklyHours: req.WeeklyHours,
 	})
 	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrAssignmentUserNotFound),
-			errors.Is(err, domain.ErrAssignmentWorkspaceNotFound):
-			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
-		case errors.Is(err, domain.ErrAssignmentWorkspaceClosed),
-			errors.Is(err, domain.ErrAssignmentPeriodClosed),
-			errors.Is(err, domain.ErrAssignmentAlreadyExists):
-			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
-		case isAssignmentValidationError(err):
-			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-		default:
-			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-		}
+		h.respondCreateAssignmentError(c, err)
 		return
 	}
 
@@ -227,44 +163,13 @@ func (h *AssignmentHandler) UpdateAssignment(c *gin.Context) {
 		return
 	}
 
-	// Only Admin and Professor can update assignments
 	if currentUser.GlobalRole != usersDomain.RoleAdmin && currentUser.GlobalRole != usersDomain.RoleProfessor {
 		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
 		return
 	}
 
-	// If Professor, get assignment and workspace to validate permissions
-	if currentUser.GlobalRole == usersDomain.RoleProfessor {
-		// Get current assignment
-		currentAssignment, err := h.getAssignmentByID.Execute(application.GetAssignmentByIDInput{ID: id})
-		if err != nil {
-			switch {
-			case errors.Is(err, domain.ErrAssignmentNotFound):
-				sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
-			default:
-				sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-			}
-			return
-		}
-
-		// Get workspace to verify professor ownership
-		workspace, err := h.workspaceReader.FindByID(currentAssignment.WorkspaceID)
-		if err != nil {
-			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-			return
-		}
-
-		// Check if professor owns the workspace
-		if workspace.UserID != currentUser.ID {
-			sharedHelpers.RespondWithError(c, http.StatusForbidden, domain.ErrAssignmentProfessorCannotUpdate)
-			return
-		}
-
-		// Check if professor is trying to change weekly hours
-		if currentAssignment.WeeklyHours != req.WeeklyHours {
-			sharedHelpers.RespondWithError(c, http.StatusBadRequest, domain.ErrAssignmentProfessorCannotChangeWeeklyHours)
-			return
-		}
+	if !h.authorizeAssignmentUpdate(c, currentUser, id, req.WeeklyHours) {
+		return
 	}
 
 	output, err := h.updateAssignment.Execute(application.UpdateAssignmentInput{
@@ -273,18 +178,7 @@ func (h *AssignmentHandler) UpdateAssignment(c *gin.Context) {
 		WeeklyHours: req.WeeklyHours,
 	})
 	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrAssignmentNotFound):
-			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
-		case errors.Is(err, domain.ErrAssignmentWorkspaceClosed),
-			errors.Is(err, domain.ErrAssignmentPeriodClosed),
-			errors.Is(err, domain.ErrAssignmentAlreadyExists):
-			sharedHelpers.RespondWithError(c, http.StatusConflict, err)
-		case isAssignmentValidationError(err):
-			sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
-		default:
-			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
-		}
+		h.respondUpdateAssignmentError(c, err)
 		return
 	}
 
@@ -396,4 +290,129 @@ func (h *AssignmentHandler) validateUserRoleForAssignment(userID uint) (usersDom
 
 func isWorkspaceNotFoundError(err error) bool {
 	return errors.Is(err, workspacesDomain.ErrWorkspaceNotFound) || err.Error() == workspacesDomain.ErrWorkspaceNotFound.Error()
+}
+
+func (h *AssignmentHandler) authorizeAssignmentCreation(c *gin.Context, currentUser authDomain.AuthenticatedUser, workspaceID uint) bool {
+	switch currentUser.GlobalRole {
+	case usersDomain.RoleAdmin:
+		return true
+	case usersDomain.RoleProfessor:
+		workspace, err := h.workspaceReader.FindByID(workspaceID)
+		if err != nil {
+			if isWorkspaceNotFoundError(err) {
+				sharedHelpers.RespondWithError(c, http.StatusNotFound, domain.ErrAssignmentWorkspaceNotFound)
+			} else {
+				sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+			}
+			return false
+		}
+
+		if workspace.UserID != currentUser.ID {
+			sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+			return false
+		}
+
+		return true
+	default:
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, authDomain.ErrAuthForbidden)
+		return false
+	}
+}
+
+func (h *AssignmentHandler) validateAssignmentTargetUser(c *gin.Context, currentRole usersDomain.UserRole, userID uint) (usersDomain.UserRole, bool) {
+	role, err := h.validateUserRoleForAssignment(userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrAssignmentUserNotFound):
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		case errors.Is(err, domain.ErrAssignmentUserInvalidRole):
+			sharedHelpers.RespondWithError(c, http.StatusForbidden, err)
+		case currentRole == usersDomain.RoleAdmin:
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		default:
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		}
+		return "", false
+	}
+
+	if currentRole == usersDomain.RoleProfessor && role != usersDomain.RoleMonitor && role != usersDomain.RoleAssistant {
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, domain.ErrAssignmentUserInvalidRole)
+		return "", false
+	}
+
+	return role, true
+}
+
+func (h *AssignmentHandler) validateAssignmentRoleCompatibility(c *gin.Context, userRole usersDomain.UserRole, assignmentRole string) bool {
+	if userRole == usersDomain.RoleMonitor && assignmentRole != string(domain.RoleMonitor) {
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, domain.ErrAssignmentRoleNotAllowedForUser)
+		return false
+	}
+
+	return true
+}
+
+func (h *AssignmentHandler) authorizeAssignmentUpdate(c *gin.Context, currentUser authDomain.AuthenticatedUser, assignmentID uint, weeklyHours int) bool {
+	if currentUser.GlobalRole != usersDomain.RoleProfessor {
+		return true
+	}
+
+	currentAssignment, err := h.getAssignmentByID.Execute(application.GetAssignmentByIDInput{ID: assignmentID})
+	if err != nil {
+		if errors.Is(err, domain.ErrAssignmentNotFound) {
+			sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+		} else {
+			sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		}
+		return false
+	}
+
+	workspace, err := h.workspaceReader.FindByID(currentAssignment.WorkspaceID)
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+		return false
+	}
+
+	if workspace.UserID != currentUser.ID {
+		sharedHelpers.RespondWithError(c, http.StatusForbidden, domain.ErrAssignmentProfessorCannotUpdate)
+		return false
+	}
+
+	if currentAssignment.WeeklyHours != weeklyHours {
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, domain.ErrAssignmentProfessorCannotChangeWeeklyHours)
+		return false
+	}
+
+	return true
+}
+
+func (h *AssignmentHandler) respondCreateAssignmentError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, domain.ErrAssignmentUserNotFound),
+		errors.Is(err, domain.ErrAssignmentWorkspaceNotFound):
+		sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+	case errors.Is(err, domain.ErrAssignmentWorkspaceClosed),
+		errors.Is(err, domain.ErrAssignmentPeriodClosed),
+		errors.Is(err, domain.ErrAssignmentAlreadyExists):
+		sharedHelpers.RespondWithError(c, http.StatusConflict, err)
+	case isAssignmentValidationError(err):
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+	default:
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+	}
+}
+
+func (h *AssignmentHandler) respondUpdateAssignmentError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, domain.ErrAssignmentNotFound):
+		sharedHelpers.RespondWithError(c, http.StatusNotFound, err)
+	case errors.Is(err, domain.ErrAssignmentWorkspaceClosed),
+		errors.Is(err, domain.ErrAssignmentPeriodClosed),
+		errors.Is(err, domain.ErrAssignmentAlreadyExists):
+		sharedHelpers.RespondWithError(c, http.StatusConflict, err)
+	case isAssignmentValidationError(err):
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, err)
+	default:
+		sharedHelpers.RespondWithError(c, http.StatusInternalServerError, sharedErrors.ErrInternalServerError)
+	}
 }
