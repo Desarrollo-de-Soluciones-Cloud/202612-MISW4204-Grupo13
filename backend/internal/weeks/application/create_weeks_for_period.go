@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+const weekDateLayout = "2006-01-02"
+
 type CreateWeeksForPeriodInput struct {
 	PeriodID    uint   `json:"period_id"`
 	InitialDate string `json:"initial_date"`
@@ -33,22 +35,7 @@ func NewCreateWeeksForPeriod(repo domain.WeekRepository) *CreateWeeksForPeriod {
 }
 
 func (uc *CreateWeeksForPeriod) Execute(input CreateWeeksForPeriodInput) (*CreateWeeksForPeriodOutput, error) {
-	if err := domain.ValidateWeekPeriodID(input.PeriodID); err != nil {
-		return nil, err
-	}
-	if err := domain.ValidateWeekInitialDate(input.InitialDate); err != nil {
-		return nil, err
-	}
-	if err := domain.ValidateWeekInitialDateIsMonday(input.InitialDate); err != nil {
-		return nil, err
-	}
-	if err := domain.ValidateWeekCount(input.WeeksCount); err != nil {
-		return nil, err
-	}
-	if err := domain.ValidateWeekFinalDate(input.FinalDate); err != nil {
-		return nil, err
-	}
-	if err := domain.ValidateWeekFinalDateIsSunday(input.FinalDate); err != nil {
+	if err := validateCreateWeeksInput(input); err != nil {
 		return nil, err
 	}
 
@@ -60,13 +47,9 @@ func (uc *CreateWeeksForPeriod) Execute(input CreateWeeksForPeriodInput) (*Creat
 		return nil, domain.ErrWeeksAlreadyExistForPeriod
 	}
 
-	initialDate, err := time.Parse("2006-01-02", input.InitialDate)
+	initialDate, finalDate, err := parseWeekRange(input.InitialDate, input.FinalDate)
 	if err != nil {
-		return nil, domain.ErrWeekInitialDateWrongFormat
-	}
-	finalDate, err := time.Parse("2006-01-02", input.FinalDate)
-	if err != nil {
-		return nil, domain.ErrWeekFinalDateWrongFormat
+		return nil, err
 	}
 
 	weeks := make([]domain.Week, 0, input.WeeksCount)
@@ -77,8 +60,8 @@ func (uc *CreateWeeksForPeriod) Execute(input CreateWeeksForPeriodInput) (*Creat
 		week, err := domain.NewWeek(
 			input.PeriodID,
 			i+1,
-			weekInitialDate.Format("2006-01-02"),
-			weekFinalDate.Format("2006-01-02"),
+			weekInitialDate.Format(weekDateLayout),
+			weekFinalDate.Format(weekDateLayout),
 		)
 		if err != nil {
 			return nil, err
@@ -96,6 +79,47 @@ func (uc *CreateWeeksForPeriod) Execute(input CreateWeeksForPeriodInput) (*Creat
 		return nil, err
 	}
 
+	return &CreateWeeksForPeriodOutput{Weeks: toWeekOutputs(weeks)}, nil
+}
+
+func validateCreateWeeksInput(input CreateWeeksForPeriodInput) error {
+	if err := domain.ValidateWeekPeriodID(input.PeriodID); err != nil {
+		return err
+	}
+	if err := domain.ValidateWeekInitialDate(input.InitialDate); err != nil {
+		return err
+	}
+	if err := domain.ValidateWeekInitialDateIsMonday(input.InitialDate); err != nil {
+		return err
+	}
+	if err := domain.ValidateWeekCount(input.WeeksCount); err != nil {
+		return err
+	}
+	if err := domain.ValidateWeekFinalDate(input.FinalDate); err != nil {
+		return err
+	}
+	if err := domain.ValidateWeekFinalDateIsSunday(input.FinalDate); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func parseWeekRange(initialDateRaw, finalDateRaw string) (time.Time, time.Time, error) {
+	initialDate, err := time.Parse(weekDateLayout, initialDateRaw)
+	if err != nil {
+		return time.Time{}, time.Time{}, domain.ErrWeekInitialDateWrongFormat
+	}
+
+	finalDate, err := time.Parse(weekDateLayout, finalDateRaw)
+	if err != nil {
+		return time.Time{}, time.Time{}, domain.ErrWeekFinalDateWrongFormat
+	}
+
+	return initialDate, finalDate, nil
+}
+
+func toWeekOutputs(weeks []domain.Week) []WeekOutput {
 	outputWeeks := make([]WeekOutput, len(weeks))
 	for i, week := range weeks {
 		outputWeeks[i] = WeekOutput{
@@ -107,5 +131,5 @@ func (uc *CreateWeeksForPeriod) Execute(input CreateWeeksForPeriodInput) (*Creat
 		}
 	}
 
-	return &CreateWeeksForPeriodOutput{Weeks: outputWeeks}, nil
+	return outputWeeks
 }
