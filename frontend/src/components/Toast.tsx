@@ -1,16 +1,16 @@
 import type { ToastType } from "./useToast";
 
-interface ToastProps {
+type ToastProps = Readonly<{
   type: ToastType;
   message: string;
   onClose: () => void;
-}
+}>;
 
 export default function Toast({ type, message, onClose }: ToastProps) {
   return (
-    <div className="toast-container" role="status" aria-live="polite">
-      <div className={`toast toast-${type}`}>
-        <p className="toast-message">{message}</p>
+    <output className="toast-container" aria-live="polite">
+      <span className={`toast toast-${type}`}>
+        <span className="toast-message">{message}</span>
         <button
           type="button"
           className="toast-close"
@@ -19,7 +19,7 @@ export default function Toast({ type, message, onClose }: ToastProps) {
         >
           x
         </button>
-      </div>
-    </div>
+      </span>
+    </output>
   );
 }
