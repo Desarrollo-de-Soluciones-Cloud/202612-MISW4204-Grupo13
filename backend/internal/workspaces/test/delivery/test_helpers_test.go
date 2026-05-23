@@ -173,16 +173,16 @@ func newWorkspaceHandlerForTest() *deliverypkg.WorkspaceHandler {
 		},
 	}
 
-	return deliverypkg.NewWorkspaceHandler(
-		applicationpkg.NewCreateWorkspace(workspaceRepo, periodRepo, userRepo),
-		applicationpkg.NewListWorkspaces(workspaceRepo),
-		applicationpkg.NewListWorkspacesByPeriod(workspaceRepo),
-		applicationpkg.NewGetWorkspaceByID(workspaceRepo),
-		applicationpkg.NewUpdateWorkspace(workspaceRepo, periodRepo, userRepo),
-		applicationpkg.NewDeleteWorkspace(workspaceRepo),
-		applicationpkg.NewCloseWorkspace(workspaceRepo, userRepo),
-		applicationpkg.NewListWorkspaceMonitorsAndAssistants(workspaceRepo, assignmentRepo, userRepo),
-	)
+	return deliverypkg.NewWorkspaceHandler(deliverypkg.WorkspaceHandlerUseCases{
+		CreateWorkspace:                    applicationpkg.NewCreateWorkspace(workspaceRepo, periodRepo, userRepo),
+		ListWorkspaces:                     applicationpkg.NewListWorkspaces(workspaceRepo),
+		ListWorkspacesByPeriod:             applicationpkg.NewListWorkspacesByPeriod(workspaceRepo),
+		GetWorkspaceByID:                   applicationpkg.NewGetWorkspaceByID(workspaceRepo),
+		UpdateWorkspace:                    applicationpkg.NewUpdateWorkspace(workspaceRepo, periodRepo, userRepo),
+		DeleteWorkspace:                    applicationpkg.NewDeleteWorkspace(workspaceRepo),
+		CloseWorkspace:                     applicationpkg.NewCloseWorkspace(workspaceRepo, userRepo),
+		ListWorkspaceMonitorsAndAssistants: applicationpkg.NewListWorkspaceMonitorsAndAssistants(workspaceRepo, assignmentRepo, userRepo),
+	})
 }
 
 func authenticatedUser(id uint, role usersDomain.UserRole) authDomain.AuthenticatedUser {

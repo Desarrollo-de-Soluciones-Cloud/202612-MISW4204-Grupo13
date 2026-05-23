@@ -38,7 +38,16 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer) {
 	deleteWorkspace := workspacesApp.NewDeleteWorkspace(workspaceRepo)
 	closeWorkspace := workspacesApp.NewCloseWorkspace(workspaceRepo, userRepo)
 	listWorkspaceMonitorsAndAssistants := workspacesApp.NewListWorkspaceMonitorsAndAssistants(workspaceRepo, assignmentRepo, userRepo)
-	handler := NewWorkspaceHandler(createWorkspace, listWorkspaces, listWorkspacesByPeriod, getWorkspaceByID, updateWorkspace, deleteWorkspace, closeWorkspace, listWorkspaceMonitorsAndAssistants)
+	handler := NewWorkspaceHandler(WorkspaceHandlerUseCases{
+		CreateWorkspace:                    createWorkspace,
+		ListWorkspaces:                     listWorkspaces,
+		ListWorkspacesByPeriod:             listWorkspacesByPeriod,
+		GetWorkspaceByID:                   getWorkspaceByID,
+		UpdateWorkspace:                    updateWorkspace,
+		DeleteWorkspace:                    deleteWorkspace,
+		CloseWorkspace:                     closeWorkspace,
+		ListWorkspaceMonitorsAndAssistants: listWorkspaceMonitorsAndAssistants,
+	})
 	workspaces := r.Group("/workspaces")
 	{
 		workspaces.Use(authorizer.RequireAuthentication())
