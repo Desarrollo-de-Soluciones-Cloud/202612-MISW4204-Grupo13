@@ -70,19 +70,19 @@ func (uc *CreateTask) Execute(input CreateTaskInput) (*TaskOutput, error) {
 		return nil, err
 	}
 
-	task, err := domain.NewTask(
-		assignment.UserID,
-		assignment.ID,
-		&week.ID,
-		input.Title,
-		input.Description,
-		input.Status,
-		input.SpentHours,
-		input.Observations,
-		normalizedWeekStartDate,
-		late,
-		input.Attachments,
-	)
+	task, err := domain.NewTask(domain.TaskInput{
+		UserID:        assignment.UserID,
+		AssignmentID:  assignment.ID,
+		WeekID:        &week.ID,
+		Title:         input.Title,
+		Description:   input.Description,
+		Status:        input.Status,
+		SpentHours:    input.SpentHours,
+		Observations:  input.Observations,
+		WeekStartDate: normalizedWeekStartDate,
+		Late:          late,
+		Attachments:   input.Attachments,
+	})
 	if err != nil {
 		return nil, err
 	}

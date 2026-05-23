@@ -157,19 +157,19 @@ func seedWeek(repo *mockWeekRepository, periodID uint, initialDate string) {
 func seedTask(t *testing.T, repo *mockTaskRepository, userID, assignmentID uint, late bool, weekStartDate time.Time) *domain.Task {
 	t.Helper()
 
-	task, err := domain.NewTask(
-		userID,
-		assignmentID,
-		nil,
-		"Prepare class",
-		"Review slides",
-		domain.TaskStatusAbierto,
-		2,
-		"",
-		weekStartDate,
-		late,
-		[]domain.TaskAttachment{},
-	)
+	task, err := domain.NewTask(domain.TaskInput{
+		UserID:        userID,
+		AssignmentID:  assignmentID,
+		WeekID:        nil,
+		Title:         "Prepare class",
+		Description:   "Review slides",
+		Status:        domain.TaskStatusAbierto,
+		SpentHours:    2,
+		Observations:  "",
+		WeekStartDate: weekStartDate,
+		Late:          late,
+		Attachments:   []domain.TaskAttachment{},
+	})
 	if err != nil {
 		t.Fatalf("expected seed task, got %v", err)
 	}

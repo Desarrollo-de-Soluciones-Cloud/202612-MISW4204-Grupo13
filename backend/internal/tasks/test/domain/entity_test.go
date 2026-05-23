@@ -18,19 +18,19 @@ const (
 func TestNewTaskSuccess(t *testing.T) {
 	weekDate := time.Date(2026, 4, 8, 10, 0, 0, 0, time.UTC)
 
-	task, err := domainpkg.NewTask(
-		1,
-		10,
-		nil,
-		" "+testTaskTitle+" ",
-		" "+testTaskDescription+" ",
-		domainpkg.TaskStatusAbierto,
-		2,
-		" bring examples ",
-		weekDate,
-		false,
-		emptyAttachments,
-	)
+	task, err := domainpkg.NewTask(domainpkg.TaskInput{
+		UserID:        1,
+		AssignmentID:  10,
+		WeekID:        nil,
+		Title:         " " + testTaskTitle + " ",
+		Description:   " " + testTaskDescription + " ",
+		Status:        domainpkg.TaskStatusAbierto,
+		SpentHours:    2,
+		Observations:  " bring examples ",
+		WeekStartDate: weekDate,
+		Late:          false,
+		Attachments:   emptyAttachments,
+	})
 	if err != nil {
 		t.Fatalf(testExpectedNoError, err)
 	}
@@ -54,19 +54,19 @@ func TestNewTaskSuccess(t *testing.T) {
 }
 
 func TestNewTaskRejectsMissingAssignmentID(t *testing.T) {
-	_, err := domainpkg.NewTask(
-		1,
-		0,
-		nil,
-		testTaskTitle,
-		testTaskDescription,
-		domainpkg.TaskStatusAbierto,
-		2,
-		"",
-		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
-		false,
-		emptyAttachments,
-	)
+	_, err := domainpkg.NewTask(domainpkg.TaskInput{
+		UserID:        1,
+		AssignmentID:  0,
+		WeekID:        nil,
+		Title:         testTaskTitle,
+		Description:   testTaskDescription,
+		Status:        domainpkg.TaskStatusAbierto,
+		SpentHours:    2,
+		Observations:  "",
+		WeekStartDate: time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+		Late:          false,
+		Attachments:   emptyAttachments,
+	})
 	if !errors.Is(err, domainpkg.ErrTaskAssignmentIDRequired) {
 		t.Fatalf("expected ErrTaskAssignmentIDRequired, got %v", err)
 	}
@@ -80,19 +80,19 @@ func TestNewTaskAcceptsOfficialStatuses(t *testing.T) {
 	}
 
 	for _, status := range validStatuses {
-		task, err := domainpkg.NewTask(
-			1,
-			10,
-			nil,
-			testTaskTitle,
-			testTaskDescription,
-			status,
-			2,
-			"",
-			time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
-			false,
-			emptyAttachments,
-		)
+		task, err := domainpkg.NewTask(domainpkg.TaskInput{
+			UserID:        1,
+			AssignmentID:  10,
+			WeekID:        nil,
+			Title:         testTaskTitle,
+			Description:   testTaskDescription,
+			Status:        status,
+			SpentHours:    2,
+			Observations:  "",
+			WeekStartDate: time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+			Late:          false,
+			Attachments:   emptyAttachments,
+		})
 		if err != nil {
 			t.Fatalf("expected status %q to be valid, got %v", status, err)
 		}
@@ -103,38 +103,38 @@ func TestNewTaskAcceptsOfficialStatuses(t *testing.T) {
 }
 
 func TestNewTaskRejectsLegacyStatus(t *testing.T) {
-	_, err := domainpkg.NewTask(
-		1,
-		10,
-		nil,
-		testTaskTitle,
-		testTaskDescription,
-		domainpkg.TaskStatus("open"),
-		2,
-		"",
-		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
-		false,
-		emptyAttachments,
-	)
+	_, err := domainpkg.NewTask(domainpkg.TaskInput{
+		UserID:        1,
+		AssignmentID:  10,
+		WeekID:        nil,
+		Title:         testTaskTitle,
+		Description:   testTaskDescription,
+		Status:        domainpkg.TaskStatus("open"),
+		SpentHours:    2,
+		Observations:  "",
+		WeekStartDate: time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+		Late:          false,
+		Attachments:   emptyAttachments,
+	})
 	if !errors.Is(err, domainpkg.ErrTaskStatusInvalid) {
 		t.Fatalf("expected ErrTaskStatusInvalid, got %v", err)
 	}
 }
 
 func TestNewTaskRejectsSpentHoursBelowOne(t *testing.T) {
-	_, err := domainpkg.NewTask(
-		1,
-		10,
-		nil,
-		testTaskTitle,
-		testTaskDescription,
-		domainpkg.TaskStatusAbierto,
-		-1,
-		"",
-		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
-		false,
-		emptyAttachments,
-	)
+	_, err := domainpkg.NewTask(domainpkg.TaskInput{
+		UserID:        1,
+		AssignmentID:  10,
+		WeekID:        nil,
+		Title:         testTaskTitle,
+		Description:   testTaskDescription,
+		Status:        domainpkg.TaskStatusAbierto,
+		SpentHours:    -1,
+		Observations:  "",
+		WeekStartDate: time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+		Late:          false,
+		Attachments:   emptyAttachments,
+	})
 	if !errors.Is(err, domainpkg.ErrTaskSpentHoursInvalid) {
 		t.Fatalf("expected ErrTaskSpentHoursInvalid, got %v", err)
 	}
@@ -161,53 +161,53 @@ func TestIsWeekClosed(t *testing.T) {
 }
 
 func TestUpdateTaskRejectsLateTask(t *testing.T) {
-	task, err := domainpkg.NewTask(
-		1,
-		10,
-		nil,
-		testTaskTitle,
-		testTaskDescription,
-		domainpkg.TaskStatusAbierto,
-		2,
-		"",
-		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
-		true,
-		emptyAttachments,
-	)
+	task, err := domainpkg.NewTask(domainpkg.TaskInput{
+		UserID:        1,
+		AssignmentID:  10,
+		WeekID:        nil,
+		Title:         testTaskTitle,
+		Description:   testTaskDescription,
+		Status:        domainpkg.TaskStatusAbierto,
+		SpentHours:    2,
+		Observations:  "",
+		WeekStartDate: time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+		Late:          true,
+		Attachments:   emptyAttachments,
+	})
 	if err != nil {
 		t.Fatalf(testExpectedNoError, err)
 	}
 
-	err = task.UpdateTask(
-		10,
-		"Prepare class 2",
-		testTaskDescription,
-		domainpkg.TaskStatusFinalizado,
-		2,
-		"",
-		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
-		true,
-		emptyAttachments,
-	)
+	err = task.UpdateTask(domainpkg.TaskInput{
+		AssignmentID:  10,
+		Title:         "Prepare class 2",
+		Description:   testTaskDescription,
+		Status:        domainpkg.TaskStatusFinalizado,
+		SpentHours:    2,
+		Observations:  "",
+		WeekStartDate: time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+		Late:          true,
+		Attachments:   emptyAttachments,
+	})
 	if !errors.Is(err, domainpkg.ErrTaskLateUpdateForbidden) {
 		t.Fatalf("expected ErrTaskLateUpdateForbidden, got %v", err)
 	}
 }
 
 func TestCanDeleteRejectsInactiveWeek(t *testing.T) {
-	task, err := domainpkg.NewTask(
-		1,
-		10,
-		nil,
-		testTaskTitle,
-		testTaskDescription,
-		domainpkg.TaskStatusAbierto,
-		2,
-		"",
-		time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC),
-		false,
-		emptyAttachments,
-	)
+	task, err := domainpkg.NewTask(domainpkg.TaskInput{
+		UserID:        1,
+		AssignmentID:  10,
+		WeekID:        nil,
+		Title:         testTaskTitle,
+		Description:   testTaskDescription,
+		Status:        domainpkg.TaskStatusAbierto,
+		SpentHours:    2,
+		Observations:  "",
+		WeekStartDate: time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC),
+		Late:          false,
+		Attachments:   emptyAttachments,
+	})
 	if err != nil {
 		t.Fatalf(testExpectedNoError, err)
 	}
@@ -219,34 +219,34 @@ func TestCanDeleteRejectsInactiveWeek(t *testing.T) {
 }
 
 func TestUpdateTaskAllowsOfficialStatusChange(t *testing.T) {
-	task, err := domainpkg.NewTask(
-		1,
-		10,
-		nil,
-		testTaskTitle,
-		testTaskDescription,
-		domainpkg.TaskStatusAbierto,
-		2,
-		"",
-		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
-		false,
-		emptyAttachments,
-	)
+	task, err := domainpkg.NewTask(domainpkg.TaskInput{
+		UserID:        1,
+		AssignmentID:  10,
+		WeekID:        nil,
+		Title:         testTaskTitle,
+		Description:   testTaskDescription,
+		Status:        domainpkg.TaskStatusAbierto,
+		SpentHours:    2,
+		Observations:  "",
+		WeekStartDate: time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+		Late:          false,
+		Attachments:   emptyAttachments,
+	})
 	if err != nil {
 		t.Fatalf(testExpectedNoError, err)
 	}
 
-	err = task.UpdateTask(
-		10,
-		testTaskTitle,
-		testTaskDescription,
-		domainpkg.TaskStatusEnDesarrollo,
-		2,
-		"",
-		time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
-		false,
-		emptyAttachments,
-	)
+	err = task.UpdateTask(domainpkg.TaskInput{
+		AssignmentID:  10,
+		Title:         testTaskTitle,
+		Description:   testTaskDescription,
+		Status:        domainpkg.TaskStatusEnDesarrollo,
+		SpentHours:    2,
+		Observations:  "",
+		WeekStartDate: time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC),
+		Late:          false,
+		Attachments:   emptyAttachments,
+	})
 	if err != nil {
 		t.Fatalf("expected status update to succeed, got %v", err)
 	}

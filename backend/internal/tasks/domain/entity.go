@@ -30,108 +30,103 @@ type Task struct {
 	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
-func NewTask(
-	userID uint,
-	assignmentID uint,
-	weekID *uint,
-	title, description string,
-	status TaskStatus,
-	spentHours int,
-	observations string,
-	weekStartDate time.Time,
-	late bool,
-	attachments []TaskAttachment,
-) (*Task, error) {
-	normalizedTitle := NormalizeTaskTitle(title)
-	normalizedDescription := NormalizeTaskDescription(description)
-	normalizedStatus := NormalizeTaskStatus(status)
-	normalizedObservations := NormalizeTaskObservations(observations)
-	normalizedWeekStartDate := NormalizeWeekStartDate(weekStartDate)
+type TaskInput struct {
+	UserID        uint
+	AssignmentID  uint
+	WeekID        *uint
+	Title         string
+	Description   string
+	Status        TaskStatus
+	SpentHours    int
+	Observations  string
+	WeekStartDate time.Time
+	Late          bool
+	Attachments   []TaskAttachment
+}
 
-	if err := ValidateTaskAssignmentID(assignmentID); err != nil {
+func NewTask(input TaskInput) (*Task, error) {
+	normalized := normalizeTaskInput(input)
+
+	if err := ValidateTaskAssignmentID(normalized.AssignmentID); err != nil {
 		return nil, err
 	}
-	if err := ValidateTaskTitle(normalizedTitle); err != nil {
+	if err := ValidateTaskTitle(normalized.Title); err != nil {
 		return nil, err
 	}
-	if err := ValidateTaskDescription(normalizedDescription); err != nil {
+	if err := ValidateTaskDescription(normalized.Description); err != nil {
 		return nil, err
 	}
-	if err := ValidateTaskStatus(normalizedStatus); err != nil {
+	if err := ValidateTaskStatus(normalized.Status); err != nil {
 		return nil, err
 	}
-	if err := ValidateTaskSpentHours(spentHours); err != nil {
+	if err := ValidateTaskSpentHours(normalized.SpentHours); err != nil {
 		return nil, err
 	}
-	if err := ValidateTaskWeekStartDate(normalizedWeekStartDate); err != nil {
+	if err := ValidateTaskWeekStartDate(normalized.WeekStartDate); err != nil {
 		return nil, err
 	}
 
 	return &Task{
-		UserID:        userID,
-		AssignmentID:  assignmentID,
-		WeekID:        weekID,
-		Title:         normalizedTitle,
-		Description:   normalizedDescription,
-		Status:        normalizedStatus,
-		SpentHours:    spentHours,
-		Observations:  normalizedObservations,
-		WeekStartDate: normalizedWeekStartDate,
-		Late:          late,
-		Attachments:   normalizeTaskAttachments(attachments),
+		UserID:        normalized.UserID,
+		AssignmentID:  normalized.AssignmentID,
+		WeekID:        normalized.WeekID,
+		Title:         normalized.Title,
+		Description:   normalized.Description,
+		Status:        normalized.Status,
+		SpentHours:    normalized.SpentHours,
+		Observations:  normalized.Observations,
+		WeekStartDate: normalized.WeekStartDate,
+		Late:          normalized.Late,
+		Attachments:   normalizeTaskAttachments(normalized.Attachments),
 	}, nil
 }
 
-func (t *Task) UpdateTask(
-	assignmentID uint,
-	title, description string,
-	status TaskStatus,
-	spentHours int,
-	observations string,
-	weekStartDate time.Time,
-	late bool,
-	attachments []TaskAttachment,
-) error {
+func (t *Task) UpdateTask(input TaskInput) error {
 	if t.Late {
 		return ErrTaskLateUpdateForbidden
 	}
 
-	normalizedTitle := NormalizeTaskTitle(title)
-	normalizedDescription := NormalizeTaskDescription(description)
-	normalizedStatus := NormalizeTaskStatus(status)
-	normalizedObservations := NormalizeTaskObservations(observations)
-	normalizedWeekStartDate := NormalizeWeekStartDate(weekStartDate)
+	normalized := normalizeTaskInput(input)
 
-	if err := ValidateTaskAssignmentID(assignmentID); err != nil {
+	if err := ValidateTaskAssignmentID(normalized.AssignmentID); err != nil {
 		return err
 	}
-	if err := ValidateTaskTitle(normalizedTitle); err != nil {
+	if err := ValidateTaskTitle(normalized.Title); err != nil {
 		return err
 	}
-	if err := ValidateTaskDescription(normalizedDescription); err != nil {
+	if err := ValidateTaskDescription(normalized.Description); err != nil {
 		return err
 	}
-	if err := ValidateTaskStatus(normalizedStatus); err != nil {
+	if err := ValidateTaskStatus(normalized.Status); err != nil {
 		return err
 	}
-	if err := ValidateTaskSpentHours(spentHours); err != nil {
+	if err := ValidateTaskSpentHours(normalized.SpentHours); err != nil {
 		return err
 	}
-	if err := ValidateTaskWeekStartDate(normalizedWeekStartDate); err != nil {
+	if err := ValidateTaskWeekStartDate(normalized.WeekStartDate); err != nil {
 		return err
 	}
 
-	t.AssignmentID = assignmentID
-	t.Title = normalizedTitle
-	t.Description = normalizedDescription
-	t.Status = normalizedStatus
-	t.SpentHours = spentHours
-	t.Observations = normalizedObservations
-	t.WeekStartDate = normalizedWeekStartDate
-	t.Late = late
-	t.Attachments = normalizeTaskAttachments(attachments)
+	t.AssignmentID = normalized.AssignmentID
+	t.Title = normalized.Title
+	t.Description = normalized.Description
+	t.Status = normalized.Status
+	t.SpentHours = normalized.SpentHours
+	t.Observations = normalized.Observations
+	t.WeekStartDate = normalized.WeekStartDate
+	t.Late = normalized.Late
+	t.Attachments = normalizeTaskAttachments(normalized.Attachments)
 
 	return nil
+}
+
+func normalizeTaskInput(input TaskInput) TaskInput {
+	input.Title = NormalizeTaskTitle(input.Title)
+	input.Description = NormalizeTaskDescription(input.Description)
+	input.Status = NormalizeTaskStatus(input.Status)
+	input.Observations = NormalizeTaskObservations(input.Observations)
+	input.WeekStartDate = NormalizeWeekStartDate(input.WeekStartDate)
+	return input
 }
 
 func (t *Task) CanDelete(now time.Time) error {
