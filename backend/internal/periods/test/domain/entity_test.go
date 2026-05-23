@@ -7,17 +7,22 @@ import (
 	"testing"
 )
 
+const (
+	testExpectedNoErrorMsg       = "expected no error, got %v"
+	testExpectedNormalizedNameMsg = "expected normalized name, got %q"
+)
+
 func TestNewPeriodSuccess(t *testing.T) {
 	initialDate := testPeriodInitialDate1005
 	weeksCount := 8
 
 	period, err := domainpkg.NewPeriod(" "+testPeriodName202610+" ", initialDate, weeksCount, domainpkg.ActivePeriod)
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Fatalf(testExpectedNoErrorMsg, err)
 	}
 
 	if period.Name != testPeriodName202610 {
-		t.Fatalf("expected normalized name, got %q", period.Name)
+		t.Fatalf(testExpectedNormalizedNameMsg, period.Name)
 	}
 	if period.InitialDate != initialDate {
 		t.Fatalf("expected initial date %v, got %v", initialDate, period.InitialDate)
@@ -46,7 +51,7 @@ func TestUpdatePeriodNormalizesValues(t *testing.T) {
 
 	period, err := domainpkg.NewPeriod(testPeriodName202610, initialDate, weeksCount, domainpkg.ActivePeriod)
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Fatalf(testExpectedNoErrorMsg, err)
 	}
 
 	newInitialDate := testPeriodInitialDate1012
@@ -54,11 +59,11 @@ func TestUpdatePeriodNormalizesValues(t *testing.T) {
 
 	err = period.UpdatePeriod(" 2026-11 ", newInitialDate, newWeeksCount, domainpkg.ClosedPeriod)
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Fatalf(testExpectedNoErrorMsg, err)
 	}
 
 	if period.Name != testPeriodName202611 {
-		t.Fatalf("expected normalized name, got %q", period.Name)
+		t.Fatalf(testExpectedNormalizedNameMsg, period.Name)
 	}
 	if period.PeriodState != domainpkg.ClosedPeriod {
 		t.Fatalf("expected state %q, got %q", domainpkg.ClosedPeriod, period.PeriodState)
@@ -112,7 +117,7 @@ func TestUpdatePeriodRejectsInvalidState(t *testing.T) {
 
 	period, err := domainpkg.NewPeriod(testPeriodName202610, initialDate, weeksCount, domainpkg.ActivePeriod)
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Fatalf(testExpectedNoErrorMsg, err)
 	}
 
 	err = period.UpdatePeriod(testPeriodName202610, initialDate, weeksCount, domainpkg.PeriodState("unknown"))
@@ -124,7 +129,7 @@ func TestUpdatePeriodRejectsInvalidState(t *testing.T) {
 func TestNormalizePeriodName(t *testing.T) {
 	normalized := domainpkg.NormalizePeriodName(" 2024-01 ")
 	if normalized != "2024-01" {
-		t.Fatalf("expected normalized name, got %q", normalized)
+		t.Fatalf(testExpectedNormalizedNameMsg, normalized)
 	}
 }
 
