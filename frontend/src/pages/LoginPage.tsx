@@ -5,9 +5,9 @@ import Loading from "../components/Loading";
 import Toast from "../components/Toast";
 import useToast from "../components/useToast";
 
-interface LoginPageProps {
+type LoginPageProps = Readonly<{
   onSignedIn: (auth: AuthResponse) => void;
-}
+}>;
 
 export default function LoginPage({ onSignedIn }: LoginPageProps) {
   const [email, setEmail] = useState("admin@example.com");
@@ -42,7 +42,7 @@ export default function LoginPage({ onSignedIn }: LoginPageProps) {
 
         <div className="form-field">
           <label>
-            Correo electrónico
+            <span>Correo electrónico</span>
             <input
               type="email"
               value={email}
@@ -54,7 +54,7 @@ export default function LoginPage({ onSignedIn }: LoginPageProps) {
 
         <div className="form-field">
           <label>
-            Contraseña
+            <span>Contraseña</span>
             <input
               type="password"
               value={password}
@@ -76,3 +76,4 @@ export default function LoginPage({ onSignedIn }: LoginPageProps) {
     </div>
   );
 }
+

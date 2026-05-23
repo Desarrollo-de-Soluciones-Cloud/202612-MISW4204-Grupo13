@@ -23,10 +23,10 @@ import Loading from "../components/Loading";
 import Toast from "../components/Toast";
 import useToast from "../components/useToast";
 
-interface AdminDashboardProps {
+type AdminDashboardProps = Readonly<{
   user: User;
   onLogout: () => void;
-}
+}>;
 
 export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   const [me, setMe] = useState<User | null>(null);
@@ -133,7 +133,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         .flatMap((item) => item.assignments)
         .forEach((item) => uniqueAssignments.set(item.id, item));
 
-      const localProfessorUsers = usersResult.users.filter((item) => item.global_role === "professor");
+      const defaultProfessor = usersResult.users.find((item) => item.global_role === "professor");
 
       setMe(meResult);
       setUsers(usersResult.users);
@@ -150,7 +150,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       setWorkspaceForm((previous) => ({
         ...previous,
         period_id: previous.period_id || String(periodsResult.periods[0]?.id ?? ""),
-        user_id: previous.user_id || String(localProfessorUsers[0]?.id ?? ""),
+        user_id: previous.user_id || String(defaultProfessor?.id ?? ""),
       }));
 
       setAssignmentForm((previous) => ({
@@ -246,14 +246,14 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
     try {
       const blob = await downloadReport(reportId);
-      const fileUrl = window.URL.createObjectURL(blob);
+      const fileUrl = globalThis.URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = fileUrl;
       anchor.download = `reporte_${reportId}.pdf`;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
-      window.URL.revokeObjectURL(fileUrl);
+      globalThis.URL.revokeObjectURL(fileUrl);
       showToast("Reporte descargado correctamente.", "success");
     } catch (err) {
       showToast(toErrorMessage(err), "error");
@@ -376,7 +376,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         <form className="form-grid" onSubmit={handleCreateUser}>
           <div className="form-field">
             <label>
-              Nombre completo
+              <span>Nombre completo</span>
               <input
                 value={userForm.name}
                 onChange={(event) =>
@@ -389,7 +389,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Correo electrónico
+              <span>Correo electrónico</span>
               <input
                 type="email"
                 value={userForm.email}
@@ -403,7 +403,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Contraseña
+              <span>Contraseña</span>
               <input
                 type="password"
                 value={userForm.password}
@@ -419,7 +419,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Rol global
+              <span>Rol global</span>
               <select
                 value={userForm.global_role}
                 onChange={(event) =>
@@ -452,7 +452,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         <form className="form-grid" onSubmit={handleCreatePeriod}>
           <div className="form-field">
             <label>
-              Nombre del periodo
+              <span>Nombre del periodo</span>
               <input
                 placeholder="2026-20"
                 value={periodForm.name}
@@ -466,7 +466,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Fecha inicial
+              <span>Fecha inicial</span>
               <input
                 type="date"
                 value={periodForm.initial_date}
@@ -481,7 +481,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Número de semanas
+              <span>Número de semanas</span>
               <select
                 value={periodForm.weeks_count}
                 onChange={(event) =>
@@ -497,7 +497,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Estado del periodo
+              <span>Estado del periodo</span>
               <select
                 value={periodForm.period_state}
                 onChange={(event) =>
@@ -526,7 +526,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         <form className="form-grid" onSubmit={handleCreateWorkspace}>
           <div className="form-field">
             <label>
-              Periodo
+              <span>Periodo</span>
               <select
                 value={workspaceForm.period_id}
                 onChange={(event) =>
@@ -551,7 +551,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Profesor responsable
+              <span>Profesor responsable</span>
               <select
                 value={workspaceForm.user_id}
                 onChange={(event) =>
@@ -574,7 +574,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Nombre del curso o proyecto
+              <span>Nombre del curso o proyecto</span>
               <input
                 value={workspaceForm.name}
                 onChange={(event) =>
@@ -587,7 +587,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Tipo
+              <span>Tipo</span>
               <select
                 value={workspaceForm.type}
                 onChange={(event) =>
@@ -605,7 +605,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Fecha inicial
+              <span>Fecha inicial</span>
               <input
                 type="date"
                 value={workspaceForm.initial_date}
@@ -619,7 +619,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Fecha final
+              <span>Fecha final</span>
               <input
                 type="date"
                 value={workspaceForm.final_date}
@@ -634,7 +634,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Observaciones
+              <span>Observaciones</span>
               <input
                 value={workspaceForm.observations}
                 onChange={(event) =>
@@ -651,7 +651,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Estado
+              <span>Estado</span>
               <select
                 value={workspaceForm.state}
                 onChange={(event) =>
@@ -679,7 +679,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         <form className="form-grid" onSubmit={handleCreateAssignment}>
           <div className="form-field">
             <label>
-              Rol de vinculación
+              <span>Rol de vinculación</span>
               <select
                 value={assignmentForm.role}
                 onChange={(event) =>
@@ -698,7 +698,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Usuario
+              <span>Usuario</span>
               <select
                 value={assignmentForm.user_id}
                 onChange={(event) =>
@@ -720,7 +720,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Curso o proyecto
+              <span>Curso o proyecto</span>
               <select
                 value={assignmentForm.workspace_id}
                 onChange={(event) =>
@@ -745,7 +745,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Horas semanales
+              <span>Horas semanales</span>
               <input
                 type="number"
                 min={1}
@@ -971,7 +971,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         <form className="form-grid" onSubmit={handleFilterReports}>
           <div className="form-field">
             <label>
-              ID del curso/proyecto
+              <span>ID del curso/proyecto</span>
               <select
                 value={reportFilters.workspace_id}
                 onChange={(event) =>
@@ -996,7 +996,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
           <div className="form-field">
             <label>
-              Semana
+              <span>Semana</span>
               <select
                 value={reportFilters.week_id}
                 onChange={(event) =>
@@ -1070,3 +1070,4 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     </Layout>
   );
 }
+
