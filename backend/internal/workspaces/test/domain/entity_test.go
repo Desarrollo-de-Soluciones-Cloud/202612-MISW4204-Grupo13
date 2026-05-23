@@ -12,16 +12,16 @@ const (
 )
 
 func TestNewWorkspaceSuccess(t *testing.T) {
-	workspace, err := workspacesDomain.NewWorkspace(
-		1,
-		2,
-		" Algorithms ",
-		workspacesDomain.WorkspaceType("course"),
-		testDomainWorkspaceStartDate,
-		testDomainWorkspaceEndDate,
-		"notes",
-		workspacesDomain.ActiveState,
-	)
+	workspace, err := workspacesDomain.NewWorkspace(workspacesDomain.WorkspaceInput{
+		PeriodID:     1,
+		UserID:       2,
+		Name:         " Algorithms ",
+		Type:         workspacesDomain.WorkspaceType("course"),
+		InitialDate:  testDomainWorkspaceStartDate,
+		FinalDate:    testDomainWorkspaceEndDate,
+		Observations: "notes",
+		State:        workspacesDomain.ActiveState,
+	})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -31,32 +31,32 @@ func TestNewWorkspaceSuccess(t *testing.T) {
 }
 
 func TestNewWorkspaceRejectsMissingProfessorID(t *testing.T) {
-	_, err := workspacesDomain.NewWorkspace(
-		1,
-		0,
-		"Algorithms",
-		workspacesDomain.WorkspaceType("course"),
-		testDomainWorkspaceStartDate,
-		testDomainWorkspaceEndDate,
-		"notes",
-		workspacesDomain.ActiveState,
-	)
+	_, err := workspacesDomain.NewWorkspace(workspacesDomain.WorkspaceInput{
+		PeriodID:     1,
+		UserID:       0,
+		Name:         "Algorithms",
+		Type:         workspacesDomain.WorkspaceType("course"),
+		InitialDate:  testDomainWorkspaceStartDate,
+		FinalDate:    testDomainWorkspaceEndDate,
+		Observations: "notes",
+		State:        workspacesDomain.ActiveState,
+	})
 	if !errors.Is(err, workspacesDomain.ErrWorkspaceUserIDRequired) {
 		t.Fatalf("expected ErrWorkspaceUserIDRequired, got %v", err)
 	}
 }
 
 func TestUpdateWorkspaceRejectsInvalidDateSequence(t *testing.T) {
-	workspace, err := workspacesDomain.NewWorkspace(
-		1,
-		2,
-		"Algorithms",
-		workspacesDomain.WorkspaceType("course"),
-		testDomainWorkspaceStartDate,
-		testDomainWorkspaceEndDate,
-		"notes",
-		workspacesDomain.ActiveState,
-	)
+	workspace, err := workspacesDomain.NewWorkspace(workspacesDomain.WorkspaceInput{
+		PeriodID:     1,
+		UserID:       2,
+		Name:         "Algorithms",
+		Type:         workspacesDomain.WorkspaceType("course"),
+		InitialDate:  testDomainWorkspaceStartDate,
+		FinalDate:    testDomainWorkspaceEndDate,
+		Observations: "notes",
+		State:        workspacesDomain.ActiveState,
+	})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

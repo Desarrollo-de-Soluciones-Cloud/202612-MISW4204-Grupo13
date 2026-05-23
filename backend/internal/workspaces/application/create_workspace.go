@@ -82,16 +82,16 @@ func (uc *CreateWorkspace) Execute(input CreateWorkspaceInput) (*CreateWorkspace
 		return nil, workspacesDomain.ErrWorkspaceUserNotProfessor
 	}
 
-	workspace, err := workspacesDomain.NewWorkspace(
-		input.PeriodID,
-		input.UserID,
-		input.Name,
-		workspacesDomain.WorkspaceType(input.Type),
-		input.InitialDate,
-		input.FinalDate,
-		input.Observations,
-		workspacesDomain.WorkspaceState(input.State),
-	)
+	workspace, err := workspacesDomain.NewWorkspace(workspacesDomain.WorkspaceInput{
+		PeriodID:     input.PeriodID,
+		UserID:       input.UserID,
+		Name:         input.Name,
+		Type:         workspacesDomain.WorkspaceType(input.Type),
+		InitialDate:  input.InitialDate,
+		FinalDate:    input.FinalDate,
+		Observations: input.Observations,
+		State:        workspacesDomain.WorkspaceState(input.State),
+	})
 	if err != nil {
 		return nil, err
 	}

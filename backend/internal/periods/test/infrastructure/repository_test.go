@@ -10,6 +10,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const testFindAllByStateErrMsg = "FindAllByState() error = %v, want nil"
+
 // setupTestDB initializes test database (skips if not available)
 func setupTestDB(t *testing.T) {
 	// Skip infrastructure tests if database not initialized
@@ -152,7 +154,7 @@ func TestFindAllByState(t *testing.T) {
 
 	activePeriods, err := repo.FindAllByState(domain.ActivePeriod)
 	if err != nil {
-		t.Fatalf("FindAllByState() error = %v, want nil", err)
+		t.Fatalf(testFindAllByStateErrMsg, err)
 	}
 
 	if len(activePeriods) != 2 {
@@ -161,7 +163,7 @@ func TestFindAllByState(t *testing.T) {
 
 	closedPeriods, err := repo.FindAllByState(domain.ClosedPeriod)
 	if err != nil {
-		t.Fatalf("FindAllByState() error = %v, want nil", err)
+		t.Fatalf(testFindAllByStateErrMsg, err)
 	}
 
 	if len(closedPeriods) != 1 {
@@ -179,7 +181,7 @@ func TestFindAllByStateEmpty(t *testing.T) {
 
 	closedPeriods, err := repo.FindAllByState(domain.ClosedPeriod)
 	if err != nil {
-		t.Fatalf("FindAllByState() error = %v, want nil", err)
+		t.Fatalf(testFindAllByStateErrMsg, err)
 	}
 
 	if len(closedPeriods) != 0 {

@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+const testWorkspaceReadNoErrorMsg = "expected no error, got %v"
+
 func TestGetWorkspaceByIDSuccess(t *testing.T) {
 	repo := &workspaceRepoStub{
 		workspace: &workspacesDomain.Workspace{
@@ -24,7 +26,7 @@ func TestGetWorkspaceByIDSuccess(t *testing.T) {
 	uc := workspacesApplication.NewGetWorkspaceByID(repo)
 	output, err := uc.Execute(workspacesApplication.GetWorkspaceByIDInput{ID: 1})
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Fatalf(testWorkspaceReadNoErrorMsg, err)
 	}
 	if output.Name != "Algorithms" {
 		t.Fatalf("expected workspace name, got %q", output.Name)
@@ -42,7 +44,7 @@ func TestListWorkspacesSuccess(t *testing.T) {
 	uc := workspacesApplication.NewListWorkspaces(repo)
 	output, err := uc.Execute()
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Fatalf(testWorkspaceReadNoErrorMsg, err)
 	}
 	if len(output.Workspaces) != 2 {
 		t.Fatalf("expected 2 workspaces, got %d", len(output.Workspaces))
@@ -59,7 +61,7 @@ func TestListWorkspacesByPeriodSuccess(t *testing.T) {
 	uc := workspacesApplication.NewListWorkspacesByPeriod(repo)
 	output, err := uc.Execute(workspacesApplication.ListWorkspacesByPeriodInput{PeriodID: 2})
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Fatalf(testWorkspaceReadNoErrorMsg, err)
 	}
 	if len(output.Workspaces) != 1 {
 		t.Fatalf("expected 1 workspace, got %d", len(output.Workspaces))

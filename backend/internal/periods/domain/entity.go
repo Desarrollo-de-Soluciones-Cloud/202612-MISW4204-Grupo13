@@ -84,12 +84,12 @@ func (p *Period) ClosePeriod() error {
 // UpdatePeriod updates period with full details (legacy method - kept for compatibility)
 func (p *Period) UpdatePeriod(name, initialDate string, weeksCount int, state PeriodState) error {
 	// Validate that period hasn't started yet
-	parsedInitialDate, err := time.Parse("2006-01-02", initialDate)
+	parsedInitialDate, err := time.Parse(periodDateLayout, initialDate)
 	if err != nil {
 		return ErrPeriodInitialDateWrongFormat
 	}
 	now := time.Now()
-	if parsedInitialDate.Before(now) && parsedInitialDate.Format("2006-01-02") != now.Format("2006-01-02") {
+	if parsedInitialDate.Before(now) && parsedInitialDate.Format(periodDateLayout) != now.Format(periodDateLayout) {
 		return ErrPeriodCannotBeUpdated
 	}
 
