@@ -1,6 +1,6 @@
-interface ErrorMessageProps {
+type ErrorMessageProps = Readonly<{
   message?: string | null;
-}
+}>;
 
 export default function ErrorMessage({ message }: ErrorMessageProps) {
   if (!message) {
