@@ -45,14 +45,7 @@ export class ApiError extends Error {
 }
 
 function normalizeText(value: string): string {
-  const normalized = value.trim();
-  const withReplaceAll = normalized as string & {
-    replaceAll?: (searchValue: RegExp | string, replaceValue: string) => string;
-  };
-
-  return withReplaceAll.replaceAll
-    ? withReplaceAll.replaceAll(/\s+/g, " ")
-    : normalized.replace(/\s+/g, " ");
+  return value.trim().split(/\s+/).join(" ");
 }
 
 function includesAny(value: string, terms: readonly string[]): boolean {
