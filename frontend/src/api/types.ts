@@ -84,6 +84,7 @@ export interface Report {
   user_id: number;
   file_path: string;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface ListUsersResponse {
