@@ -131,7 +131,6 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
       const nextReports = await loadReportsForFilters(selectedWorkspaceId, selectedWeekId);
       latestCount = nextReports.filter((item) => item.week_id === selectedWeekId).length;
-      const generatedCount = Math.max(latestCount - baselineCount, 0);
 
       if (latestCount >= expectedTotal) {
         showToast(
