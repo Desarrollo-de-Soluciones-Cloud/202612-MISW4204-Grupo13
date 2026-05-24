@@ -1,15 +1,20 @@
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY index.html ./
 COPY src ./src
 COPY tsconfig.json ./
 COPY tsconfig.app.json ./
 COPY tsconfig.node.json ./
 COPY vite.config.ts ./
-RUN chown -R node:node /app
+ARG VITE_API_BASE_URL=/api
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+RUN npm run build
 
-USER node
-EXPOSE 5173
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --chown=root:root --chmod=444 nginx.conf /etc/nginx/nginx.conf
+USER nginx
+EXPOSE 8080
+CMD ["nginx", "-g", "daemon off;"]

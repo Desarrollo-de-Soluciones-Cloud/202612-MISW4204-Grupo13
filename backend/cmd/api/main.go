@@ -7,6 +7,7 @@ import (
 	reportsDelivery "backend/internal/reports/delivery"
 	"backend/internal/shared/config"
 	"backend/internal/shared/database"
+	sharedHTTP "backend/internal/shared/http"
 	tasksDelivery "backend/internal/tasks/delivery"
 	usersDelivery "backend/internal/users/delivery"
 	usersSeed "backend/internal/users/seed"
@@ -29,6 +30,7 @@ func main() {
 
 	r := gin.Default()
 	r.SetTrustedProxies([]string{"127.0.0.1", "172.18.0.0/16"})
+	r.Use(sharedHTTP.CORSMiddleware(cfg.CORSAllowedOrigins))
 
 	api := r.Group("/api")
 	api.GET("", func(c *gin.Context) {

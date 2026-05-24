@@ -45,6 +45,17 @@ type AIReportGenerator interface {
 	GenerateWeeklyReport(input AIWeeklyReportInput) (string, error)
 }
 
+type ReportJobPublisher interface {
+	PublishWeeklyReportJob(ctx context.Context, job WeeklyReportJobMessage) error
+}
+
+type WeeklyReportJobMessage struct {
+	WorkspaceID  uint `json:"workspace_id"`
+	WeekID       uint `json:"week_id"`
+	AssignmentID uint `json:"assignment_id"`
+	UserID       uint `json:"user_id"`
+}
+
 type AIWeeklyReportInput struct {
 	WorkspaceID   uint
 	WorkspaceName string

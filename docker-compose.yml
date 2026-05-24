@@ -1,41 +1,10 @@
 services:
-  seneprojects_cloudsql:
-    image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.15.3
-    container_name: seneprojects_cloudsql
-    command:
-      - "--address=0.0.0.0"
-      - "--port=5432"
-      - "${CLOUD_SQL_CONNECTION_NAME}"
-    expose:
-      - "5432"
-    restart: always
-
-  seneprojects_backend:
-    build: ./backend
-    container_name: seneprojects_backend
-    env_file:
-      - .env
-      - .env.admin
-    expose:
-      - "8080"
-    depends_on:
-      - seneprojects_cloudsql
-    restart: always
-
   seneprojects_frontend:
     build:
       context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
     container_name: seneprojects_frontend
-    expose:
-      - "5173"
-    restart: always
-
-  seneprojects_nginx:
-    build: ./nginx
-    container_name: seneprojects_nginx
     ports:
       - "80:8080"
-    depends_on:
-      - seneprojects_backend
-      - seneprojects_frontend
     restart: always

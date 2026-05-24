@@ -26,6 +26,15 @@ type ProfessorDashboardProps = Readonly<{
   onLogout: () => void;
 }>;
 
+const reportPollingIntervalMs = 4000;
+const reportPollingAttempts = 15;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    globalThis.setTimeout(resolve, ms);
+  });
+}
+
 export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboardProps) {
   const [me, setMe] = useState<User | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -79,6 +88,70 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
   const getWeekLabel = (week: Week): string =>
     `Semana ${week.number}: ${week.initial_date} a ${week.final_date} (ID ${week.id})`;
+
+  const getReportGenerationContext = (selectedWorkspaceId: number, selectedWeekId: number) => {
+    const workspace = workspaces.find((item) => item.id === selectedWorkspaceId);
+    const week =
+      Object.values(weeksByPeriod)
+        .flat()
+        .find((item) => item.id === selectedWeekId) ?? null;
+
+    return {
+      workspaceLabel: workspace?.name ?? `workspace ${selectedWorkspaceId}`,
+      weekLabel: week ? `semana ${week.number} (${week.initial_date} a ${week.final_date})` : `semana ${selectedWeekId}`,
+    };
+  };
+
+  const loadReportsForFilters = async (selectedWorkspaceId: number, selectedWeekId?: number) => {
+    const response = await listReports({
+      workspace_id: selectedWorkspaceId,
+      week_id: selectedWeekId,
+    });
+    setReports(response.reports);
+    return response.reports;
+  };
+
+  const waitForQueuedReports = async (
+    selectedWorkspaceId: number,
+    selectedWeekId: number,
+    queuedCount: number,
+  ) => {
+    let latestCount = 0;
+    const { workspaceLabel, weekLabel } = getReportGenerationContext(
+      selectedWorkspaceId,
+      selectedWeekId,
+    );
+
+    for (let attempt = 0; attempt < reportPollingAttempts; attempt += 1) {
+      if (attempt > 0) {
+        await delay(reportPollingIntervalMs);
+      }
+
+      const nextReports = await loadReportsForFilters(selectedWorkspaceId, selectedWeekId);
+      latestCount = nextReports.filter((item) => item.week_id === selectedWeekId).length;
+
+      if (latestCount >= queuedCount) {
+        showToast(
+          `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} finalizo con exito. Los resultados ya estan disponibles en la lista para descarga.`,
+          "success",
+        );
+        return;
+      }
+    }
+
+    if (latestCount === 0) {
+      showToast(
+        `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} se esta demorando mas de lo esperado. Revisa mas tarde la lista de reportes.`,
+        "info",
+      );
+      return;
+    }
+
+    showToast(
+      `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} se esta demorando mas de lo esperado. Ya hay resultados parciales visibles en la lista.`,
+      "info",
+    );
+  };
 
   const loadWeeksForPeriod = async (periodId: number) => {
     if (weeksByPeriod[periodId]) {
@@ -227,11 +300,10 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
     const loadReports = async () => {
       try {
-        const response = await listReports({
-          workspace_id: selectedWorkspaceId,
-          week_id: filterWeekId ? Number(filterWeekId) : undefined,
-        });
-        setReports(response.reports);
+        await loadReportsForFilters(
+          selectedWorkspaceId,
+          filterWeekId ? Number(filterWeekId) : undefined,
+        );
       } catch (err) {
         showToast(toErrorMessage(err), "error");
       }
@@ -247,23 +319,46 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     try {
       const selectedWorkspaceId = Number(workspaceId);
       const selectedWeekId = Number(weekId);
+      const { workspaceLabel, weekLabel } = getReportGenerationContext(
+        selectedWorkspaceId,
+        selectedWeekId,
+      );
 
       const response = await generateWeeklyReport({
         workspace_id: selectedWorkspaceId,
         week_id: selectedWeekId,
       });
-      showToast(`Se generaron ${response.generated_count} reportes semanales.`, "success");
+      if (response.reports.length === 0) {
+        setFilterWorkspaceId(String(selectedWorkspaceId));
+        setFilterWeekId(String(selectedWeekId));
+        showToast(
+          `Se inicio la generacion asincrona de reportes para ${workspaceLabel} en la ${weekLabel}. Te avisaremos cuando los resultados empiecen a quedar disponibles.`,
+          "info",
+        );
+        setWeekId("");
+        await waitForQueuedReports(
+          selectedWorkspaceId,
+          selectedWeekId,
+          response.generated_count,
+        );
+        return;
+      }
+
+      showToast(
+        `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} finalizo con exito. Los resultados ya estan disponibles para descarga.`,
+        "success",
+      );
       setWeekId("");
 
       const reportsWorkspaceId = getReportsWorkspaceId(selectedWorkspaceId);
-      const reportResult = reportsWorkspaceId
-        ? await listReports({
-            workspace_id: reportsWorkspaceId,
-            week_id: filterWeekId ? Number(filterWeekId) : undefined,
-          })
-        : { reports: [] };
-
-      setReports(reportResult.reports);
+      if (reportsWorkspaceId) {
+        await loadReportsForFilters(
+          reportsWorkspaceId,
+          filterWeekId ? Number(filterWeekId) : undefined,
+        );
+      } else {
+        setReports([]);
+      }
     } catch (err) {
       showToast(toErrorMessage(err), "error");
     }
@@ -279,11 +374,10 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         return;
       }
 
-      const response = await listReports({
-        workspace_id: Number(filterWorkspaceId),
-        week_id: filterWeekId ? Number(filterWeekId) : undefined,
-      });
-      setReports(response.reports);
+      await loadReportsForFilters(
+        Number(filterWorkspaceId),
+        filterWeekId ? Number(filterWeekId) : undefined,
+      );
     } catch (err) {
       showToast(toErrorMessage(err), "error");
     }
