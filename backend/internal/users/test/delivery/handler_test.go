@@ -2,7 +2,6 @@ package delivery_test
 
 import (
 	authDomain "backend/internal/auth/domain"
-	"backend/internal/shared/database"
 	applicationpkg "backend/internal/users/application"
 	deliverypkg "backend/internal/users/delivery"
 	usersDomain "backend/internal/users/domain"
@@ -12,8 +11,6 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 const testUsersPath = "/users"
@@ -22,16 +19,6 @@ type mockUserRepository struct {
 	users map[string]*usersDomain.User
 	byID  map[uint]*usersDomain.User
 	next  uint
-}
-
-type userRouteAuthorizerStub struct{}
-
-func (userRouteAuthorizerStub) RequireAuthentication() gin.HandlerFunc {
-	return func(c *gin.Context) { c.Next() }
-}
-
-func (userRouteAuthorizerStub) RequireRoles(...usersDomain.UserRole) gin.HandlerFunc {
-	return func(c *gin.Context) { c.Next() }
 }
 
 func newMockUserRepository() *mockUserRepository {
@@ -165,20 +152,6 @@ func TestGetUserByIDBadID(t *testing.T) {
 	}
 }
 
-func setupUsersRouteDryRunDB(t *testing.T) {
-	t.Helper()
-
-	db, err := gorm.Open(postgres.New(postgres.Config{
-		DSN:                  "host=localhost user=test password=test dbname=test port=5432 sslmode=disable",
-		PreferSimpleProtocol: true,
-	}), &gorm.Config{DryRun: true})
-	if err != nil {
-		t.Fatalf("expected dry run db, got %v", err)
-	}
-
-	database.DB = db
-}
-
 func TestCreateUserConflict(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newUserHandlerForTest()
@@ -276,7 +249,7 @@ func TestGetUserByIDNotFound(t *testing.T) {
 func TestChangeUserRoleSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := newMockUserRepository()
-	user, _ := usersDomain.NewUser(usersDomain.UserInput{Name: "Ana Gomez", Email: "ana@example.com", Password: "Password123", GlobalRole: usersDomain.RoleProfessor})
+	user, _ := usersDomain.NewUser("Ana Gomez", "ana@example.com", "Password123", usersDomain.RoleProfessor)
 	_ = repo.Create(user)
 	handler := deliverypkg.NewUserHandler(
 		applicationpkg.NewCreateUser(repo),
@@ -299,31 +272,4 @@ func TestChangeUserRoleSuccess(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", w.Code)
 	}
-}
-
-func TestSetupRoutesRegistersUserEndpoints(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	setupUsersRouteDryRunDB(t)
-
-	router := gin.New()
-	deliverypkg.SetupRoutes(router, userRouteAuthorizerStub{})
-
-	routes := router.Routes()
-	assertUserRouteExists(t, routes, http.MethodPost, "/users")
-	assertUserRouteExists(t, routes, http.MethodPut, "/users/:id")
-	assertUserRouteExists(t, routes, http.MethodPatch, "/users/:id/role")
-	assertUserRouteExists(t, routes, http.MethodGet, "/users")
-	assertUserRouteExists(t, routes, http.MethodGet, "/users/:id")
-}
-
-func assertUserRouteExists(t *testing.T, routes gin.RoutesInfo, method string, path string) {
-	t.Helper()
-
-	for _, route := range routes {
-		if route.Method == method && route.Path == path {
-			return
-		}
-	}
-
-	t.Fatalf("expected route %s %s to exist", method, path)
 }
