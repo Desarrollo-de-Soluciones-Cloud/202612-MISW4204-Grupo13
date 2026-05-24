@@ -33,3 +33,19 @@ func TestBuildWeeklyReportPromptIncludesInstructionsAndInput(t *testing.T) {
 		t.Fatalf("expected prompt to include length rule, got %q", prompt)
 	}
 }
+
+func TestBuildWeeklyReportPromptMentionsExpectedNaturalLanguageFields(t *testing.T) {
+	prompt := buildWeeklyReportPrompt(`{"total_hours":6}`)
+	expectedFragments := []string{
+		"monitor o asistente",
+		"workspace",
+		"horas reportadas",
+		"recomendaci",
+	}
+
+	for _, fragment := range expectedFragments {
+		if !strings.Contains(strings.ToLower(prompt), fragment) {
+			t.Fatalf("expected prompt to contain %q, got %q", fragment, prompt)
+		}
+	}
+}
