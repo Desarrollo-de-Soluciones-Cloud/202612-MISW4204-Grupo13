@@ -114,13 +114,13 @@ label {
   margin: 0.3rem 0 0;
   font-size: 0.8rem;
   font-weight: 400;
-  color: #677a90;
+  color: #4d6178;
   line-height: 1.35;
 }
 
 .help-icon {
   font-style: normal;
-  color: #8aa8c6;
+  color: #4d6178;
   margin-right: 0.2rem;
 }
 
@@ -407,6 +407,7 @@ tbody tr:hover {
 }
 
 .toast-container {
+  display: block;
   position: fixed;
   top: 1rem;
   right: 1rem;
@@ -443,6 +444,7 @@ tbody tr:hover {
 }
 
 .toast-message {
+  display: block;
   margin: 0;
   line-height: 1.35;
   font-size: 0.93rem;

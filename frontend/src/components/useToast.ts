@@ -11,11 +11,11 @@ const DEFAULT_DURATION_MS = 3000;
 
 export default function useToast(durationMs: number = DEFAULT_DURATION_MS) {
   const [toast, setToast] = useState<ToastState | null>(null);
-  const timeoutRef = useRef<number | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
 
   const clearTimeoutRef = useCallback(() => {
     if (timeoutRef.current !== null) {
-      window.clearTimeout(timeoutRef.current);
+      globalThis.clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
   }, []);
@@ -29,7 +29,7 @@ export default function useToast(durationMs: number = DEFAULT_DURATION_MS) {
     (message: string, type: ToastType = "info") => {
       clearTimeoutRef();
       setToast({ message, type });
-      timeoutRef.current = window.setTimeout(() => {
+      timeoutRef.current = globalThis.setTimeout(() => {
         setToast(null);
         timeoutRef.current = null;
       }, durationMs);

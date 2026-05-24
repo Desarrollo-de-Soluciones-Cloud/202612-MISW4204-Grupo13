@@ -17,10 +17,10 @@ import Loading from "../components/Loading";
 import Toast from "../components/Toast";
 import useToast from "../components/useToast";
 
-interface WorkerDashboardProps {
+type WorkerDashboardProps = Readonly<{
   user: User;
   onLogout: () => void;
-}
+}>;
 
 interface TaskFormState {
   assignment_id: string;
@@ -195,6 +195,13 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
     }
   };
 
+  const handleRemoveExistingAttachment = (attachmentId: string) => {
+    setEditForm((previous): TaskFormState => ({
+      ...previous,
+      existing_attachments: previous.existing_attachments.filter((item) => item.id !== attachmentId),
+    }));
+  };
+
   return (
     <Layout
       title={dashboardTitle}
@@ -285,7 +292,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
         <form className="form-grid" onSubmit={handleCreateTask}>
           <div className="form-field">
             <label>
-              Vinculación
+              <span>Vinculación</span>
               <select
                 value={createForm.assignment_id}
                 onChange={(event) =>
@@ -311,7 +318,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
           <div className="form-field">
             <label>
-              Título
+              <span>Título</span>
               <input
                 value={createForm.title}
                 onChange={(event) =>
@@ -325,7 +332,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
           <div className="form-field">
             <label>
-              Adjuntos
+              <span>Adjuntos</span>
               <input
                 type="file"
                 multiple
@@ -342,7 +349,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
           <div className="form-field">
             <label>
-              Descripción
+              <span>Descripción</span>
               <input
                 value={createForm.description}
                 onChange={(event) =>
@@ -358,7 +365,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
           <div className="form-field">
             <label>
-              Estado
+              <span>Estado</span>
               <select
                 value={createForm.status}
                 onChange={(event) =>
@@ -380,7 +387,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
           <div className="form-field">
             <label>
-              Horas dedicadas
+              <span>Horas dedicadas</span>
               <input
                 type="number"
                 min={1}
@@ -399,7 +406,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
           <div className="form-field">
             <label>
-              Observaciones
+              <span>Observaciones</span>
               <input
                 value={createForm.observations}
                 onChange={(event) =>
@@ -414,7 +421,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
           <div className="form-field">
             <label>
-              Fecha de inicio de semana
+              <span>Fecha de inicio de semana</span>
               <input
                 type="date"
                 value={createForm.week_start_date}
@@ -516,7 +523,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
           <form className="form-grid" onSubmit={handleUpdateTask}>
             <div className="form-field">
               <label>
-                Vinculación
+                <span>Vinculación</span>
                 <select
                   value={editForm.assignment_id}
                   onChange={(event) =>
@@ -541,7 +548,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
             <div className="form-field">
               <label>
-                Adjuntar nuevos archivos
+                <span>Adjuntar nuevos archivos</span>
                 <input
                   type="file"
                   multiple
@@ -557,35 +564,30 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
             </div>
 
             <div className="form-field">
-              <label>Archivos actuales</label>
+              <label htmlFor="edit-existing-attachments">Archivos actuales</label>
               {editForm.existing_attachments.length === 0 ? (
-                <p className="muted">Sin archivos adjuntos.</p>
+                <output id="edit-existing-attachments" className="muted">
+                  Sin archivos adjuntos.
+                </output>
               ) : (
-                <div className="actions-row">
+                <output id="edit-existing-attachments" className="actions-row">
                   {editForm.existing_attachments.map((attachment) => (
                     <button
                       key={attachment.id}
                       type="button"
                       className="button-secondary"
-                      onClick={() =>
-                        setEditForm((previous): TaskFormState => ({
-                          ...previous,
-                          existing_attachments: previous.existing_attachments.filter(
-                            (item) => item.id !== attachment.id,
-                          ),
-                        }))
-                      }
+                      onClick={() => handleRemoveExistingAttachment(attachment.id)}
                     >
                       Quitar {attachment.name}
                     </button>
                   ))}
-                </div>
+                </output>
               )}
             </div>
 
             <div className="form-field">
               <label>
-                Título
+                <span>Título</span>
                 <input
                   value={editForm.title}
                   onChange={(event) =>
@@ -598,7 +600,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
             <div className="form-field">
               <label>
-                Descripción
+                <span>Descripción</span>
                 <input
                   value={editForm.description}
                   onChange={(event) =>
@@ -614,7 +616,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
             <div className="form-field">
               <label>
-                Estado
+                <span>Estado</span>
                 <select
                   value={editForm.status}
                   onChange={(event) =>
@@ -635,7 +637,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
             <div className="form-field">
               <label>
-                Horas dedicadas
+                <span>Horas dedicadas</span>
                 <input
                   type="number"
                   min={1}
@@ -653,7 +655,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
             <div className="form-field">
               <label>
-                Observaciones
+                <span>Observaciones</span>
                 <input
                   value={editForm.observations}
                   onChange={(event) =>
@@ -668,7 +670,7 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
 
             <div className="form-field">
               <label>
-                Fecha de inicio de semana
+                <span>Fecha de inicio de semana</span>
                 <input
                   type="date"
                   value={editForm.week_start_date}
@@ -695,3 +697,4 @@ export default function WorkerDashboard({ user, onLogout }: WorkerDashboardProps
     </Layout>
   );
 }
+

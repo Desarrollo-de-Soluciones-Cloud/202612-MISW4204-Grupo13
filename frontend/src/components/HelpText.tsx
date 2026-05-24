@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
-interface HelpTextProps {
+type HelpTextProps = Readonly<{
   children: ReactNode;
-}
+}>;
 
 export default function HelpText({ children }: HelpTextProps) {
   return (

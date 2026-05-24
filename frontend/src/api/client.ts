@@ -18,9 +18,7 @@ import type {
   ListWorkspacesResponse,
   Period,
   Task,
-  TaskAttachment,
   User,
-  Week,
   Workspace,
   UpdateTaskPayload,
 } from "./types";
@@ -47,7 +45,27 @@ export class ApiError extends Error {
 }
 
 function normalizeText(value: string): string {
-  return value.trim().replace(/\s+/g, " ");
+  return value.trim().split(/\s+/).join(" ");
+}
+
+function includesAny(value: string, terms: readonly string[]): boolean {
+  return terms.some((term) => value.includes(term));
+}
+
+function includesEntityNotFound(value: string, entity: string): boolean {
+  return value.includes(entity) && includesAny(value, ["not found", "does not exist"]);
+}
+
+function includesTaskValidationFields(value: string): boolean {
+  return includesAny(value, [
+    "title",
+    "description",
+    "week_start_date",
+    "status",
+    "spent_hours",
+    "binding",
+    "required",
+  ]);
 }
 
 function formatStatusMessage(status: number): string {
@@ -73,119 +91,175 @@ function formatStatusMessage(status: number): string {
   return "Ocurrio un error inesperado en la solicitud.";
 }
 
+type DomainMessageRule = {
+  matches: (normalized: string, status: number) => boolean;
+  message: string | ((message: string, status: number) => string);
+};
+
+const DOMAIN_MESSAGE_RULES: DomainMessageRule[] = [
+  {
+    matches: (normalized) => includesEntityNotFound(normalized, "week"),
+    message: "La semana seleccionada no existe.",
+  },
+  {
+    matches: (normalized) => includesEntityNotFound(normalized, "assignment"),
+    message: "La vinculacion seleccionada no existe.",
+  },
+  {
+    matches: (normalized) => normalized.includes("workspace") && normalized.includes("closed"),
+    message: "No se pueden crear tareas en un curso o proyecto cerrado.",
+  },
+  {
+    matches: (normalized) =>
+      includesAny(normalized, [
+        "week is not active",
+        "late update forbidden",
+        "cannot be updated",
+        "cannot be modified",
+      ]),
+    message: "La tarea no se puede modificar porque la semana ya no esta activa.",
+  },
+  {
+    matches: (normalized, status) => status === 400 && includesTaskValidationFields(normalized),
+    message: "Completa titulo, descripcion, semana, estado y horas.",
+  },
+  {
+    matches: (normalized) => includesAny(normalized, ["40%", "40 percent", "forty"]),
+    message: "La vinculacion no cumple la regla del 40% entre horas de monitor y asistente.",
+  },
+  {
+    matches: (normalized) => normalized.includes("already exists") && normalized.includes("assignment"),
+    message: "Ya existe una vinculacion equivalente para ese usuario y curso/proyecto.",
+  },
+  {
+    matches: (normalized) =>
+      includesAny(normalized, [
+        "monitor weekly hours cannot exceed",
+        "assistant weekly hours cannot exceed",
+      ]),
+    message: (message) => message,
+  },
+  {
+    matches: (normalized) => normalized.includes("period") && normalized.includes("closed"),
+    message: "No se puede crear un curso/proyecto en un periodo cerrado.",
+  },
+  {
+    matches: (normalized) => normalized.includes("professor can only create workspaces for themselves"),
+    message: "Como profesor, solo puedes crear cursos/proyectos asociados a tu propia cuenta.",
+  },
+  {
+    matches: (normalized) => normalized.includes("professor can only create assignments in their own workspaces"),
+    message: "Como profesor, solo puedes crear vinculaciones en cursos/proyectos que te pertenecen.",
+  },
+  {
+    matches: (normalized) => normalized.includes("professor") && includesAny(normalized, ["not found", "invalid"]),
+    message: "El profesor seleccionado no existe o no tiene rol de profesor.",
+  },
+  {
+    matches: (normalized) => normalized.includes("date") && normalized.includes("period"),
+    message: "Revisa las fechas del periodo academico.",
+  },
+  {
+    matches: (normalized) => includesAny(normalized, ["weeks_count", "weeks count"]),
+    message: "Revisa la cantidad de semanas del periodo academico.",
+  },
+  {
+    matches: (normalized) => normalized.includes("no tasks") && normalized.includes("week"),
+    message: "No hay tareas reportadas para ese curso/proyecto y semana.",
+  },
+  {
+    matches: (normalized) => includesAny(normalized, ["report workspace not found", "workspace not found"]),
+    message: "No se encontro el curso/proyecto seleccionado para generar el reporte.",
+  },
+  {
+    matches: (normalized) => normalized.includes("report week not found") || (normalized.includes("week") && normalized.includes("report")),
+    message: "No se encontro la semana seleccionada para generar el reporte.",
+  },
+  {
+    matches: (normalized) => includesAny(normalized, ["ai report generation failed", "ai generation failed"]),
+    message: "No fue posible generar el resumen con IA. Revisa la configuracion del servicio.",
+  },
+  {
+    matches: (normalized) => includesAny(normalized, ["pdf report generation failed", "pdf generation failed"]),
+    message: "No fue posible generar el PDF del reporte.",
+  },
+  {
+    matches: (normalized) => normalized.includes("report file not found") || normalized.includes("download"),
+    message: "No se pudo descargar el PDF. Verifica que el archivo exista.",
+  },
+  {
+    matches: (normalized) => normalized === "internal server error",
+    message: (_message, status) => formatStatusMessage(status),
+  },
+];
+
 function mapDomainErrorMessage(rawMessage: string, status: number): string {
   const message = normalizeText(rawMessage);
   const normalized = message.toLowerCase();
 
-  if (
-    normalized.includes("week") &&
-    (normalized.includes("not found") || normalized.includes("does not exist"))
-  ) {
-    return "La semana seleccionada no existe.";
-  }
-
-  if (
-    normalized.includes("assignment") &&
-    (normalized.includes("not found") || normalized.includes("does not exist"))
-  ) {
-    return "La vinculacion seleccionada no existe.";
-  }
-
-  if (normalized.includes("workspace") && normalized.includes("closed")) {
-    return "No se pueden crear tareas en un curso o proyecto cerrado.";
-  }
-
-  if (
-    normalized.includes("week is not active") ||
-    normalized.includes("late update forbidden") ||
-    normalized.includes("cannot be updated") ||
-    normalized.includes("cannot be modified")
-  ) {
-    return "La tarea no se puede modificar porque la semana ya no esta activa.";
-  }
-
-  if (
-    normalized.includes("title") ||
-    normalized.includes("description") ||
-    normalized.includes("week_start_date") ||
-    normalized.includes("status") ||
-    normalized.includes("spent_hours") ||
-    normalized.includes("binding") ||
-    normalized.includes("required")
-  ) {
-    if (status === 400) {
-      return "Completa titulo, descripcion, semana, estado y horas.";
+  for (const rule of DOMAIN_MESSAGE_RULES) {
+    if (!rule.matches(normalized, status)) {
+      continue;
     }
-  }
 
-  if (normalized.includes("40%") || normalized.includes("40 percent") || normalized.includes("forty")) {
-    return "La vinculacion no cumple la regla del 40% entre horas de monitor y asistente.";
-  }
-
-  if (normalized.includes("already exists") && normalized.includes("assignment")) {
-    return "Ya existe una vinculacion equivalente para ese usuario y curso/proyecto.";
-  }
-
-  if (
-    normalized.includes("monitor weekly hours cannot exceed") ||
-    normalized.includes("assistant weekly hours cannot exceed")
-  ) {
-    return message;
-  }
-
-  if (normalized.includes("period") && normalized.includes("closed")) {
-    return "No se puede crear un curso/proyecto en un periodo cerrado.";
-  }
-
-  if (normalized.includes("professor can only create workspaces for themselves")) {
-    return "Como profesor, solo puedes crear cursos/proyectos asociados a tu propia cuenta.";
-  }
-
-  if (normalized.includes("professor can only create assignments in their own workspaces")) {
-    return "Como profesor, solo puedes crear vinculaciones en cursos/proyectos que te pertenecen.";
-  }
-
-  if (normalized.includes("professor") && (normalized.includes("not found") || normalized.includes("invalid"))) {
-    return "El profesor seleccionado no existe o no tiene rol de profesor.";
-  }
-
-  if (normalized.includes("date") && normalized.includes("period")) {
-    return "Revisa las fechas del periodo academico.";
-  }
-
-  if (normalized.includes("weeks_count") || normalized.includes("weeks count")) {
-    return "Revisa la cantidad de semanas del periodo academico.";
-  }
-
-  if (normalized.includes("no tasks") && normalized.includes("week")) {
-    return "No hay tareas reportadas para ese curso/proyecto y semana.";
-  }
-
-  if (normalized.includes("report workspace not found") || normalized.includes("workspace not found")) {
-    return "No se encontro el curso/proyecto seleccionado para generar el reporte.";
-  }
-
-  if (normalized.includes("report week not found") || (normalized.includes("week") && normalized.includes("report"))) {
-    return "No se encontro la semana seleccionada para generar el reporte.";
-  }
-
-  if (normalized.includes("ai report generation failed") || normalized.includes("ai generation failed")) {
-    return "No fue posible generar el resumen con IA. Revisa la configuracion del servicio.";
-  }
-
-  if (normalized.includes("pdf report generation failed") || normalized.includes("pdf generation failed")) {
-    return "No fue posible generar el PDF del reporte.";
-  }
-
-  if (normalized.includes("report file not found") || normalized.includes("download")) {
-    return "No se pudo descargar el PDF. Verifica que el archivo exista.";
-  }
-
-  if (normalized === "internal server error") {
-    return formatStatusMessage(status);
+    return typeof rule.message === "string" ? rule.message : rule.message(message, status);
   }
 
   return message;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getStringValue(source: Record<string, unknown>, key: string): string | null {
+  const value = source[key];
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = normalizeText(value);
+  return normalized === "" ? null : normalized;
+}
+
+function extractMessageFromObject(value: unknown): string | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return getStringValue(value, "message") ?? getStringValue(value, "error") ?? getStringValue(value, "field");
+}
+
+function extractMessagesFromDetails(details: ApiErrorBody["details"]): string[] {
+  if (typeof details === "string") {
+    const normalized = normalizeText(details);
+    return normalized ? [normalized] : [];
+  }
+
+  if (!Array.isArray(details)) {
+    return [];
+  }
+
+  return details
+    .filter((detail): detail is string => typeof detail === "string")
+    .map((detail) => normalizeText(detail))
+    .filter((detail) => detail !== "");
+}
+
+function extractMessagesFromErrors(errors: ApiErrorBody["errors"]): string[] {
+  if (!Array.isArray(errors)) {
+    return [];
+  }
+
+  return errors
+    .map((item) => {
+      if (typeof item === "string") {
+        return normalizeText(item);
+      }
+
+      return extractMessageFromObject(item);
+    })
+    .filter((message): message is string => Boolean(message));
 }
 
 function extractApiMessages(body: ApiErrorBody | null): string[] {
@@ -193,45 +267,16 @@ function extractApiMessages(body: ApiErrorBody | null): string[] {
     return [];
   }
 
-  const messages: string[] = [];
+  const topLevelMessages = [body.error, body.message]
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => normalizeText(value))
+    .filter((value) => value !== "");
 
-  if (typeof body.error === "string" && body.error.trim() !== "") {
-    messages.push(body.error);
-  }
-
-  if (typeof body.message === "string" && body.message.trim() !== "") {
-    messages.push(body.message);
-  }
-
-  if (typeof body.details === "string" && body.details.trim() !== "") {
-    messages.push(body.details);
-  }
-
-  if (Array.isArray(body.details)) {
-    for (const detail of body.details) {
-      if (typeof detail === "string" && detail.trim() !== "") {
-        messages.push(detail);
-      }
-    }
-  }
-
-  if (Array.isArray(body.errors)) {
-    for (const item of body.errors) {
-      if (typeof item === "string" && item.trim() !== "") {
-        messages.push(item);
-        continue;
-      }
-
-      if (item && typeof item === "object") {
-        const value = item.message || item.error || item.field;
-        if (typeof value === "string" && value.trim() !== "") {
-          messages.push(value);
-        }
-      }
-    }
-  }
-
-  return messages;
+  return [
+    ...topLevelMessages,
+    ...extractMessagesFromDetails(body.details),
+    ...extractMessagesFromErrors(body.errors),
+  ];
 }
 
 
@@ -486,7 +531,8 @@ export function listReports(filters: {
   }
 
   const query = params.toString();
-  return request<ListReportsResponse>(`/reports${query ? `?${query}` : ""}`);
+  const suffix = query ? `?${query}` : "";
+  return request<ListReportsResponse>(`/reports${suffix}`);
 }
 
 export function downloadReport(id: number): Promise<Blob> {
@@ -528,4 +574,4 @@ export type {
   Workspace,
   CreateTaskPayload,
   UpdateTaskPayload,
-};
+} from "./types";

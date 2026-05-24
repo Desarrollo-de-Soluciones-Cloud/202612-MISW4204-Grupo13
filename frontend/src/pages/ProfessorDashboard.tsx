@@ -21,10 +21,10 @@ import Loading from "../components/Loading";
 import Toast from "../components/Toast";
 import useToast from "../components/useToast";
 
-interface ProfessorDashboardProps {
+type ProfessorDashboardProps = Readonly<{
   user: User;
   onLogout: () => void;
-}
+}>;
 
 export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboardProps) {
   const [me, setMe] = useState<User | null>(null);
@@ -303,14 +303,14 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
     try {
       const blob = await downloadReport(reportId);
-      const fileUrl = window.URL.createObjectURL(blob);
+      const fileUrl = globalThis.URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = fileUrl;
       anchor.download = `reporte_${reportId}.pdf`;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
-      window.URL.revokeObjectURL(fileUrl);
+      globalThis.URL.revokeObjectURL(fileUrl);
       showToast(`Reporte ${reportId} descargado correctamente.`, "success");
     } catch (err) {
       showToast(toErrorMessage(err), "error");
@@ -494,7 +494,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         <form className="form-grid" onSubmit={handleCreateWorkspace}>
           <div className="form-field">
             <label>
-              Periodo academico
+              <span>Periodo academico</span>
               <select
                 value={workspaceForm.period_id}
                 onChange={(event) =>
@@ -519,7 +519,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
           <div className="form-field">
             <label>
-              Nombre
+              <span>Nombre</span>
               <input
                 value={workspaceForm.name}
                 onChange={(event) =>
@@ -535,7 +535,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
           <div className="form-field">
             <label>
-              Tipo
+              <span>Tipo</span>
               <select
                 value={workspaceForm.type}
                 onChange={(event) =>
@@ -553,7 +553,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
           <div className="form-field">
             <label>
-              Fecha inicial
+              <span>Fecha inicial</span>
               <input
                 type="date"
                 value={workspaceForm.initial_date}
@@ -570,7 +570,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
           <div className="form-field">
             <label>
-              Fecha final
+              <span>Fecha final</span>
               <input
                 type="date"
                 value={workspaceForm.final_date}
@@ -587,7 +587,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
           <div className="form-field">
             <label>
-              Observaciones
+              <span>Observaciones</span>
               <input
                 value={workspaceForm.observations}
                 onChange={(event) =>
@@ -603,7 +603,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
           <div className="form-field">
             <label>
-              Estado
+              <span>Estado</span>
               <select
                 value={workspaceForm.state}
                 onChange={(event) =>
@@ -631,7 +631,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         <form className="form-grid" onSubmit={handleCreateAssignment}>
           <div className="form-field">
             <label>
-              Curso/proyecto propio
+              <span>Curso/proyecto propio</span>
               <select
                 value={assignmentForm.workspace_id}
                 onChange={(event) =>
@@ -656,7 +656,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
           <div className="form-field">
             <label>
-              Rol de vinculacion
+              <span>Rol de vinculacion</span>
               <select
                 value={assignmentForm.role}
                 onChange={(event) =>
@@ -674,7 +674,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
           <div className="form-field">
             <label>
-              Usuario
+              <span>Usuario</span>
               <select
                 value={assignmentForm.user_id}
                 onChange={(event) =>
@@ -701,7 +701,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
           <div className="form-field">
             <label>
-              Horas semanales
+              <span>Horas semanales</span>
               <input
                 type="number"
                 min={1}
@@ -729,7 +729,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         <form className="form-grid" onSubmit={handleGenerateReport}>
           <div className="form-field">
             <label>
-              Curso/proyecto
+              <span>Curso/proyecto</span>
               <select
                 value={workspaceId}
                 onChange={(event) => setWorkspaceId(event.target.value)}
@@ -750,7 +750,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
           <div className="form-field">
             <label>
-              Semana
+              <span>Semana</span>
               <select
                 value={weekId}
                 onChange={(event) => setWeekId(event.target.value)}
@@ -786,7 +786,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         <form className="form-grid" onSubmit={handleFilterReports}>
           <div className="form-field">
             <label>
-              Curso/proyecto
+              <span>Curso/proyecto</span>
               <select
                 value={filterWorkspaceId}
                 onChange={(event) => setFilterWorkspaceId(event.target.value)}
@@ -806,7 +806,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
           <div className="form-field">
             <label>
-              Semana
+              <span>Semana</span>
               <select
                 value={filterWeekId}
                 onChange={(event) => setFilterWeekId(event.target.value)}
@@ -865,3 +865,4 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     </Layout>
   );
 }
+

@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 import type { User } from "../api/types";
 
-interface LayoutProps {
+type LayoutProps = Readonly<{
   title: string;
   description?: string;
   user: User;
   onLogout: () => void;
   children: ReactNode;
-}
+}>;
 
 function toRoleLabel(role: User["global_role"]): string {
   const map = {
