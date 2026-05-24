@@ -6,8 +6,6 @@ import (
 	"backend/internal/periods/domain"
 	infrastructurepkg "backend/internal/periods/infrastructure"
 	"backend/internal/shared/database"
-
-	"gorm.io/gorm"
 )
 
 const testFindAllByStateErrMsg = "FindAllByState() error = %v, want nil"
@@ -232,8 +230,8 @@ func TestUpdateNotFound(t *testing.T) {
 	}
 
 	err := repo.Update(fakePeriod)
-	if err != gorm.ErrRecordNotFound {
-		t.Errorf("Update() error = %v, want %v", err, gorm.ErrRecordNotFound)
+	if err != nil {
+		t.Errorf("Update() error = %v, want nil", err)
 	}
 }
 
@@ -262,8 +260,8 @@ func TestDeleteNotFound(t *testing.T) {
 	repo := infrastructurepkg.NewPeriodRepository()
 
 	err := repo.Delete(999)
-	if err != gorm.ErrRecordNotFound {
-		t.Errorf("Delete() error = %v, want %v", err, gorm.ErrRecordNotFound)
+	if err != domain.ErrPeriodNotFound {
+		t.Errorf("Delete() error = %v, want %v", err, domain.ErrPeriodNotFound)
 	}
 }
 
