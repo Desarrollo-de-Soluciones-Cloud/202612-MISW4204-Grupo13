@@ -26,6 +26,20 @@ type ProfessorDashboardProps = Readonly<{
   onLogout: () => void;
 }>;
 
+type ReportGenerationStatus = Readonly<{
+  message: string;
+  type: "idle" | "queued" | "ready";
+}>;
+
+const reportPollingIntervalMs = 4000;
+const reportPollingAttempts = 6;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    globalThis.setTimeout(resolve, ms);
+  });
+}
+
 export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboardProps) {
   const [me, setMe] = useState<User | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -54,6 +68,10 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     weekly_hours: "1",
   });
   const [loading, setLoading] = useState(false);
+  const [reportGenerationStatus, setReportGenerationStatus] = useState<ReportGenerationStatus>({
+    message: "",
+    type: "idle",
+  });
   const { toast, showToast, clearToast } = useToast();
 
   const getReportsWorkspaceId = (fallbackWorkspaceId?: number): number | undefined => {
@@ -79,6 +97,50 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
   const getWeekLabel = (week: Week): string =>
     `Semana ${week.number}: ${week.initial_date} a ${week.final_date} (ID ${week.id})`;
+
+  const loadReportsForFilters = async (selectedWorkspaceId: number, selectedWeekId?: number) => {
+    const response = await listReports({
+      workspace_id: selectedWorkspaceId,
+      week_id: selectedWeekId,
+    });
+    setReports(response.reports);
+    return response.reports;
+  };
+
+  const waitForQueuedReports = async (
+    selectedWorkspaceId: number,
+    selectedWeekId: number,
+    baselineCount: number,
+    queuedCount: number,
+  ) => {
+    setReportGenerationStatus({
+      message: `Generando ${queuedCount} reporte(s). La lista se actualizara automaticamente cuando esten listos.`,
+      type: "queued",
+    });
+
+    for (let attempt = 0; attempt < reportPollingAttempts; attempt += 1) {
+      if (attempt > 0) {
+        await delay(reportPollingIntervalMs);
+      }
+
+      const nextReports = await loadReportsForFilters(selectedWorkspaceId, selectedWeekId);
+      const nextCount = nextReports.filter((item) => item.week_id === selectedWeekId).length;
+      if (nextCount > baselineCount) {
+        setReportGenerationStatus({
+          message: `Los nuevos reportes de la semana ${selectedWeekId} ya estan disponibles para descarga.`,
+          type: "ready",
+        });
+        showToast("Los reportes ya estan listos para descarga.", "success");
+        return;
+      }
+    }
+
+    setReportGenerationStatus({
+      message: "La generacion sigue en proceso. Puedes volver a consultar esta lista en unos segundos.",
+      type: "queued",
+    });
+    showToast("La generacion sigue en proceso. Vuelve a consultar en unos segundos.", "info");
+  };
 
   const loadWeeksForPeriod = async (periodId: number) => {
     if (weeksByPeriod[periodId]) {
@@ -227,11 +289,10 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
     const loadReports = async () => {
       try {
-        const response = await listReports({
-          workspace_id: selectedWorkspaceId,
-          week_id: filterWeekId ? Number(filterWeekId) : undefined,
-        });
-        setReports(response.reports);
+        await loadReportsForFilters(
+          selectedWorkspaceId,
+          filterWeekId ? Number(filterWeekId) : undefined,
+        );
       } catch (err) {
         showToast(toErrorMessage(err), "error");
       }
@@ -247,33 +308,50 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     try {
       const selectedWorkspaceId = Number(workspaceId);
       const selectedWeekId = Number(weekId);
+      const baselineCount = reports.filter((item) => item.week_id === selectedWeekId).length;
 
       const response = await generateWeeklyReport({
         workspace_id: selectedWorkspaceId,
         week_id: selectedWeekId,
       });
       if (response.reports.length === 0) {
+        setFilterWorkspaceId(String(selectedWorkspaceId));
+        setFilterWeekId(String(selectedWeekId));
         showToast(
-          `Se encolaron ${response.generated_count} reportes semanales. Actualiza la lista en unos segundos.`,
-          "success",
+          `Se encolaron ${response.generated_count} reportes semanales. Te avisaremos cuando aparezcan en la lista.`,
+          "info",
         );
         setWeekId("");
+        await waitForQueuedReports(
+          selectedWorkspaceId,
+          selectedWeekId,
+          baselineCount,
+          response.generated_count,
+        );
         return;
       }
 
       showToast(`Se generaron ${response.generated_count} reportes semanales.`, "success");
+      setReportGenerationStatus({
+        message: `Se generaron ${response.generated_count} reporte(s) de inmediato para la semana seleccionada.`,
+        type: "ready",
+      });
       setWeekId("");
 
       const reportsWorkspaceId = getReportsWorkspaceId(selectedWorkspaceId);
-      const reportResult = reportsWorkspaceId
-        ? await listReports({
-            workspace_id: reportsWorkspaceId,
-            week_id: filterWeekId ? Number(filterWeekId) : undefined,
-          })
-        : { reports: [] };
-
-      setReports(reportResult.reports);
+      if (reportsWorkspaceId) {
+        await loadReportsForFilters(
+          reportsWorkspaceId,
+          filterWeekId ? Number(filterWeekId) : undefined,
+        );
+      } else {
+        setReports([]);
+      }
     } catch (err) {
+      setReportGenerationStatus({
+        message: "",
+        type: "idle",
+      });
       showToast(toErrorMessage(err), "error");
     }
   };
@@ -288,11 +366,10 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         return;
       }
 
-      const response = await listReports({
-        workspace_id: Number(filterWorkspaceId),
-        week_id: filterWeekId ? Number(filterWeekId) : undefined,
-      });
-      setReports(response.reports);
+      await loadReportsForFilters(
+        Number(filterWorkspaceId),
+        filterWeekId ? Number(filterWeekId) : undefined,
+      );
     } catch (err) {
       showToast(toErrorMessage(err), "error");
     }
@@ -783,6 +860,13 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
       <section className="card">
         <h2>Reportes generados</h2>
         <p className="section-desc">Filtra por curso/proyecto o semana para consultar los reportes disponibles.</p>
+        {reportGenerationStatus.type !== "idle" ? (
+          <div
+            className={reportGenerationStatus.type === "ready" ? "success-box status-box" : "info-card status-box"}
+          >
+            <p>{reportGenerationStatus.message}</p>
+          </div>
+        ) : null}
         <form className="form-grid" onSubmit={handleFilterReports}>
           <div className="form-field">
             <label>

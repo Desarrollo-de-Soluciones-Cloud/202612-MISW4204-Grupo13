@@ -365,6 +365,16 @@ tbody tr:hover {
   color: #24445f;
 }
 
+.status-box {
+  margin-bottom: 1rem;
+  border-radius: 0.7rem;
+  padding: 0.9rem 1rem;
+}
+
+.status-box p {
+  margin: 0;
+}
+
 .list-help {
   margin: 0.4rem 0 0;
   padding-left: 1rem;
@@ -453,8 +463,8 @@ tbody tr:hover {
 
 .toast-close {
   border: none;
-  background: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.9);
+  color: #16324d;
   width: 1.6rem;
   height: 1.6rem;
   min-width: 1.6rem;
@@ -465,7 +475,7 @@ tbody tr:hover {
 }
 
 .toast-close:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.3);
+  background: #ffffff;
 }
 
 @media (max-width: 768px) {
