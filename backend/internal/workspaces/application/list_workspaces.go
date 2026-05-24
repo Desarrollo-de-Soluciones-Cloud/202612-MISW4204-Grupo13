@@ -34,6 +34,10 @@ func (uc *ListWorkspaces) Execute() (*ListWorkspacesOutput, error) {
 		return nil, err
 	}
 
+	return &ListWorkspacesOutput{Workspaces: mapWorkspaceDTOs(workspaces)}, nil
+}
+
+func mapWorkspaceDTOs(workspaces []domain.Workspace) []WorkspaceDTO {
 	result := make([]WorkspaceDTO, len(workspaces))
 	for i, w := range workspaces {
 		result[i] = WorkspaceDTO{
@@ -48,6 +52,5 @@ func (uc *ListWorkspaces) Execute() (*ListWorkspacesOutput, error) {
 			State:        string(w.State),
 		}
 	}
-
-	return &ListWorkspacesOutput{Workspaces: result}, nil
+	return result
 }

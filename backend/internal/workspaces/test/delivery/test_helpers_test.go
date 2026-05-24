@@ -79,13 +79,7 @@ func (r *workspaceRepoStub) Delete(id uint) error {
 
 func (r *periodRepoStub) Create(period *periodsDomain.Period) error { return nil }
 func (r *periodRepoStub) FindByID(id uint) (*periodsDomain.Period, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.period == nil || r.period.ID != id {
-		return nil, periodsDomain.ErrPeriodNotFound
-	}
-	return r.period, nil
+	return findPeriodStubByID(r.period, r.err, id)
 }
 func (r *periodRepoStub) FindByName(name string) (*periodsDomain.Period, error) {
 	return nil, periodsDomain.ErrPeriodNotFound
@@ -133,10 +127,7 @@ func (r *assignmentRepoStub) FindByWorkspaceUserID(workspaceUserID uint) ([]assi
 	return nil, nil
 }
 func (r *assignmentRepoStub) FindByWorkspaceIDsAndRoles(workspaceIDs []uint, roles []assignmentsDomain.AssignmentRole) ([]assignmentsDomain.Assignment, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	return r.assignments, nil
+	return findAssignmentsStubByRoles(r.assignments, r.err)
 }
 func (r *assignmentRepoStub) SumWeeklyHoursByUserAndRole(userID uint, role assignmentsDomain.AssignmentRole) (int, error) {
 	return 0, nil
@@ -192,4 +183,24 @@ func newWorkspaceHandlerForTest() *deliverypkg.WorkspaceHandler {
 
 func authenticatedUser(id uint, role usersDomain.UserRole) authDomain.AuthenticatedUser {
 	return authDomain.AuthenticatedUser{ID: id, GlobalRole: role}
+}
+
+func findPeriodStubByID(period *periodsDomain.Period, err error, id uint) (*periodsDomain.Period, error) {
+	if err != nil {
+		return nil, err
+	}
+	if period == nil || period.ID != id {
+		return nil, periodsDomain.ErrPeriodNotFound
+	}
+	return period, nil
+}
+
+func findAssignmentsStubByRoles(
+	assignments []assignmentsDomain.Assignment,
+	err error,
+) ([]assignmentsDomain.Assignment, error) {
+	if err != nil {
+		return nil, err
+	}
+	return assignments, nil
 }

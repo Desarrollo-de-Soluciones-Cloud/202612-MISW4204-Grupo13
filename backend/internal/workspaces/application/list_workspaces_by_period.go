@@ -26,20 +26,5 @@ func (uc *ListWorkspacesByPeriod) Execute(input ListWorkspacesByPeriodInput) (*L
 		return nil, err
 	}
 
-	result := make([]WorkspaceDTO, len(workspaces))
-	for i, w := range workspaces {
-		result[i] = WorkspaceDTO{
-			ID:           w.ID,
-			PeriodID:     w.PeriodID,
-			UserID:       w.UserID,
-			Name:         w.Name,
-			Type:         string(w.Type),
-			InitialDate:  w.InitialDate,
-			FinalDate:    w.FinalDate,
-			Observations: w.Observations,
-			State:        string(w.State),
-		}
-	}
-
-	return &ListWorkspacesByPeriodOutput{Workspaces: result}, nil
+	return &ListWorkspacesByPeriodOutput{Workspaces: mapWorkspaceDTOs(workspaces)}, nil
 }

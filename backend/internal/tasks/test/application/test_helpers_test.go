@@ -107,27 +107,15 @@ func (m *mockTaskRepository) Delete(id uint) error {
 }
 
 func (m *mockAssignmentRepository) FindByID(id uint) (*assignmentsDomain.Assignment, error) {
-	assignment, ok := m.assignments[id]
-	if !ok {
-		return nil, assignmentsDomain.ErrAssignmentNotFound
-	}
-	return assignment, nil
+	return findTaskAssignmentStubByID(m.assignments, id)
 }
 
 func (m *mockWorkspaceRepository) FindByID(id uint) (*workspacesDomain.Workspace, error) {
-	workspace, ok := m.workspaces[id]
-	if !ok {
-		return nil, workspacesDomain.ErrWorkspaceNotFound
-	}
-	return workspace, nil
+	return findTaskWorkspaceStubByID(m.workspaces, id)
 }
 
 func (m *mockWeekRepository) FindByPeriodIDAndStartDate(periodID uint, startDate string) (*weeksDomain.Week, error) {
-	week, ok := m.weeks[startDate]
-	if !ok {
-		return nil, weeksDomain.ErrWeekNotFound
-	}
-	return week, nil
+	return findTaskWeekStubByStartDate(m.weeks, startDate)
 }
 
 func seedAssignment(repo *mockAssignmentRepository, id, userID uint) {
@@ -177,4 +165,37 @@ func seedTask(t *testing.T, repo *mockTaskRepository, userID, assignmentID uint,
 		t.Fatalf("expected create seed task, got %v", err)
 	}
 	return task
+}
+
+func findTaskAssignmentStubByID(
+	assignments map[uint]*assignmentsDomain.Assignment,
+	id uint,
+) (*assignmentsDomain.Assignment, error) {
+	assignment, ok := assignments[id]
+	if !ok {
+		return nil, assignmentsDomain.ErrAssignmentNotFound
+	}
+	return assignment, nil
+}
+
+func findTaskWorkspaceStubByID(
+	workspaces map[uint]*workspacesDomain.Workspace,
+	id uint,
+) (*workspacesDomain.Workspace, error) {
+	workspace, ok := workspaces[id]
+	if !ok {
+		return nil, workspacesDomain.ErrWorkspaceNotFound
+	}
+	return workspace, nil
+}
+
+func findTaskWeekStubByStartDate(
+	weeks map[string]*weeksDomain.Week,
+	startDate string,
+) (*weeksDomain.Week, error) {
+	week, ok := weeks[startDate]
+	if !ok {
+		return nil, weeksDomain.ErrWeekNotFound
+	}
+	return week, nil
 }
