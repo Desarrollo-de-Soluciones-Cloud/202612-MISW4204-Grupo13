@@ -15,6 +15,7 @@ import {
 } from "../api/client";
 import type { Period, Report, Task, User, Week, Workspace } from "../api/types";
 import EmptyState from "../components/EmptyState";
+import { SessionSummaryTable, WorkspaceDetailsFields, WorkspaceWeekFilters } from "../components/dashboardShared";
 import HelpText from "../components/HelpText";
 import Layout from "../components/Layout";
 import Loading from "../components/Loading";
@@ -481,30 +482,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
       <section className="card">
         <h2>Resumen de sesión</h2>
-        {me ? (
-          <table>
-            <tbody>
-              <tr>
-                <th>ID</th>
-                <td>{me.id}</td>
-              </tr>
-              <tr>
-                <th>Nombre</th>
-                <td>{me.name}</td>
-              </tr>
-              <tr>
-                <th>Correo</th>
-                <td>{me.email}</td>
-              </tr>
-              <tr>
-                <th>Rol</th>
-                <td>{me.global_role}</td>
-              </tr>
-            </tbody>
-          </table>
-        ) : (
-          <p className="muted">Sin datos</p>
-        )}
+        <SessionSummaryTable user={me} />
       </section>
 
       <section className="card">
@@ -602,107 +580,12 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
             </label>
           </div>
 
-          <div className="form-field">
-            <label>
-              <span>Nombre</span>
-              <input
-                value={workspaceForm.name}
-                onChange={(event) =>
-                  setWorkspaceForm((previous) => ({
-                    ...previous,
-                    name: event.target.value,
-                  }))
-                }
-                required
-              />
-            </label>
-          </div>
-
-          <div className="form-field">
-            <label>
-              <span>Tipo</span>
-              <select
-                value={workspaceForm.type}
-                onChange={(event) =>
-                  setWorkspaceForm((previous) => ({
-                    ...previous,
-                    type: event.target.value as "course" | "project",
-                  }))
-                }
-              >
-                <option value="course">Curso</option>
-                <option value="project">Proyecto</option>
-              </select>
-            </label>
-          </div>
-
-          <div className="form-field">
-            <label>
-              <span>Fecha inicial</span>
-              <input
-                type="date"
-                value={workspaceForm.initial_date}
-                onChange={(event) =>
-                  setWorkspaceForm((previous) => ({
-                    ...previous,
-                    initial_date: event.target.value,
-                  }))
-                }
-                required
-              />
-            </label>
-          </div>
-
-          <div className="form-field">
-            <label>
-              <span>Fecha final</span>
-              <input
-                type="date"
-                value={workspaceForm.final_date}
-                onChange={(event) =>
-                  setWorkspaceForm((previous) => ({
-                    ...previous,
-                    final_date: event.target.value,
-                  }))
-                }
-                required
-              />
-            </label>
-          </div>
-
-          <div className="form-field">
-            <label>
-              <span>Observaciones</span>
-              <input
-                value={workspaceForm.observations}
-                onChange={(event) =>
-                  setWorkspaceForm((previous) => ({
-                    ...previous,
-                    observations: event.target.value,
-                  }))
-                }
-                required
-              />
-            </label>
-          </div>
-
-          <div className="form-field">
-            <label>
-              <span>Estado</span>
-              <select
-                value={workspaceForm.state}
-                onChange={(event) =>
-                  setWorkspaceForm((previous) => ({
-                    ...previous,
-                    state: event.target.value as "active" | "closed",
-                  }))
-                }
-              >
-                <option value="active">Activo</option>
-                <option value="closed">Cerrado</option>
-              </select>
-            </label>
-          </div>
+          <WorkspaceDetailsFields
+            form={workspaceForm}
+            onChange={(updates) =>
+              setWorkspaceForm((previous) => ({ ...previous, ...updates }))
+            }
+          />
 
           <div className="form-actions">
             <button type="submit">Crear curso/proyecto</button>
@@ -869,43 +752,22 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         <h2>Reportes generados</h2>
         <p className="section-desc">Filtra por curso/proyecto o semana para consultar los reportes disponibles.</p>
         <form className="form-grid" onSubmit={handleFilterReports}>
-          <div className="form-field">
-            <label>
-              <span>Curso/proyecto</span>
-              <select
-                value={filterWorkspaceId}
-                onChange={(event) => setFilterWorkspaceId(event.target.value)}
-                required
-              >
-                <option value="" disabled>
-                  Selecciona un curso/proyecto
-                </option>
-                {workspaces.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {getWorkspaceLabel(item)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="form-field">
-            <label>
-              <span>Semana</span>
-              <select
-                value={filterWeekId}
-                onChange={(event) => setFilterWeekId(event.target.value)}
-                disabled={filterWorkspaceId === "" || filterWeeks.length === 0}
-              >
-                <option value="">Todas las semanas</option>
-                {filterWeeks.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {getWeekLabel(item)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <WorkspaceWeekFilters
+            workspaceId={filterWorkspaceId}
+            weekId={filterWeekId}
+            workspaces={workspaces}
+            weeks={filterWeeks}
+            workspaceLabel="Curso/proyecto"
+            weekLabel="Semana"
+            workspacePlaceholder="Selecciona un curso/proyecto"
+            weekPlaceholder="Todas las semanas"
+            allWeeksLabel="Todas las semanas"
+            disabled={filterWorkspaceId === "" || filterWeeks.length === 0}
+            onWorkspaceChange={setFilterWorkspaceId}
+            onWeekChange={setFilterWeekId}
+            getWorkspaceLabel={getWorkspaceLabel}
+            getWeekLabel={getWeekLabel}
+          />
 
           <div className="form-actions">
             <button type="submit">Aplicar filtros</button>

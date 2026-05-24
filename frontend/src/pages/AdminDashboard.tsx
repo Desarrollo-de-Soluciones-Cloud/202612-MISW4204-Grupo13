@@ -17,6 +17,7 @@ import {
 } from "../api/client";
 import type { Assignment, GlobalRole, Period, Report, Task, User, Week, Workspace } from "../api/types";
 import EmptyState from "../components/EmptyState";
+import { SessionSummaryTable, WorkspaceDetailsFields, WorkspaceWeekFilters } from "../components/dashboardShared";
 import HelpText from "../components/HelpText";
 import Layout from "../components/Layout";
 import Loading from "../components/Loading";
@@ -572,100 +573,14 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
             <HelpText>El usuario seleccionado debe tener rol Profesor.</HelpText>
           </div>
 
-          <div className="form-field">
-            <label>
-              <span>Nombre del curso o proyecto</span>
-              <input
-                value={workspaceForm.name}
-                onChange={(event) =>
-                  setWorkspaceForm((previous) => ({ ...previous, name: event.target.value }))
-                }
-                required
-              />
-            </label>
-          </div>
-
-          <div className="form-field">
-            <label>
-              <span>Tipo</span>
-              <select
-                value={workspaceForm.type}
-                onChange={(event) =>
-                  setWorkspaceForm((previous) => ({
-                    ...previous,
-                    type: event.target.value as "course" | "project",
-                  }))
-                }
-              >
-                <option value="course">Curso</option>
-                <option value="project">Proyecto</option>
-              </select>
-            </label>
-          </div>
-
-          <div className="form-field">
-            <label>
-              <span>Fecha inicial</span>
-              <input
-                type="date"
-                value={workspaceForm.initial_date}
-                onChange={(event) =>
-                  setWorkspaceForm((previous) => ({ ...previous, initial_date: event.target.value }))
-                }
-                required
-              />
-            </label>
-          </div>
-
-          <div className="form-field">
-            <label>
-              <span>Fecha final</span>
-              <input
-                type="date"
-                value={workspaceForm.final_date}
-                onChange={(event) =>
-                  setWorkspaceForm((previous) => ({ ...previous, final_date: event.target.value }))
-                }
-                required
-              />
-            </label>
-            <HelpText>La fecha inicial debe ser anterior a la fecha final.</HelpText>
-          </div>
-
-          <div className="form-field">
-            <label>
-              <span>Observaciones</span>
-              <input
-                value={workspaceForm.observations}
-                onChange={(event) =>
-                  setWorkspaceForm((previous) => ({
-                    ...previous,
-                    observations: event.target.value,
-                  }))
-                }
-                required
-              />
-            </label>
-            <HelpText>Incluye información breve sobre el curso o proyecto.</HelpText>
-          </div>
-
-          <div className="form-field">
-            <label>
-              <span>Estado</span>
-              <select
-                value={workspaceForm.state}
-                onChange={(event) =>
-                  setWorkspaceForm((previous) => ({
-                    ...previous,
-                    state: event.target.value as "active" | "closed",
-                  }))
-                }
-              >
-                <option value="active">Activo</option>
-                <option value="closed">Cerrado</option>
-              </select>
-            </label>
-          </div>
+          <WorkspaceDetailsFields
+            form={workspaceForm}
+            onChange={(updates) =>
+              setWorkspaceForm((previous) => ({ ...previous, ...updates }))
+            }
+            finalDateHelpText="La fecha inicial debe ser anterior a la fecha final."
+            observationsHelpText="Incluye información breve sobre el curso o proyecto."
+          />
 
           <div className="form-actions">
             <button type="submit">Crear curso o proyecto</button>
@@ -778,30 +693,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
       <section className="card">
         <h2>Resumen de sesión</h2>
-        {me ? (
-          <table>
-            <tbody>
-              <tr>
-                <th>ID</th>
-                <td>{me.id}</td>
-              </tr>
-              <tr>
-                <th>Nombre</th>
-                <td>{me.name}</td>
-              </tr>
-              <tr>
-                <th>Correo</th>
-                <td>{me.email}</td>
-              </tr>
-              <tr>
-                <th>Rol</th>
-                <td>{me.global_role}</td>
-              </tr>
-            </tbody>
-          </table>
-        ) : (
-          <p className="muted">Sin datos</p>
-        )}
+        <SessionSummaryTable user={me} />
       </section>
 
       <section className="card">
@@ -969,53 +861,26 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       <section className="card">
         <h2>Reportes generados</h2>
         <form className="form-grid" onSubmit={handleFilterReports}>
-          <div className="form-field">
-            <label>
-              <span>ID del curso/proyecto</span>
-              <select
-                value={reportFilters.workspace_id}
-                onChange={(event) =>
-                  setReportFilters((previous) => ({
-                    ...previous,
-                    workspace_id: event.target.value,
-                  }))
-                }
-                required
-              >
-                <option value="" disabled>
-                  Selecciona un curso/proyecto
-                </option>
-                {workspaces.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {getWorkspaceLabel(item)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="form-field">
-            <label>
-              <span>Semana</span>
-              <select
-                value={reportFilters.week_id}
-                onChange={(event) =>
-                  setReportFilters((previous) => ({
-                    ...previous,
-                    week_id: event.target.value,
-                  }))
-                }
-                disabled={reportFilters.workspace_id === "" || reportWeeks.length === 0}
-              >
-                <option value="">Todas las semanas</option>
-                {reportWeeks.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {getWeekLabel(item)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <WorkspaceWeekFilters
+            workspaceId={reportFilters.workspace_id}
+            weekId={reportFilters.week_id}
+            workspaces={workspaces}
+            weeks={reportWeeks}
+            workspaceLabel="ID del curso/proyecto"
+            weekLabel="Semana"
+            workspacePlaceholder="Selecciona un curso/proyecto"
+            weekPlaceholder="Todas las semanas"
+            allWeeksLabel="Todas las semanas"
+            disabled={reportFilters.workspace_id === "" || reportWeeks.length === 0}
+            onWorkspaceChange={(value) =>
+              setReportFilters((previous) => ({ ...previous, workspace_id: value }))
+            }
+            onWeekChange={(value) =>
+              setReportFilters((previous) => ({ ...previous, week_id: value }))
+            }
+            getWorkspaceLabel={getWorkspaceLabel}
+            getWeekLabel={getWeekLabel}
+          />
 
           <div className="form-actions">
             <button type="submit">Aplicar filtros</button>
