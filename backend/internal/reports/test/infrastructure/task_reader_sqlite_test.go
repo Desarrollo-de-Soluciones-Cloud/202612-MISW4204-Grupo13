@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const testTaskWeekStartDate = "2026-10-05"
+
 func TestTaskReaderFindAllByWorkspaceAndWeekSQLite(t *testing.T) {
 	db := sharedDB.SetupSQLiteDB(t, &assignmentsDomain.Assignment{}, &tasksDomain.Task{})
 
@@ -23,9 +25,9 @@ func TestTaskReaderFindAllByWorkspaceAndWeekSQLite(t *testing.T) {
 	}
 
 	tasks := []tasksDomain.Task{
-		{AssignmentID: assignments[0].ID, Title: "A", Description: "A", Status: tasksDomain.TaskStatusEnDesarrollo, SpentHours: 2, WeekID: uintPtr(7), WeekStartDate: mustTaskDate(t, "2026-10-05")},
-		{AssignmentID: assignments[0].ID, Title: "B", Description: "B", Status: tasksDomain.TaskStatusFinalizado, SpentHours: 3, WeekID: uintPtr(7), WeekStartDate: mustTaskDate(t, "2026-10-05")},
-		{AssignmentID: assignments[1].ID, Title: "C", Description: "C", Status: tasksDomain.TaskStatusEnDesarrollo, SpentHours: 1, WeekID: uintPtr(7), WeekStartDate: mustTaskDate(t, "2026-10-05")},
+		{AssignmentID: assignments[0].ID, Title: "A", Description: "A", Status: tasksDomain.TaskStatusEnDesarrollo, SpentHours: 2, WeekID: uintPtr(7), WeekStartDate: mustTaskDate(t, testTaskWeekStartDate)},
+		{AssignmentID: assignments[0].ID, Title: "B", Description: "B", Status: tasksDomain.TaskStatusFinalizado, SpentHours: 3, WeekID: uintPtr(7), WeekStartDate: mustTaskDate(t, testTaskWeekStartDate)},
+		{AssignmentID: assignments[1].ID, Title: "C", Description: "C", Status: tasksDomain.TaskStatusEnDesarrollo, SpentHours: 1, WeekID: uintPtr(7), WeekStartDate: mustTaskDate(t, testTaskWeekStartDate)},
 	}
 	for i := range tasks {
 		if err := db.Create(&tasks[i]).Error; err != nil {
@@ -34,7 +36,7 @@ func TestTaskReaderFindAllByWorkspaceAndWeekSQLite(t *testing.T) {
 	}
 
 	reader := reportsInfrastructure.NewTaskReader()
-	found, err := reader.FindAllByWorkspaceAndWeek(1, 7, "2026-10-05")
+	found, err := reader.FindAllByWorkspaceAndWeek(1, 7, testTaskWeekStartDate)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

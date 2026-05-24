@@ -16,6 +16,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	testAssignmentsPath   = "/assignments"
+	testHeaderContentType = "Content-Type"
+	testApplicationJSON   = "application/json"
+	errExpected200        = "expected 200, got %d"
+	errExpected400        = "expected 400, got %d"
+)
+
 type assignmentRepoStub struct {
 	assignments []assignmentsDomain.Assignment
 }
@@ -167,7 +175,7 @@ func TestCreateAssignmentUnauthorized(t *testing.T) {
 	handler := newAssignmentHandlerForTest()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodPost, "/assignments", nil)
+	c.Request = httptest.NewRequest(http.MethodPost, testAssignmentsPath, nil)
 
 	handler.CreateAssignment(c)
 
@@ -180,15 +188,15 @@ func TestCreateAssignmentSuccessForProfessor(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newAssignmentHandlerForTest()
 	body, _ := json.Marshal(map[string]any{
-		"user_id":       3,
-		"workspace_id":  7,
-		"role":          "assistant",
-		"weekly_hours":  6,
+		"user_id":      3,
+		"workspace_id": 7,
+		"role":         "assistant",
+		"weekly_hours": 6,
 	})
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodPost, "/assignments", bytes.NewBuffer(body))
-	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request = httptest.NewRequest(http.MethodPost, testAssignmentsPath, bytes.NewBuffer(body))
+	c.Request.Header.Set(testHeaderContentType, testApplicationJSON)
 	c.Set("current_user", authenticatedUser(10, usersDomain.RoleProfessor))
 
 	handler.CreateAssignment(c)
@@ -219,13 +227,13 @@ func TestListAssignmentsForAdmin(t *testing.T) {
 	handler := newAssignmentHandlerForTest()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/assignments", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, testAssignmentsPath, nil)
 	c.Set("current_user", authenticatedUser(1, usersDomain.RoleAdmin))
 
 	handler.ListAssignments(c)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf(errExpected200, w.Code)
 	}
 }
 
@@ -240,8 +248,8 @@ func TestCreateAssignmentProfessorForbiddenForForeignWorkspace(t *testing.T) {
 	})
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodPost, "/assignments", bytes.NewBuffer(body))
-	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request = httptest.NewRequest(http.MethodPost, testAssignmentsPath, bytes.NewBuffer(body))
+	c.Request.Header.Set(testHeaderContentType, testApplicationJSON)
 	c.Set("current_user", authenticatedUser(99, usersDomain.RoleProfessor))
 
 	handler.CreateAssignment(c)
@@ -256,13 +264,13 @@ func TestListAssignmentsForProfessor(t *testing.T) {
 	handler := newAssignmentHandlerForTest()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/assignments", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, testAssignmentsPath, nil)
 	c.Set("current_user", authenticatedUser(10, usersDomain.RoleProfessor))
 
 	handler.ListAssignments(c)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf(errExpected200, w.Code)
 	}
 }
 
@@ -271,13 +279,13 @@ func TestListAssignmentsForMonitor(t *testing.T) {
 	handler := newAssignmentHandlerForTest()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/assignments", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, testAssignmentsPath, nil)
 	c.Set("current_user", authenticatedUser(2, usersDomain.RoleMonitor))
 
 	handler.ListAssignments(c)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf(errExpected200, w.Code)
 	}
 }
 
@@ -285,20 +293,20 @@ func TestUpdateAssignmentRejectsProfessorWeeklyHourChange(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newAssignmentHandlerForTest()
 	body, _ := json.Marshal(map[string]any{
-		"role":          "monitor",
-		"weekly_hours":  10,
+		"role":         "monitor",
+		"weekly_hours": 10,
 	})
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest(http.MethodPut, "/assignments/1", bytes.NewBuffer(body))
-	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.Header.Set(testHeaderContentType, testApplicationJSON)
 	c.Params = gin.Params{{Key: "id", Value: "1"}}
 	c.Set("current_user", authenticatedUser(10, usersDomain.RoleProfessor))
 
 	handler.UpdateAssignment(c)
 
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
+		t.Fatalf(errExpected400, w.Code)
 	}
 }
 
@@ -307,14 +315,14 @@ func TestCreateAssignmentBadRequest(t *testing.T) {
 	handler := newAssignmentHandlerForTest()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodPost, "/assignments", bytes.NewBufferString(`{"user_id":"bad"}`))
-	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request = httptest.NewRequest(http.MethodPost, testAssignmentsPath, bytes.NewBufferString(`{"user_id":"bad"}`))
+	c.Request.Header.Set(testHeaderContentType, testApplicationJSON)
 	c.Set("current_user", authenticatedUser(1, usersDomain.RoleAdmin))
 
 	handler.CreateAssignment(c)
 
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
+		t.Fatalf(errExpected400, w.Code)
 	}
 }
 
@@ -329,8 +337,8 @@ func TestCreateAssignmentTargetUserNotFound(t *testing.T) {
 	})
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodPost, "/assignments", bytes.NewBuffer(body))
-	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request = httptest.NewRequest(http.MethodPost, testAssignmentsPath, bytes.NewBuffer(body))
+	c.Request.Header.Set(testHeaderContentType, testApplicationJSON)
 	c.Set("current_user", authenticatedUser(1, usersDomain.RoleAdmin))
 
 	handler.CreateAssignment(c)
@@ -351,14 +359,14 @@ func TestCreateAssignmentRoleNotAllowedForMonitor(t *testing.T) {
 	})
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodPost, "/assignments", bytes.NewBuffer(body))
-	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request = httptest.NewRequest(http.MethodPost, testAssignmentsPath, bytes.NewBuffer(body))
+	c.Request.Header.Set(testHeaderContentType, testApplicationJSON)
 	c.Set("current_user", authenticatedUser(1, usersDomain.RoleAdmin))
 
 	handler.CreateAssignment(c)
 
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
+		t.Fatalf(errExpected400, w.Code)
 	}
 }
 
@@ -374,7 +382,7 @@ func TestGetAssignmentByIDBadID(t *testing.T) {
 	handler.GetAssignmentByID(c)
 
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
+		t.Fatalf(errExpected400, w.Code)
 	}
 }
 

@@ -16,6 +16,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	testAuthEmail         = "john@example.com"
+	testAuthSignInPath    = "/auth/sign-in"
+	testAuthSecurePath    = "/secure"
+	testHeaderContentType = "Content-Type"
+	testApplicationJSON   = "application/json"
+	errExpected200        = "expected 200, got %d"
+	errExpected401        = "expected 401, got %d"
+)
+
 type mockAuthUserReader struct {
 	user *authDomain.AuthenticatedUserCredentials
 	err  error
@@ -69,7 +79,7 @@ func newAuthHandlerForTest(t *testing.T) *deliverypkg.AuthHandler {
 			AuthenticatedUser: authDomain.AuthenticatedUser{
 				ID:         1,
 				Name:       "John",
-				Email:      "john@example.com",
+				Email:      testAuthEmail,
 				GlobalRole: usersDomain.RoleAdmin,
 			},
 			Password: hash,
@@ -87,8 +97,8 @@ func TestSignInBadRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newAuthHandlerForTest(t)
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/auth/sign-in", bytes.NewBufferString(`{"email":123}`))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, testAuthSignInPath, bytes.NewBufferString(`{"email":123}`))
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 
@@ -104,18 +114,18 @@ func TestSignInSuccess(t *testing.T) {
 	handler := newAuthHandlerForTest(t)
 	w := httptest.NewRecorder()
 	body, _ := json.Marshal(deliverypkg.SignInRequest{
-		Email:    "john@example.com",
+		Email:    testAuthEmail,
 		Password: "password123",
 	})
-	req := httptest.NewRequest(http.MethodPost, "/auth/sign-in", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, testAuthSignInPath, bytes.NewBuffer(body))
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 
 	handler.SignIn(c)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf(errExpected200, w.Code)
 	}
 }
 
@@ -128,7 +138,7 @@ func TestGetCurrentUserUnauthorized(t *testing.T) {
 	handler.GetCurrentUser(c)
 
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", w.Code)
+		t.Fatalf(errExpected401, w.Code)
 	}
 }
 
@@ -137,12 +147,12 @@ func TestRequireAuthenticationMissingHeader(t *testing.T) {
 	handler := newAuthHandlerForTest(t)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/secure", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, testAuthSecurePath, nil)
 
 	handler.RequireAuthentication()(c)
 
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", w.Code)
+		t.Fatalf(errExpected401, w.Code)
 	}
 }
 
@@ -171,7 +181,7 @@ func TestSignInInvalidCredentials(t *testing.T) {
 			AuthenticatedUser: authDomain.AuthenticatedUser{
 				ID:         1,
 				Name:       "John",
-				Email:      "john@example.com",
+				Email:      testAuthEmail,
 				GlobalRole: usersDomain.RoleAdmin,
 			},
 			Password: hash,
@@ -184,18 +194,18 @@ func TestSignInInvalidCredentials(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	body, _ := json.Marshal(deliverypkg.SignInRequest{
-		Email:    "john@example.com",
+		Email:    testAuthEmail,
 		Password: "wrong-password",
 	})
-	req := httptest.NewRequest(http.MethodPost, "/auth/sign-in", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, testAuthSignInPath, bytes.NewBuffer(body))
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 
 	handler.SignIn(c)
 
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", w.Code)
+		t.Fatalf(errExpected401, w.Code)
 	}
 }
 
@@ -208,11 +218,11 @@ func TestSignInInternalError(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	body, _ := json.Marshal(deliverypkg.SignInRequest{
-		Email:    "john@example.com",
+		Email:    testAuthEmail,
 		Password: "password123",
 	})
-	req := httptest.NewRequest(http.MethodPost, "/auth/sign-in", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, testAuthSignInPath, bytes.NewBuffer(body))
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 
@@ -231,14 +241,14 @@ func TestGetCurrentUserSuccess(t *testing.T) {
 	c.Set("current_user", authDomain.AuthenticatedUser{
 		ID:         1,
 		Name:       "John",
-		Email:      "john@example.com",
+		Email:      testAuthEmail,
 		GlobalRole: usersDomain.RoleAdmin,
 	})
 
 	handler.GetCurrentUser(c)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf(errExpected200, w.Code)
 	}
 }
 
@@ -250,13 +260,13 @@ func TestRequireAuthenticationInvalidToken(t *testing.T) {
 	)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/secure", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, testAuthSecurePath, nil)
 	c.Request.Header.Set("Authorization", "Bearer bad-token")
 
 	handler.RequireAuthentication()(c)
 
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", w.Code)
+		t.Fatalf(errExpected401, w.Code)
 	}
 }
 
@@ -265,7 +275,7 @@ func TestRequireAuthenticationSuccess(t *testing.T) {
 	user := &authDomain.AuthenticatedUser{
 		ID:         1,
 		Name:       "John",
-		Email:      "john@example.com",
+		Email:      testAuthEmail,
 		GlobalRole: usersDomain.RoleAdmin,
 	}
 	handler := deliverypkg.NewAuthHandler(
@@ -274,13 +284,13 @@ func TestRequireAuthenticationSuccess(t *testing.T) {
 	)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/secure", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, testAuthSecurePath, nil)
 	c.Request.Header.Set("Authorization", "Bearer ok-token")
 
 	handler.RequireAuthentication()(c)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf(errExpected200, w.Code)
 	}
 	if _, ok := deliverypkg.GetCurrentUser(c); !ok {
 		t.Fatal("expected current user in context")
@@ -296,7 +306,7 @@ func TestRequireRolesUnauthorizedWithoutUser(t *testing.T) {
 	handler.RequireRoles(usersDomain.RoleAdmin)(c)
 
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", w.Code)
+		t.Fatalf(errExpected401, w.Code)
 	}
 }
 
@@ -313,6 +323,6 @@ func TestRequireRolesSuccess(t *testing.T) {
 	handler.RequireRoles(usersDomain.RoleAdmin)(c)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf(errExpected200, w.Code)
 	}
 }

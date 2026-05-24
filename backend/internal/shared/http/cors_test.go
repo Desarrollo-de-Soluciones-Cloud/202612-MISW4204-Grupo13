@@ -8,22 +8,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	testFrontendOrigin      = "https://frontend.example.com"
+	corsAllowOriginHeader   = "Access-Control-Allow-Origin"
+)
+
 func TestCORSMiddlewareAllowsConfiguredOrigin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	recorder := httptest.NewRecorder()
 	nextCalled := false
 	router := gin.New()
-	router.Use(CORSMiddleware([]string{"https://frontend.example.com"}))
+	router.Use(CORSMiddleware([]string{testFrontendOrigin}))
 	router.GET("/", func(ctx *gin.Context) {
 		nextCalled = true
 		ctx.Status(http.StatusOK)
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("Origin", "https://frontend.example.com")
+	req.Header.Set("Origin", testFrontendOrigin)
 	router.ServeHTTP(recorder, req)
 
-	if recorder.Header().Get("Access-Control-Allow-Origin") != "https://frontend.example.com" {
+	if recorder.Header().Get(corsAllowOriginHeader) != testFrontendOrigin {
 		t.Fatalf("expected allow origin header to be set")
 	}
 	if recorder.Header().Get("Vary") != "Origin" {
@@ -43,7 +48,7 @@ func TestCORSMiddlewareAllowsAnyOriginWhenListIsEmpty(t *testing.T) {
 
 	CORSMiddleware(nil)(c)
 
-	if recorder.Header().Get("Access-Control-Allow-Origin") != "https://random.example.com" {
+	if recorder.Header().Get(corsAllowOriginHeader) != "https://random.example.com" {
 		t.Fatalf("expected wildcard-by-empty-config behavior")
 	}
 }
@@ -60,17 +65,17 @@ func TestCORSMiddlewareRejectsUnknownOriginAndHandlesPreflight(t *testing.T) {
 	if recorder.Code != http.StatusNoContent {
 		t.Fatalf("expected status 204, got %d", recorder.Code)
 	}
-	if recorder.Header().Get("Access-Control-Allow-Origin") != "" {
+	if recorder.Header().Get(corsAllowOriginHeader) != "" {
 		t.Fatalf("expected no allow origin header for blocked origin")
 	}
 }
 
 func TestIsAllowedOrigin(t *testing.T) {
 	allowed := map[string]struct{}{
-		"https://frontend.example.com": {},
+		testFrontendOrigin: {},
 	}
 
-	if !isAllowedOrigin("https://frontend.example.com", allowed) {
+	if !isAllowedOrigin(testFrontendOrigin, allowed) {
 		t.Fatalf("expected origin to be allowed")
 	}
 	if isAllowedOrigin("https://blocked.example.com", allowed) {

@@ -13,7 +13,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const testUsersPath = "/users"
+const (
+	testUsersPath         = "/users"
+	testHeaderContentType = "Content-Type"
+	testApplicationJSON   = "application/json"
+	errExpected200        = "expected 200, got %d"
+)
 
 type mockUserRepository struct {
 	users map[string]*usersDomain.User
@@ -95,7 +100,7 @@ func TestCreateUserBadRequest(t *testing.T) {
 	handler := newUserHandlerForTest()
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, testUsersPath, bytes.NewBufferString(`{"name":1}`))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 
@@ -158,7 +163,7 @@ func TestCreateUserConflict(t *testing.T) {
 
 	firstBody := bytes.NewBufferString(`{"name":"Ana Gomez","email":"ana@example.com","password":"Password123","global_role":"professor"}`)
 	firstReq := httptest.NewRequest(http.MethodPost, testUsersPath, firstBody)
-	firstReq.Header.Set("Content-Type", "application/json")
+	firstReq.Header.Set(testHeaderContentType, testApplicationJSON)
 	firstW := httptest.NewRecorder()
 	firstC, _ := gin.CreateTestContext(firstW)
 	firstC.Request = firstReq
@@ -166,7 +171,7 @@ func TestCreateUserConflict(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, testUsersPath, bytes.NewBufferString(`{"name":"Ana Gomez","email":"ana@example.com","password":"Password123","global_role":"professor"}`))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 
@@ -200,7 +205,7 @@ func TestListUsersAdminSuccess(t *testing.T) {
 	handler.ListUsers(c)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf(errExpected200, w.Code)
 	}
 }
 
@@ -227,7 +232,7 @@ func TestListUsersProfessorRoleFilterAllowed(t *testing.T) {
 	handler.ListUsers(c)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf(errExpected200, w.Code)
 	}
 }
 
@@ -262,7 +267,7 @@ func TestChangeUserRoleSuccess(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPatch, "/users/1/role", bytes.NewBufferString(`{"global_role":"assistant"}`))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Params = gin.Params{{Key: "id", Value: "1"}}
@@ -270,6 +275,6 @@ func TestChangeUserRoleSuccess(t *testing.T) {
 	handler.ChangeUserRole(c)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf(errExpected200, w.Code)
 	}
 }

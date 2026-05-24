@@ -14,6 +14,10 @@ import (
 const (
 	testWorkspacesPath      = "/workspaces"
 	testExpected200Msg      = "expected 200, got %d"
+	testHeaderContentType   = "Content-Type"
+	testApplicationJSON     = "application/json"
+	errExpected403          = "expected 403, got %d"
+	errExpected400          = "expected 400, got %d"
 )
 
 func TestCreateWorkspaceUnauthorized(t *testing.T) {
@@ -39,7 +43,7 @@ func TestCreateWorkspaceProfessorForbiddenForOtherOwner(t *testing.T) {
 		"initial_date": "2026-06-02", "final_date": "2026-06-30", "observations": "obs", "state": "active",
 	})
 	req := httptest.NewRequest(http.MethodPost, testWorkspacesPath, bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Set("current_user", authenticatedUser(10, usersDomain.RoleProfessor))
@@ -47,7 +51,7 @@ func TestCreateWorkspaceProfessorForbiddenForOtherOwner(t *testing.T) {
 	handler.CreateWorkspace(c)
 
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d", w.Code)
+		t.Fatalf(errExpected403, w.Code)
 	}
 }
 
@@ -88,7 +92,7 @@ func TestGetWorkspaceByIDBadID(t *testing.T) {
 	handler.GetWorkspaceByID(c)
 
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
+		t.Fatalf(errExpected400, w.Code)
 	}
 }
 
@@ -97,7 +101,7 @@ func TestUpdateWorkspaceBadRequest(t *testing.T) {
 	handler := newWorkspaceHandlerForTest()
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPut, "/workspaces/1", bytes.NewBufferString(`{"name":1}`))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Params = gin.Params{{Key: "id", Value: "1"}}
@@ -106,7 +110,7 @@ func TestUpdateWorkspaceBadRequest(t *testing.T) {
 	handler.UpdateWorkspace(c)
 
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
+		t.Fatalf(errExpected400, w.Code)
 	}
 }
 
@@ -137,7 +141,7 @@ func TestListWorkspaceMonitorsAndAssistantsProfessorOnly(t *testing.T) {
 	handler.ListWorkspaceMonitorsAndAssistants(c)
 
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d", w.Code)
+		t.Fatalf(errExpected403, w.Code)
 	}
 }
 
@@ -168,7 +172,7 @@ func TestListWorkspacesProfessorForbiddenForAnotherUserFilter(t *testing.T) {
 	handler.ListWorkspaces(c)
 
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d", w.Code)
+		t.Fatalf(errExpected403, w.Code)
 	}
 }
 
@@ -184,7 +188,7 @@ func TestListWorkspacesByPeriodBadPeriodID(t *testing.T) {
 	handler.ListWorkspaces(c)
 
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
+		t.Fatalf(errExpected400, w.Code)
 	}
 }
 
@@ -200,7 +204,7 @@ func TestDeleteWorkspaceForbiddenForProfessorFromAnotherOwner(t *testing.T) {
 	handler.DeleteWorkspace(c)
 
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d", w.Code)
+		t.Fatalf(errExpected403, w.Code)
 	}
 }
 
@@ -209,7 +213,7 @@ func TestCreateWorkspaceBadRequest(t *testing.T) {
 	handler := newWorkspaceHandlerForTest()
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, testWorkspacesPath, bytes.NewBufferString(`{"period_id":"bad"}`))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Set("current_user", authenticatedUser(1, usersDomain.RoleAdmin))
@@ -217,7 +221,7 @@ func TestCreateWorkspaceBadRequest(t *testing.T) {
 	handler.CreateWorkspace(c)
 
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
+		t.Fatalf(errExpected400, w.Code)
 	}
 }
 
@@ -233,7 +237,7 @@ func TestGetWorkspaceByIDForbiddenForProfessor(t *testing.T) {
 	handler.GetWorkspaceByID(c)
 
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d", w.Code)
+		t.Fatalf(errExpected403, w.Code)
 	}
 }
 

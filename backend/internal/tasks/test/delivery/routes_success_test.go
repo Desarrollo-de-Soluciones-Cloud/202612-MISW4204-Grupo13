@@ -14,6 +14,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const testTaskIDRoute = "/tasks/:id"
+
 func TestSetupRoutesRegistersTaskRoutesWithBucket(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	t.Setenv("STORAGE_EMULATOR_HOST", "http://127.0.0.1:9090")
@@ -27,10 +29,10 @@ func TestSetupRoutesRegistersTaskRoutesWithBucket(t *testing.T) {
 
 	assertTaskRouteRegistered(t, router.Routes(), http.MethodPost, "/tasks")
 	assertTaskRouteRegistered(t, router.Routes(), http.MethodGet, "/tasks")
-	assertTaskRouteRegistered(t, router.Routes(), http.MethodGet, "/tasks/:id")
+	assertTaskRouteRegistered(t, router.Routes(), http.MethodGet, testTaskIDRoute)
 	assertTaskRouteRegistered(t, router.Routes(), http.MethodGet, "/tasks/:id/attachments/:attachmentId/download")
-	assertTaskRouteRegistered(t, router.Routes(), http.MethodPut, "/tasks/:id")
-	assertTaskRouteRegistered(t, router.Routes(), http.MethodDelete, "/tasks/:id")
+	assertTaskRouteRegistered(t, router.Routes(), http.MethodPut, testTaskIDRoute)
+	assertTaskRouteRegistered(t, router.Routes(), http.MethodDelete, testTaskIDRoute)
 }
 
 func assertTaskRouteRegistered(t *testing.T, routes gin.RoutesInfo, method string, path string) {
