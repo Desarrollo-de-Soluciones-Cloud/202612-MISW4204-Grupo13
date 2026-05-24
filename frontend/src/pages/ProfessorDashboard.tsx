@@ -35,14 +35,6 @@ function delay(ms: number): Promise<void> {
   });
 }
 
-function getLatestReportTimestamp(items: Report[], weekId: number): number {
-  return items
-    .filter((item) => item.week_id === weekId && item.updated_at)
-    .map((item) => Date.parse(item.updated_at as string))
-    .filter((value) => !Number.isNaN(value))
-    .reduce((latest, current) => Math.max(latest, current), 0);
-}
-
 export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboardProps) {
   const [me, setMe] = useState<User | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -122,13 +114,9 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
   const waitForQueuedReports = async (
     selectedWorkspaceId: number,
     selectedWeekId: number,
-    baselineCount: number,
     queuedCount: number,
-    baselineLatestTimestamp: number,
   ) => {
-    const expectedTotal = baselineCount + queuedCount;
-    let latestCount = baselineCount;
-    let latestTimestamp = baselineLatestTimestamp;
+    let latestCount = 0;
     const { workspaceLabel, weekLabel } = getReportGenerationContext(
       selectedWorkspaceId,
       selectedWeekId,
@@ -141,9 +129,8 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
       const nextReports = await loadReportsForFilters(selectedWorkspaceId, selectedWeekId);
       latestCount = nextReports.filter((item) => item.week_id === selectedWeekId).length;
-      latestTimestamp = getLatestReportTimestamp(nextReports, selectedWeekId);
 
-      if (latestCount >= expectedTotal || latestTimestamp > baselineLatestTimestamp) {
+      if (latestCount >= queuedCount) {
         showToast(
           `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} finalizo con exito. Los resultados ya estan disponibles en la lista para descarga.`,
           "success",
@@ -152,8 +139,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
       }
     }
 
-    const generatedCount = Math.max(latestCount - baselineCount, 0);
-    if (generatedCount === 0) {
+    if (latestCount === 0) {
       showToast(
         `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} se esta demorando mas de lo esperado. Revisa mas tarde la lista de reportes.`,
         "info",
@@ -333,8 +319,6 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     try {
       const selectedWorkspaceId = Number(workspaceId);
       const selectedWeekId = Number(weekId);
-      const baselineCount = reports.filter((item) => item.week_id === selectedWeekId).length;
-      const baselineLatestTimestamp = getLatestReportTimestamp(reports, selectedWeekId);
       const { workspaceLabel, weekLabel } = getReportGenerationContext(
         selectedWorkspaceId,
         selectedWeekId,
@@ -355,9 +339,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         await waitForQueuedReports(
           selectedWorkspaceId,
           selectedWeekId,
-          baselineCount,
           response.generated_count,
-          baselineLatestTimestamp,
         );
         return;
       }
