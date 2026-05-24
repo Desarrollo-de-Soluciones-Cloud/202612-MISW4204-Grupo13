@@ -1,6 +1,8 @@
 package delivery
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"context"
 	"errors"
 	"fmt"
@@ -31,25 +33,34 @@ type ReportFileStorage interface {
 
 type ReportHandler struct {
 	generateWeeklyReports *reportsApplication.GenerateWeeklyReports
+	queueWeeklyReports    *reportsApplication.QueueWeeklyReports
+	processWeeklyReport   *reportsApplication.ProcessWeeklyReportJob
 	listReports           *reportsApplication.ListReports
 	getReportByID         *reportsApplication.GetReportByID
 	workspaceReader       ReportWorkspaceReader
 	reportFileStorage     ReportFileStorage
+	pubSubPushAuthToken   string
 }
 
 func NewReportHandler(
 	generateWeeklyReports *reportsApplication.GenerateWeeklyReports,
+	queueWeeklyReports *reportsApplication.QueueWeeklyReports,
+	processWeeklyReport *reportsApplication.ProcessWeeklyReportJob,
 	listReports *reportsApplication.ListReports,
 	getReportByID *reportsApplication.GetReportByID,
 	workspaceReader ReportWorkspaceReader,
 	reportFileStorage ReportFileStorage,
+	pubSubPushAuthToken string,
 ) *ReportHandler {
 	return &ReportHandler{
 		generateWeeklyReports: generateWeeklyReports,
+		queueWeeklyReports:    queueWeeklyReports,
+		processWeeklyReport:   processWeeklyReport,
 		listReports:           listReports,
 		getReportByID:         getReportByID,
 		workspaceReader:       workspaceReader,
 		reportFileStorage:     reportFileStorage,
+		pubSubPushAuthToken:   pubSubPushAuthToken,
 	}
 }
 
@@ -77,6 +88,11 @@ func (h *ReportHandler) GenerateWeeklyReports(c *gin.Context) {
 		return
 	}
 
+	if h.queueWeeklyReports != nil {
+		h.queueReports(c, req)
+		return
+	}
+
 	output, err := h.generateWeeklyReports.Execute(reportsApplication.GenerateWeeklyReportsInput{
 		WorkspaceID: req.WorkspaceID,
 		WeekID:      req.WeekID,
@@ -95,6 +111,31 @@ func (h *ReportHandler) GenerateWeeklyReports(c *gin.Context) {
 		Reports:        responses,
 		GeneratedCount: len(responses),
 	})
+}
+
+func (h *ReportHandler) ProcessWeeklyReportJob(c *gin.Context) {
+	if !h.isAuthorizedPubSubPushRequest(c) {
+		sharedHelpers.RespondWithError(c, http.StatusUnauthorized, authDomain.ErrAuthTokenRequired)
+		return
+	}
+
+	if h.processWeeklyReport == nil {
+		sharedHelpers.RespondWithError(c, http.StatusNotImplemented, sharedErrors.ErrInternalServerError)
+		return
+	}
+
+	job, err := parsePubSubWeeklyReportJob(c)
+	if err != nil {
+		sharedHelpers.RespondWithError(c, http.StatusBadRequest, reportsDomain.ErrReportInvalidInput)
+		return
+	}
+
+	if _, err := h.processWeeklyReport.Execute(job); err != nil {
+		handleGenerateReportsError(c, err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func (h *ReportHandler) ListReports(c *gin.Context) {
@@ -282,4 +323,48 @@ func toReportResponse(report reportsApplication.ReportOutput) ReportResponse {
 		UserID:       report.UserID,
 		FilePath:     report.FilePath,
 	}
+}
+
+func (h *ReportHandler) queueReports(c *gin.Context, req GenerateWeeklyReportsRequest) {
+	output, err := h.queueWeeklyReports.Execute(reportsApplication.QueueWeeklyReportsInput{
+		WorkspaceID: req.WorkspaceID,
+		WeekID:      req.WeekID,
+	})
+	if err != nil {
+		handleGenerateReportsError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusAccepted, GenerateWeeklyReportsResponse{
+		Reports:        []ReportResponse{},
+		GeneratedCount: output.QueuedCount,
+	})
+}
+
+func (h *ReportHandler) isAuthorizedPubSubPushRequest(c *gin.Context) bool {
+	if strings.TrimSpace(h.pubSubPushAuthToken) == "" {
+		return false
+	}
+
+	return c.GetHeader("X-PubSub-Token") == h.pubSubPushAuthToken ||
+		c.Query("token") == h.pubSubPushAuthToken
+}
+
+func parsePubSubWeeklyReportJob(c *gin.Context) (reportsApplication.WeeklyReportJobMessage, error) {
+	var req PubSubPushRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		return reportsApplication.WeeklyReportJobMessage{}, err
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(req.Message.Data)
+	if err != nil {
+		return reportsApplication.WeeklyReportJobMessage{}, err
+	}
+
+	var job reportsApplication.WeeklyReportJobMessage
+	if err := json.Unmarshal(decoded, &job); err != nil {
+		return reportsApplication.WeeklyReportJobMessage{}, err
+	}
+
+	return job, nil
 }

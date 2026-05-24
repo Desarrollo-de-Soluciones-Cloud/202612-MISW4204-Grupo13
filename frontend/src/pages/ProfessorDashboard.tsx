@@ -252,6 +252,15 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         workspace_id: selectedWorkspaceId,
         week_id: selectedWeekId,
       });
+      if (response.reports.length === 0) {
+        showToast(
+          `Se encolaron ${response.generated_count} reportes semanales. Actualiza la lista en unos segundos.`,
+          "success",
+        );
+        setWeekId("");
+        return;
+      }
+
       showToast(`Se generaron ${response.generated_count} reportes semanales.`, "success");
       setWeekId("");
 

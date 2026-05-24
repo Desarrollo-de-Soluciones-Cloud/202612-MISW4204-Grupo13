@@ -22,3 +22,13 @@ type GenerateWeeklyReportsResponse struct {
 type ListReportsResponse struct {
 	Reports []ReportResponse `json:"reports"`
 }
+
+type PubSubPushRequest struct {
+	Message      PubSubPushMessage `json:"message"`
+	Subscription string            `json:"subscription"`
+}
+
+type PubSubPushMessage struct {
+	Data string `json:"data"`
+	ID   string `json:"messageId"`
+}
