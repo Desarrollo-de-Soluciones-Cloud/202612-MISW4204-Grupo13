@@ -237,3 +237,79 @@ func TestCreateTaskMultipartWithAttachment(t *testing.T) {
 		t.Fatalf("expected 1 uploaded file, got %d", len(storage.uploaded))
 	}
 }
+
+func TestCreateTaskForbiddenForForeignOperationalUser(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler, _, _ := newTaskHandlerForTest(t)
+	w := httptest.NewRecorder()
+	body, _ := json.Marshal(map[string]any{
+		"assignment_id":   1,
+		"title":           "Task title",
+		"description":     "Task description",
+		"status":          "abierto",
+		"spent_hours":     2,
+		"observations":    "",
+		"week_start_date": "2026-04-06",
+	})
+	req := httptest.NewRequest(http.MethodPost, testTasksPath, bytes.NewBuffer(body))
+	req.Header.Set(testHeaderContentType, "application/json")
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Set("current_user", authenticatedUser(999, usersDomain.RoleMonitor))
+
+	handler.CreateTask(c)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestDownloadAttachmentForbiddenForForeignUser(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler, repo, storage := newTaskHandlerForTest(t)
+	seedTask(t, repo, 10, 1, time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC), []tasksDomain.TaskAttachment{
+		{ID: "att_1", Name: "evidence.pdf", FilePath: testAttachmentFilePath, ContentType: "application/pdf", Size: 4},
+	})
+	storage.uploaded[testAttachmentFilePath] = []byte("test")
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/tasks/1/attachments/att_1/download", nil)
+	c.Params = gin.Params{{Key: "id", Value: "1"}, {Key: "attachmentId", Value: "att_1"}}
+	c.Set("current_user", authenticatedUser(200, usersDomain.RoleAssistant))
+
+	handler.DownloadAttachment(c)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestUpdateTaskSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler, repo, _ := newTaskHandlerForTest(t)
+	seedTask(t, repo, 10, 1, time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC), nil)
+
+	w := httptest.NewRecorder()
+	body, _ := json.Marshal(map[string]any{
+		"assignment_id":   1,
+		"title":           "Updated title",
+		"description":     "Updated description",
+		"status":          "finalizado",
+		"spent_hours":     2,
+		"observations":    "ok",
+		"week_start_date": "2026-04-06",
+	})
+	req := httptest.NewRequest(http.MethodPut, "/tasks/1", bytes.NewBuffer(body))
+	req.Header.Set(testHeaderContentType, "application/json")
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Params = gin.Params{{Key: "id", Value: "1"}}
+	c.Set("current_user", authenticatedUser(99, usersDomain.RoleAdmin))
+
+	handler.UpdateTask(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}

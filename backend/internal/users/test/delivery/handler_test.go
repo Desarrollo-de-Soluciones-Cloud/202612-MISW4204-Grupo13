@@ -151,3 +151,125 @@ func TestGetUserByIDBadID(t *testing.T) {
 		t.Fatalf("expected 400, got %d", w.Code)
 	}
 }
+
+func TestCreateUserConflict(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newUserHandlerForTest()
+
+	firstBody := bytes.NewBufferString(`{"name":"Ana Gomez","email":"ana@example.com","password":"Password123","global_role":"professor"}`)
+	firstReq := httptest.NewRequest(http.MethodPost, testUsersPath, firstBody)
+	firstReq.Header.Set("Content-Type", "application/json")
+	firstW := httptest.NewRecorder()
+	firstC, _ := gin.CreateTestContext(firstW)
+	firstC.Request = firstReq
+	handler.CreateUser(firstC)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, testUsersPath, bytes.NewBufferString(`{"name":"Ana Gomez","email":"ana@example.com","password":"Password123","global_role":"professor"}`))
+	req.Header.Set("Content-Type", "application/json")
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	handler.CreateUser(c)
+
+	if w.Code != http.StatusConflict {
+		t.Fatalf("expected 409, got %d", w.Code)
+	}
+}
+
+func TestListUsersAdminSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newUserHandlerForTest()
+	repo := newMockUserRepository()
+	_ = repo.Create(&usersDomain.User{ID: 1, Name: "Ana", Email: "ana@example.com", GlobalRole: usersDomain.RoleProfessor})
+	_ = repo.Create(&usersDomain.User{ID: 2, Name: "Luis", Email: "luis@example.com", GlobalRole: usersDomain.RoleMonitor})
+	handler = deliverypkg.NewUserHandler(
+		applicationpkg.NewCreateUser(repo),
+		applicationpkg.NewListUsers(repo),
+		applicationpkg.NewListUsersByRole(repo),
+		applicationpkg.NewGetUserByID(repo),
+		applicationpkg.NewUpdateUser(repo),
+		applicationpkg.NewChangeUserRole(repo),
+	)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, testUsersPath, nil)
+	c.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin})
+
+	handler.ListUsers(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestListUsersProfessorRoleFilterAllowed(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newUserHandlerForTest()
+	repo := newMockUserRepository()
+	_ = repo.Create(&usersDomain.User{Name: "Luis", Email: "luis@example.com", GlobalRole: usersDomain.RoleMonitor})
+	handler = deliverypkg.NewUserHandler(
+		applicationpkg.NewCreateUser(repo),
+		applicationpkg.NewListUsers(repo),
+		applicationpkg.NewListUsersByRole(repo),
+		applicationpkg.NewGetUserByID(repo),
+		applicationpkg.NewUpdateUser(repo),
+		applicationpkg.NewChangeUserRole(repo),
+	)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, testUsersPath+"?role=monitor", nil)
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleProfessor})
+
+	handler.ListUsers(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestGetUserByIDNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newUserHandlerForTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/users/99", nil)
+	c.Params = gin.Params{{Key: "id", Value: "99"}}
+
+	handler.GetUserByID(c)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestChangeUserRoleSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := newMockUserRepository()
+	user, _ := usersDomain.NewUser("Ana Gomez", "ana@example.com", "Password123", usersDomain.RoleProfessor)
+	_ = repo.Create(user)
+	handler := deliverypkg.NewUserHandler(
+		applicationpkg.NewCreateUser(repo),
+		applicationpkg.NewListUsers(repo),
+		applicationpkg.NewListUsersByRole(repo),
+		applicationpkg.NewGetUserByID(repo),
+		applicationpkg.NewUpdateUser(repo),
+		applicationpkg.NewChangeUserRole(repo),
+	)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPatch, "/users/1/role", bytes.NewBufferString(`{"global_role":"assistant"}`))
+	req.Header.Set("Content-Type", "application/json")
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Params = gin.Params{{Key: "id", Value: "1"}}
+
+	handler.ChangeUserRole(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
