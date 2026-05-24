@@ -365,16 +365,6 @@ tbody tr:hover {
   color: #24445f;
 }
 
-.status-box {
-  margin-bottom: 1rem;
-  border-radius: 0.7rem;
-  padding: 0.9rem 1rem;
-}
-
-.status-box p {
-  margin: 0;
-}
-
 .list-help {
   margin: 0.4rem 0 0;
   padding-left: 1rem;

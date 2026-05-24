@@ -5,12 +5,16 @@ import (
 
 	assignmentsDomain "backend/internal/assignments/domain"
 	reportsDomain "backend/internal/reports/domain"
+	tasksDomain "backend/internal/tasks/domain"
+	weeksDomain "backend/internal/weeks/domain"
+	workspacesDomain "backend/internal/workspaces/domain"
 )
 
 type QueueWeeklyReports struct {
 	workspaceReader  WorkspaceReader
 	weekReader       WeekReader
 	assignmentReader AssignmentReader
+	taskReader       TaskReader
 	jobPublisher     ReportJobPublisher
 }
 
@@ -27,12 +31,14 @@ func NewQueueWeeklyReports(
 	workspaceReader WorkspaceReader,
 	weekReader WeekReader,
 	assignmentReader AssignmentReader,
+	taskReader TaskReader,
 	jobPublisher ReportJobPublisher,
 ) *QueueWeeklyReports {
 	return &QueueWeeklyReports{
 		workspaceReader:  workspaceReader,
 		weekReader:       weekReader,
 		assignmentReader: assignmentReader,
+		taskReader:       taskReader,
 		jobPublisher:     jobPublisher,
 	}
 }
@@ -45,7 +51,8 @@ func (uc *QueueWeeklyReports) Execute(input QueueWeeklyReportsInput) (*QueueWeek
 		return nil, err
 	}
 
-	if err := uc.validateReferences(input); err != nil {
+	_, week, err := uc.resolveReferences(input)
+	if err != nil {
 		return nil, err
 	}
 
@@ -59,7 +66,15 @@ func (uc *QueueWeeklyReports) Execute(input QueueWeeklyReportsInput) (*QueueWeek
 		return nil, reportsDomain.ErrReportNoAssignmentsFound
 	}
 
-	queuedCount, err := uc.publishJobs(input, reportableAssignments)
+	assignmentsWithTasks, err := uc.filterAssignmentsWithTasks(input, week.InitialDate, reportableAssignments)
+	if err != nil {
+		return nil, err
+	}
+	if len(assignmentsWithTasks) == 0 {
+		return nil, reportsDomain.ErrReportNoTasksFoundForWeek
+	}
+
+	queuedCount, err := uc.publishJobs(input, assignmentsWithTasks)
 	if err != nil {
 		return nil, err
 	}
@@ -67,18 +82,54 @@ func (uc *QueueWeeklyReports) Execute(input QueueWeeklyReportsInput) (*QueueWeek
 	return &QueueWeeklyReportsOutput{QueuedCount: queuedCount}, nil
 }
 
-func (uc *QueueWeeklyReports) validateReferences(input QueueWeeklyReportsInput) error {
-	_, err := uc.workspaceReader.FindByID(input.WorkspaceID)
+func (uc *QueueWeeklyReports) resolveReferences(
+	input QueueWeeklyReportsInput,
+) (*workspacesDomain.Workspace, *weeksDomain.Week, error) {
+	workspace, err := uc.workspaceReader.FindByID(input.WorkspaceID)
 	if err != nil {
-		return reportsDomain.ErrReportWorkspaceNotFound
+		return nil, nil, reportsDomain.ErrReportWorkspaceNotFound
 	}
 
-	_, err = uc.weekReader.FindByID(input.WeekID)
+	week, err := uc.weekReader.FindByID(input.WeekID)
 	if err != nil {
-		return reportsDomain.ErrReportWeekNotFound
+		return nil, nil, reportsDomain.ErrReportWeekNotFound
 	}
 
-	return nil
+	return workspace, week, nil
+}
+
+func (uc *QueueWeeklyReports) filterAssignmentsWithTasks(
+	input QueueWeeklyReportsInput,
+	weekInitialDate string,
+	assignments []assignmentsDomain.Assignment,
+) ([]assignmentsDomain.Assignment, error) {
+	allTasks, err := uc.taskReader.FindAllByWorkspaceAndWeek(
+		input.WorkspaceID,
+		input.WeekID,
+		weekInitialDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	assignmentsWithTasks := make([]assignmentsDomain.Assignment, 0, len(assignments))
+	for _, assignment := range assignments {
+		if hasTasksForAssignment(allTasks, assignment.ID) {
+			assignmentsWithTasks = append(assignmentsWithTasks, assignment)
+		}
+	}
+
+	return assignmentsWithTasks, nil
+}
+
+func hasTasksForAssignment(allTasks []tasksDomain.Task, assignmentID uint) bool {
+	for _, task := range allTasks {
+		if task.AssignmentID == assignmentID {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (uc *QueueWeeklyReports) publishJobs(

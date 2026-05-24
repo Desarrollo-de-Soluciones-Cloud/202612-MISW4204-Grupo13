@@ -26,13 +26,8 @@ type ProfessorDashboardProps = Readonly<{
   onLogout: () => void;
 }>;
 
-type ReportGenerationStatus = Readonly<{
-  message: string;
-  type: "idle" | "queued" | "ready";
-}>;
-
 const reportPollingIntervalMs = 4000;
-const reportPollingAttempts = 6;
+const reportPollingAttempts = 15;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -68,10 +63,6 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     weekly_hours: "1",
   });
   const [loading, setLoading] = useState(false);
-  const [reportGenerationStatus, setReportGenerationStatus] = useState<ReportGenerationStatus>({
-    message: "",
-    type: "idle",
-  });
   const { toast, showToast, clearToast } = useToast();
 
   const getReportsWorkspaceId = (fallbackWorkspaceId?: number): number | undefined => {
@@ -113,10 +104,8 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     baselineCount: number,
     queuedCount: number,
   ) => {
-    setReportGenerationStatus({
-      message: `Generando ${queuedCount} reporte(s). La lista se actualizara automaticamente cuando esten listos.`,
-      type: "queued",
-    });
+    const expectedTotal = baselineCount + queuedCount;
+    let latestCount = baselineCount;
 
     for (let attempt = 0; attempt < reportPollingAttempts; attempt += 1) {
       if (attempt > 0) {
@@ -124,22 +113,25 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
       }
 
       const nextReports = await loadReportsForFilters(selectedWorkspaceId, selectedWeekId);
-      const nextCount = nextReports.filter((item) => item.week_id === selectedWeekId).length;
-      if (nextCount > baselineCount) {
-        setReportGenerationStatus({
-          message: `Los nuevos reportes de la semana ${selectedWeekId} ya estan disponibles para descarga.`,
-          type: "ready",
-        });
-        showToast("Los reportes ya estan listos para descarga.", "success");
+      latestCount = nextReports.filter((item) => item.week_id === selectedWeekId).length;
+      const generatedCount = Math.max(latestCount - baselineCount, 0);
+
+      if (latestCount >= expectedTotal) {
+        showToast(`La generacion finalizo y los ${generatedCount} reportes ya estan listos para descarga.`, "success");
         return;
       }
     }
 
-    setReportGenerationStatus({
-      message: "La generacion sigue en proceso. Puedes volver a consultar esta lista en unos segundos.",
-      type: "queued",
-    });
-    showToast("La generacion sigue en proceso. Vuelve a consultar en unos segundos.", "info");
+    const generatedCount = Math.max(latestCount - baselineCount, 0);
+    if (generatedCount === 0) {
+      showToast("No hubo reportes para generar en la semana seleccionada.", "info");
+      return;
+    }
+
+    showToast(
+      `La generacion asincrona esta tardando mas de lo esperado. Van ${generatedCount} de ${queuedCount} reporte(s) visibles.`,
+      "info",
+    );
   };
 
   const loadWeeksForPeriod = async (periodId: number) => {
@@ -318,7 +310,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         setFilterWorkspaceId(String(selectedWorkspaceId));
         setFilterWeekId(String(selectedWeekId));
         showToast(
-          `Se encolaron ${response.generated_count} reportes semanales. Te avisaremos cuando aparezcan en la lista.`,
+          `Se inicio la generacion asincrona de ${response.generated_count} reporte(s). Te avisaremos cuando empiecen a quedar disponibles.`,
           "info",
         );
         setWeekId("");
@@ -332,10 +324,6 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
       }
 
       showToast(`Se generaron ${response.generated_count} reportes semanales.`, "success");
-      setReportGenerationStatus({
-        message: `Se generaron ${response.generated_count} reporte(s) de inmediato para la semana seleccionada.`,
-        type: "ready",
-      });
       setWeekId("");
 
       const reportsWorkspaceId = getReportsWorkspaceId(selectedWorkspaceId);
@@ -348,10 +336,6 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         setReports([]);
       }
     } catch (err) {
-      setReportGenerationStatus({
-        message: "",
-        type: "idle",
-      });
       showToast(toErrorMessage(err), "error");
     }
   };
@@ -860,13 +844,6 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
       <section className="card">
         <h2>Reportes generados</h2>
         <p className="section-desc">Filtra por curso/proyecto o semana para consultar los reportes disponibles.</p>
-        {reportGenerationStatus.type !== "idle" ? (
-          <div
-            className={reportGenerationStatus.type === "ready" ? "success-box status-box" : "info-card status-box"}
-          >
-            <p>{reportGenerationStatus.message}</p>
-          </div>
-        ) : null}
         <form className="form-grid" onSubmit={handleFilterReports}>
           <div className="form-field">
             <label>

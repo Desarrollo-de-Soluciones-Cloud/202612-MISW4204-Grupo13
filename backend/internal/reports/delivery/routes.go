@@ -96,6 +96,7 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer, cfg *sharedConfig.Co
 			workspaceRepo,
 			weekRepo,
 			assignmentReader,
+			taskReader,
 			publisher,
 		)
 	}
