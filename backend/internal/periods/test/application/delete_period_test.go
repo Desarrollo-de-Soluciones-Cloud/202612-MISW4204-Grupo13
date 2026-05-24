@@ -1,6 +1,7 @@
 package application
 
 import (
+	applicationpkg "backend/internal/periods/application"
 	"backend/internal/periods/domain"
 	"errors"
 	"testing"
@@ -47,7 +48,7 @@ func TestDeletePeriodSuccess(t *testing.T) {
 		period: &domain.Period{ID: 9},
 	}
 
-	err := NewDeletePeriod(repo).Execute(DeletePeriodInput{ID: 9})
+	err := applicationpkg.NewDeletePeriod(repo).Execute(applicationpkg.DeletePeriodInput{ID: 9})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -59,7 +60,7 @@ func TestDeletePeriodSuccess(t *testing.T) {
 func TestDeletePeriodPropagatesFindError(t *testing.T) {
 	repo := &deletePeriodRepoStub{findErr: domain.ErrPeriodNotFound}
 
-	err := NewDeletePeriod(repo).Execute(DeletePeriodInput{ID: 4})
+	err := applicationpkg.NewDeletePeriod(repo).Execute(applicationpkg.DeletePeriodInput{ID: 4})
 	if !errors.Is(err, domain.ErrPeriodNotFound) {
 		t.Fatalf("expected ErrPeriodNotFound, got %v", err)
 	}
@@ -71,7 +72,7 @@ func TestDeletePeriodPropagatesDeleteError(t *testing.T) {
 		deleteErr: domain.ErrPeriodNotFound,
 	}
 
-	err := NewDeletePeriod(repo).Execute(DeletePeriodInput{ID: 11})
+	err := applicationpkg.NewDeletePeriod(repo).Execute(applicationpkg.DeletePeriodInput{ID: 11})
 	if !errors.Is(err, domain.ErrPeriodNotFound) {
 		t.Fatalf("expected delete error, got %v", err)
 	}
