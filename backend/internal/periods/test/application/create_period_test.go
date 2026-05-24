@@ -54,21 +54,13 @@ func (m *MockPeriodRepository) FindByName(name string) (*domain.Period, error) {
 }
 
 func (m *MockPeriodRepository) FindAll() ([]domain.Period, error) {
-	periods := make([]domain.Period, 0, len(m.periods))
-	for _, p := range m.periods {
-		periods = append(periods, *p)
-	}
-	return periods, nil
+	return collectPeriodsForCreatePeriodTests(m.periods, nil), nil
 }
 
 func (m *MockPeriodRepository) FindAllByState(state domain.PeriodState) ([]domain.Period, error) {
-	periods := make([]domain.Period, 0)
-	for _, p := range m.periods {
-		if p.PeriodState == state {
-			periods = append(periods, *p)
-		}
-	}
-	return periods, nil
+	return collectPeriodsForCreatePeriodTests(m.periods, func(period *domain.Period) bool {
+		return period.PeriodState == state
+	}), nil
 }
 
 func (m *MockPeriodRepository) Update(period *domain.Period) error {
@@ -95,6 +87,20 @@ func (m *MockPeriodRepository) Delete(id uint) error {
 	delete(m.periods, id)
 	delete(m.periodsByName, period.Name)
 	return nil
+}
+
+func collectPeriodsForCreatePeriodTests(
+	periods map[uint]*domain.Period,
+	keep func(*domain.Period) bool,
+) []domain.Period {
+	result := make([]domain.Period, 0, len(periods))
+	for _, period := range periods {
+		if keep != nil && !keep(period) {
+			continue
+		}
+		result = append(result, *period)
+	}
+	return result
 }
 
 func TestCreatePeriodSuccess(t *testing.T) {

@@ -15,8 +15,9 @@ import (
 )
 
 type MockPeriodRepository struct {
-	periods map[uint]*domain.Period
-	nextID  uint
+	periods       map[uint]*domain.Period
+	periodsByName map[string]*domain.Period
+	nextID        uint
 }
 
 type MockCreateWeeksForPeriod struct{}
@@ -27,14 +28,16 @@ func (m *MockCreateWeeksForPeriod) Execute(input weeksApplication.CreateWeeksFor
 
 func newMockPeriodRepository() *MockPeriodRepository {
 	return &MockPeriodRepository{
-		periods: make(map[uint]*domain.Period),
-		nextID:  1,
+		periods:       make(map[uint]*domain.Period),
+		periodsByName: make(map[string]*domain.Period),
+		nextID:        1,
 	}
 }
 
 func (m *MockPeriodRepository) Create(period *domain.Period) error {
 	period.ID = m.nextID
 	m.periods[m.nextID] = period
+	m.periodsByName[period.Name] = period
 	m.nextID++
 	return nil
 }
@@ -47,45 +50,43 @@ func (m *MockPeriodRepository) FindByID(id uint) (*domain.Period, error) {
 }
 
 func (m *MockPeriodRepository) FindByName(name string) (*domain.Period, error) {
-	for _, p := range m.periods {
-		if p.Name == name {
-			return p, nil
-		}
+	if period, ok := m.periodsByName[name]; ok {
+		return period, nil
 	}
 	return nil, domain.ErrPeriodNotFound
 }
 
 func (m *MockPeriodRepository) FindAll() ([]domain.Period, error) {
-	periods := make([]domain.Period, 0, len(m.periods))
-	for _, p := range m.periods {
-		periods = append(periods, *p)
-	}
-	return periods, nil
+	return collectPeriods(m.periods, nil), nil
 }
 
 func (m *MockPeriodRepository) FindAllByState(state domain.PeriodState) ([]domain.Period, error) {
-	periods := make([]domain.Period, 0)
-	for _, p := range m.periods {
-		if p.PeriodState == state {
-			periods = append(periods, *p)
-		}
-	}
-	return periods, nil
+	return collectPeriods(m.periods, func(period *domain.Period) bool {
+		return period.PeriodState == state
+	}), nil
 }
 
 func (m *MockPeriodRepository) Update(period *domain.Period) error {
 	if _, exists := m.periods[period.ID]; !exists {
 		return domain.ErrPeriodNotFound
 	}
+	for name, existingPeriod := range m.periodsByName {
+		if existingPeriod.ID == period.ID && name != period.Name {
+			delete(m.periodsByName, name)
+		}
+	}
 	m.periods[period.ID] = period
+	m.periodsByName[period.Name] = period
 	return nil
 }
 
 func (m *MockPeriodRepository) Delete(id uint) error {
-	if _, exists := m.periods[id]; !exists {
+	period, exists := m.periods[id]
+	if !exists {
 		return domain.ErrPeriodNotFound
 	}
 	delete(m.periods, id)
+	delete(m.periodsByName, period.Name)
 	return nil
 }
 
@@ -103,6 +104,20 @@ func setupTestHandler(repo domain.PeriodRepository) *delivery.PeriodHandler {
 		application.NewUpdatePeriod(repo),
 		application.NewClosePeriod(repo),
 	)
+}
+
+func collectPeriods(
+	periods map[uint]*domain.Period,
+	keep func(*domain.Period) bool,
+) []domain.Period {
+	result := make([]domain.Period, 0, len(periods))
+	for _, period := range periods {
+		if keep != nil && !keep(period) {
+			continue
+		}
+		result = append(result, *period)
+	}
+	return result
 }
 
 func TestCreatePeriodSuccess(t *testing.T) {
