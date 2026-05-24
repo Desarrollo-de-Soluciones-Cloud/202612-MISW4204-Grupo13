@@ -52,30 +52,34 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer, cfg *sharedConfig.Co
 	}
 
 	generateWeeklyReports := reportsApplication.NewGenerateWeeklyReports(
-		reportRepo,
-		workspaceRepo,
-		weekRepo,
-		assignmentReader,
-		taskReader,
-		userRepo,
-		pdfGenerator,
-		aiReportGenerator,
-		reportFileStorage,
+		reportsApplication.GenerateWeeklyReportsDependencies{
+			ReportRepo:        reportRepo,
+			WorkspaceReader:   workspaceRepo,
+			WeekReader:        weekRepo,
+			AssignmentReader:  assignmentReader,
+			TaskReader:        taskReader,
+			UserReader:        userRepo,
+			PDFGenerator:      pdfGenerator,
+			AIReportGenerator: aiReportGenerator,
+			ReportFileStorage: reportFileStorage,
+		},
 		&reportsApplication.GenerateWeeklyReportsOptions{
 			ReportsGCSPrefix: cfg.GCSReportsPrefix,
 		},
 	)
 
 	processWeeklyReportJob := reportsApplication.NewProcessWeeklyReportJob(
-		reportRepo,
-		workspaceRepo,
-		weekRepo,
-		assignmentReader,
-		taskReader,
-		userRepo,
-		pdfGenerator,
-		aiReportGenerator,
-		reportFileStorage,
+		reportsApplication.ProcessWeeklyReportJobDependencies{
+			ReportRepo:        reportRepo,
+			WorkspaceReader:   workspaceRepo,
+			WeekReader:        weekRepo,
+			AssignmentReader:  assignmentReader,
+			TaskReader:        taskReader,
+			UserReader:        userRepo,
+			PDFGenerator:      pdfGenerator,
+			AIReportGenerator: aiReportGenerator,
+			ReportFileStorage: reportFileStorage,
+		},
 		&reportsApplication.GenerateWeeklyReportsOptions{
 			ReportsGCSPrefix: cfg.GCSReportsPrefix,
 		},
@@ -110,16 +114,16 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer, cfg *sharedConfig.Co
 
 	getReportByID := reportsApplication.NewGetReportByID(reportRepo)
 
-	handler := NewReportHandler(
-		generateWeeklyReports,
-		queueWeeklyReports,
-		processWeeklyReportJob,
-		listReports,
-		getReportByID,
-		workspaceRepo,
-		reportFileStorage,
-		cfg.PubSubPushAuthToken,
-	)
+	handler := NewReportHandler(ReportHandlerDependencies{
+		GenerateWeeklyReports: generateWeeklyReports,
+		QueueWeeklyReports:    queueWeeklyReports,
+		ProcessWeeklyReport:   processWeeklyReportJob,
+		ListReports:           listReports,
+		GetReportByID:         getReportByID,
+		WorkspaceReader:       workspaceRepo,
+		ReportFileStorage:     reportFileStorage,
+		PubSubPushAuthToken:   cfg.PubSubPushAuthToken,
+	})
 
 	reports := r.Group("/reports")
 	reports.POST("/weekly/process", handler.ProcessWeeklyReportJob)

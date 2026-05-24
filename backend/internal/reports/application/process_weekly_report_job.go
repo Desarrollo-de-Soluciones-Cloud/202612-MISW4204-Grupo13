@@ -22,41 +22,47 @@ type ProcessWeeklyReportJob struct {
 	reportsGCSPrefix  string
 }
 
+type ProcessWeeklyReportJobDependencies struct {
+	ReportRepo        reportsDomain.ReportRepository
+	WorkspaceReader   WorkspaceReader
+	WeekReader        WeekReader
+	AssignmentReader  AssignmentReader
+	TaskReader        TaskReader
+	UserReader        UserReader
+	PDFGenerator      PDFGenerator
+	AIReportGenerator AIReportGenerator
+	ReportFileStorage ReportFileStorage
+}
+
 func NewProcessWeeklyReportJob(
-	reportRepo reportsDomain.ReportRepository,
-	workspaceReader WorkspaceReader,
-	weekReader WeekReader,
-	assignmentReader AssignmentReader,
-	taskReader TaskReader,
-	userReader UserReader,
-	pdfGenerator PDFGenerator,
-	aiReportGenerator AIReportGenerator,
-	reportFileStorage ReportFileStorage,
+	deps ProcessWeeklyReportJobDependencies,
 	options *GenerateWeeklyReportsOptions,
 ) *ProcessWeeklyReportJob {
 	generator := NewGenerateWeeklyReports(
-		reportRepo,
-		workspaceReader,
-		weekReader,
-		assignmentReader,
-		taskReader,
-		userReader,
-		pdfGenerator,
-		aiReportGenerator,
-		reportFileStorage,
+		GenerateWeeklyReportsDependencies{
+			ReportRepo:        deps.ReportRepo,
+			WorkspaceReader:   deps.WorkspaceReader,
+			WeekReader:        deps.WeekReader,
+			AssignmentReader:  deps.AssignmentReader,
+			TaskReader:        deps.TaskReader,
+			UserReader:        deps.UserReader,
+			PDFGenerator:      deps.PDFGenerator,
+			AIReportGenerator: deps.AIReportGenerator,
+			ReportFileStorage: deps.ReportFileStorage,
+		},
 		options,
 	)
 
 	return &ProcessWeeklyReportJob{
-		reportRepo:        reportRepo,
-		workspaceReader:   workspaceReader,
-		weekReader:        weekReader,
-		assignmentReader:  assignmentReader,
-		taskReader:        taskReader,
-		userReader:        userReader,
-		pdfGenerator:      pdfGenerator,
-		aiReportGenerator: aiReportGenerator,
-		reportFileStorage: reportFileStorage,
+		reportRepo:        deps.ReportRepo,
+		workspaceReader:   deps.WorkspaceReader,
+		weekReader:        deps.WeekReader,
+		assignmentReader:  deps.AssignmentReader,
+		taskReader:        deps.TaskReader,
+		userReader:        deps.UserReader,
+		pdfGenerator:      deps.PDFGenerator,
+		aiReportGenerator: deps.AIReportGenerator,
+		reportFileStorage: deps.ReportFileStorage,
 		reportsStorageDir: generator.reportsStorageDir,
 		reportsGCSPrefix:  generator.reportsGCSPrefix,
 	}

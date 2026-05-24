@@ -42,25 +42,29 @@ type ReportHandler struct {
 	pubSubPushAuthToken   string
 }
 
+type ReportHandlerDependencies struct {
+	GenerateWeeklyReports *reportsApplication.GenerateWeeklyReports
+	QueueWeeklyReports    *reportsApplication.QueueWeeklyReports
+	ProcessWeeklyReport   *reportsApplication.ProcessWeeklyReportJob
+	ListReports           *reportsApplication.ListReports
+	GetReportByID         *reportsApplication.GetReportByID
+	WorkspaceReader       ReportWorkspaceReader
+	ReportFileStorage     ReportFileStorage
+	PubSubPushAuthToken   string
+}
+
 func NewReportHandler(
-	generateWeeklyReports *reportsApplication.GenerateWeeklyReports,
-	queueWeeklyReports *reportsApplication.QueueWeeklyReports,
-	processWeeklyReport *reportsApplication.ProcessWeeklyReportJob,
-	listReports *reportsApplication.ListReports,
-	getReportByID *reportsApplication.GetReportByID,
-	workspaceReader ReportWorkspaceReader,
-	reportFileStorage ReportFileStorage,
-	pubSubPushAuthToken string,
+	deps ReportHandlerDependencies,
 ) *ReportHandler {
 	return &ReportHandler{
-		generateWeeklyReports: generateWeeklyReports,
-		queueWeeklyReports:    queueWeeklyReports,
-		processWeeklyReport:   processWeeklyReport,
-		listReports:           listReports,
-		getReportByID:         getReportByID,
-		workspaceReader:       workspaceReader,
-		reportFileStorage:     reportFileStorage,
-		pubSubPushAuthToken:   pubSubPushAuthToken,
+		generateWeeklyReports: deps.GenerateWeeklyReports,
+		queueWeeklyReports:    deps.QueueWeeklyReports,
+		processWeeklyReport:   deps.ProcessWeeklyReport,
+		listReports:           deps.ListReports,
+		getReportByID:         deps.GetReportByID,
+		workspaceReader:       deps.WorkspaceReader,
+		reportFileStorage:     deps.ReportFileStorage,
+		pubSubPushAuthToken:   deps.PubSubPushAuthToken,
 	}
 }
 

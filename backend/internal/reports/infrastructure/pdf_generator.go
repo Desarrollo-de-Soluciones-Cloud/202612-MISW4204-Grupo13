@@ -58,6 +58,15 @@ type taskPDFRow struct {
 	Observation string
 }
 
+const (
+	pdfAISectionTitle        = "SÃ­ntesis generada por IA:"
+	pdfTasksSectionTitle     = "Tareas reportadas:"
+	pdfMonitorAssistantLabel = "Monitor/Asistente"
+	pdfReportedHoursLabel    = "Horas reportadas"
+	pdfDescriptionPrefix     = "descripcion:"
+	pdfObservationsPrefix    = "observaciones:"
+)
+
 func parsePDFSections(lines []string) parsedPDFSections {
 	result := parsedPDFSections{
 		info:  make(map[string]string),
@@ -71,68 +80,24 @@ func parsePDFSections(lines []string) parsedPDFSections {
 		line := strings.TrimSpace(rawLine)
 
 		switch line {
-		case "Síntesis generada por IA:":
+		case pdfAISectionTitle:
 			currentSection = "ai"
 			continue
-		case "Tareas reportadas:":
+		case pdfTasksSectionTitle:
 			currentSection = "tasks"
 			continue
 		}
 
-		if strings.HasPrefix(line, "Workspace:") {
-			result.info["Workspace"] = strings.TrimSpace(strings.TrimPrefix(line, "Workspace:"))
+		if key, value, ok := parsePDFInfoLine(line); ok {
+			result.info[key] = value
 			continue
 		}
 
-		if strings.HasPrefix(line, "Monitor/Asistente:") {
-			result.info["Monitor/Asistente"] = strings.TrimSpace(strings.TrimPrefix(line, "Monitor/Asistente:"))
-			continue
-		}
-
-		if strings.HasPrefix(line, "Rol:") {
-			result.info["Rol"] = strings.TrimSpace(strings.TrimPrefix(line, "Rol:"))
-			continue
-		}
-
-		if strings.HasPrefix(line, "Semana:") {
-			result.info["Semana"] = strings.TrimSpace(strings.TrimPrefix(line, "Semana:"))
-			continue
-		}
-
-		if strings.HasPrefix(line, "Horas reportadas:") {
-			result.info["Horas reportadas"] = strings.TrimSpace(strings.TrimPrefix(line, "Horas reportadas:"))
-			continue
-		}
-
-		if currentSection == "ai" {
-			if line != "" {
-				if result.aiText != "" {
-					result.aiText += " "
-				}
-				result.aiText += line
-			}
-			continue
-		}
-
-		if currentSection == "tasks" {
-			if strings.HasPrefix(line, "- ") {
-				if currentTask != nil {
-					result.tasks = append(result.tasks, *currentTask)
-				}
-
-				currentTask = parseTaskHeader(line)
-				continue
-			}
-
-			if currentTask != nil && strings.HasPrefix(line, "descripcion:") {
-				currentTask.Description = strings.TrimSpace(strings.TrimPrefix(line, "descripcion:"))
-				continue
-			}
-
-			if currentTask != nil && strings.HasPrefix(line, "observaciones:") {
-				currentTask.Observation = strings.TrimSpace(strings.TrimPrefix(line, "observaciones:"))
-				continue
-			}
+		switch currentSection {
+		case "ai":
+			appendAIText(&result.aiText, line)
+		case "tasks":
+			currentTask = parseTaskSectionLine(line, currentTask, &result.tasks)
 		}
 	}
 
@@ -141,6 +106,61 @@ func parsePDFSections(lines []string) parsedPDFSections {
 	}
 
 	return result
+}
+
+func parsePDFInfoLine(line string) (string, string, bool) {
+	infoPrefixes := []struct {
+		key    string
+		prefix string
+	}{
+		{key: "Workspace", prefix: "Workspace:"},
+		{key: pdfMonitorAssistantLabel, prefix: pdfMonitorAssistantLabel + ":"},
+		{key: "Rol", prefix: "Rol:"},
+		{key: "Semana", prefix: "Semana:"},
+		{key: pdfReportedHoursLabel, prefix: pdfReportedHoursLabel + ":"},
+	}
+
+	for _, item := range infoPrefixes {
+		if strings.HasPrefix(line, item.prefix) {
+			return item.key, strings.TrimSpace(strings.TrimPrefix(line, item.prefix)), true
+		}
+	}
+
+	return "", "", false
+}
+
+func appendAIText(aiText *string, line string) {
+	if line == "" {
+		return
+	}
+
+	if *aiText != "" {
+		*aiText += " "
+	}
+
+	*aiText += line
+}
+
+func parseTaskSectionLine(line string, currentTask *taskPDFRow, tasks *[]taskPDFRow) *taskPDFRow {
+	if strings.HasPrefix(line, "- ") {
+		if currentTask != nil {
+			*tasks = append(*tasks, *currentTask)
+		}
+		return parseTaskHeader(line)
+	}
+
+	if currentTask == nil {
+		return currentTask
+	}
+
+	switch {
+	case strings.HasPrefix(line, pdfDescriptionPrefix):
+		currentTask.Description = strings.TrimSpace(strings.TrimPrefix(line, pdfDescriptionPrefix))
+	case strings.HasPrefix(line, pdfObservationsPrefix):
+		currentTask.Observation = strings.TrimSpace(strings.TrimPrefix(line, pdfObservationsPrefix))
+	}
+
+	return currentTask
 }
 
 func parseTaskHeader(line string) *taskPDFRow {
@@ -167,14 +187,14 @@ func parseTaskHeader(line string) *taskPDFRow {
 }
 
 func writeInfoTable(pdf *gofpdf.Fpdf, tr func(string) string, info map[string]string) {
-	writeSectionTitle(pdf, tr, "Información general")
+	writeSectionTitle(pdf, tr, "InformaciÃ³n general")
 
 	rows := [][]string{
 		{"Workspace", info["Workspace"]},
-		{"Monitor/Asistente", info["Monitor/Asistente"]},
+		{pdfMonitorAssistantLabel, info[pdfMonitorAssistantLabel]},
 		{"Rol", info["Rol"]},
 		{"Semana", info["Semana"]},
-		{"Horas reportadas", info["Horas reportadas"]},
+		{pdfReportedHoursLabel, info[pdfReportedHoursLabel]},
 	}
 
 	widths := []float64{48, 127}
@@ -189,7 +209,7 @@ func writeInfoTable(pdf *gofpdf.Fpdf, tr func(string) string, info map[string]st
 }
 
 func writeAISection(pdf *gofpdf.Fpdf, tr func(string) string, text string) {
-	writeSectionTitle(pdf, tr, "Síntesis generada por IA")
+	writeSectionTitle(pdf, tr, "SÃ­ntesis generada por IA")
 
 	pdf.SetFont("Arial", "", 10)
 	pdf.MultiCell(0, 6, tr(text), "", "L", false)
@@ -205,7 +225,7 @@ func writeTasksTable(pdf *gofpdf.Fpdf, tr func(string) string, tasks []taskPDFRo
 		return
 	}
 
-	headers := []string{"Tarea", "Estado", "Horas", "Observación / descripción"}
+	headers := []string{"Tarea", "Estado", "Horas", "ObservaciÃ³n / descripciÃ³n"}
 	widths := []float64{54, 27, 18, 76}
 
 	writeTableHeader(pdf, tr, headers, widths)
@@ -258,12 +278,7 @@ func writeWrappedRow(
 	maxLines := 1
 
 	for i, cell := range cells {
-		if i < len(styles) && styles[i] != "" {
-			pdf.SetFont("Arial", styles[i], 9)
-		} else {
-			pdf.SetFont("Arial", "", 8)
-		}
-
+		setRowCellFont(pdf, styles, i)
 		wrappedCells[i] = splitCellText(pdf, tr(cell), widths[i]-2)
 
 		if len(wrappedCells[i]) > maxLines {
@@ -278,34 +293,10 @@ func writeWrappedRow(
 	startX, startY := pdf.GetXY()
 
 	for i, cellLines := range wrappedCells {
-		x := startX
-		for j := 0; j < i; j++ {
-			x += widths[j]
-		}
-
-		if i < len(styles) && styles[i] != "" {
-			pdf.SetFont("Arial", styles[i], 9)
-		} else {
-			pdf.SetFont("Arial", "", 8)
-		}
-
-		fill := false
-		if i < len(fills) {
-			fill = fills[i]
-		}
-
-		if fill {
-			pdf.SetFillColor(238, 238, 238)
-		} else {
-			pdf.SetFillColor(255, 255, 255)
-		}
-
-		pdf.Rect(x, startY, widths[i], rowHeight, "D")
-
-		if fill {
-			pdf.Rect(x, startY, widths[i], rowHeight, "F")
-			pdf.Rect(x, startY, widths[i], rowHeight, "D")
-		}
+		x := calculateRowStartX(startX, widths, i)
+		setRowCellFont(pdf, styles, i)
+		fill := shouldFillCell(fills, i)
+		drawWrappedCellBackground(pdf, x, startY, widths[i], rowHeight, fill)
 
 		pdf.SetXY(x+1, startY+1.5)
 
@@ -315,6 +306,46 @@ func writeWrappedRow(
 	}
 
 	pdf.SetXY(startX, startY+rowHeight)
+}
+
+func setRowCellFont(pdf *gofpdf.Fpdf, styles []string, index int) {
+	if index < len(styles) && styles[index] != "" {
+		pdf.SetFont("Arial", styles[index], 9)
+		return
+	}
+
+	pdf.SetFont("Arial", "", 8)
+}
+
+func calculateRowStartX(startX float64, widths []float64, index int) float64 {
+	x := startX
+	for i := 0; i < index; i++ {
+		x += widths[i]
+	}
+	return x
+}
+
+func shouldFillCell(fills []bool, index int) bool {
+	return index < len(fills) && fills[index]
+}
+
+func drawWrappedCellBackground(
+	pdf *gofpdf.Fpdf,
+	x float64,
+	y float64,
+	width float64,
+	height float64,
+	fill bool,
+) {
+	if fill {
+		pdf.SetFillColor(238, 238, 238)
+		pdf.Rect(x, y, width, height, "F")
+		pdf.Rect(x, y, width, height, "D")
+		return
+	}
+
+	pdf.SetFillColor(255, 255, 255)
+	pdf.Rect(x, y, width, height, "D")
 }
 
 func splitCellText(pdf *gofpdf.Fpdf, text string, width float64) []string {

@@ -12,8 +12,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const expectedBadRequestFormat = "expected 400, got %d"
+
 func newReportHandlerForTest() *deliverypkg.ReportHandler {
-	return deliverypkg.NewReportHandler(nil, nil, nil, nil, nil, nil, nil, "")
+	return deliverypkg.NewReportHandler(deliverypkg.ReportHandlerDependencies{})
 }
 
 func TestGenerateWeeklyReportsUnauthorized(t *testing.T) {
@@ -46,7 +48,7 @@ func TestGenerateWeeklyReportsBadRequest(t *testing.T) {
 	handler.GenerateWeeklyReports(c)
 
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
+		t.Fatalf(expectedBadRequestFormat, w.Code)
 	}
 }
 
@@ -65,7 +67,7 @@ func TestListReportsBadWorkspaceFilter(t *testing.T) {
 	handler.ListReports(c)
 
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
+		t.Fatalf(expectedBadRequestFormat, w.Code)
 	}
 }
 
@@ -83,6 +85,6 @@ func TestDownloadReportBadID(t *testing.T) {
 	handler.DownloadReport(c)
 
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
+		t.Fatalf(expectedBadRequestFormat, w.Code)
 	}
 }

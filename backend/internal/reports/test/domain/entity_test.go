@@ -6,16 +6,18 @@ import (
 	"testing"
 )
 
+const reportFilePath = "reports/file.pdf"
+
 func TestNewWeeklyReportSuccess(t *testing.T) {
-	report, err := reportsDomain.NewWeeklyReport(1, 2, 3, 4, "reports/file.pdf")
+	report, err := reportsDomain.NewWeeklyReport(1, 2, 3, 4, reportFilePath)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	if report.WorkspaceID != 1 || report.WeekID != 2 || report.AssignmentID != 3 || report.UserID != 4 {
 		t.Fatalf("unexpected report: %+v", report)
 	}
-	if report.FilePath != "reports/file.pdf" {
-		t.Fatalf("expected file path reports/file.pdf, got %q", report.FilePath)
+	if report.FilePath != reportFilePath {
+		t.Fatalf("expected file path %s, got %q", reportFilePath, report.FilePath)
 	}
 }
 
@@ -27,7 +29,7 @@ func TestNewWeeklyReportRejectsMissingFilePath(t *testing.T) {
 }
 
 func TestNewWeeklyReportRejectsMissingAssignmentID(t *testing.T) {
-	_, err := reportsDomain.NewWeeklyReport(1, 2, 0, 4, "reports/file.pdf")
+	_, err := reportsDomain.NewWeeklyReport(1, 2, 0, 4, reportFilePath)
 	if !errors.Is(err, reportsDomain.ErrReportAssignmentIDRequired) {
 		t.Fatalf("expected ErrReportAssignmentIDRequired, got %v", err)
 	}

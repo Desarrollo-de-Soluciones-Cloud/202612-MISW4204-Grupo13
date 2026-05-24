@@ -31,6 +31,18 @@ type GenerateWeeklyReports struct {
 	now               func() time.Time
 }
 
+type GenerateWeeklyReportsDependencies struct {
+	ReportRepo        reportsDomain.ReportRepository
+	WorkspaceReader   WorkspaceReader
+	WeekReader        WeekReader
+	AssignmentReader  AssignmentReader
+	TaskReader        TaskReader
+	UserReader        UserReader
+	PDFGenerator      PDFGenerator
+	AIReportGenerator AIReportGenerator
+	ReportFileStorage ReportFileStorage
+}
+
 type GenerateWeeklyReportsOptions struct {
 	ReportsStorageDir string
 	ReportsGCSPrefix  string
@@ -47,15 +59,7 @@ type GenerateWeeklyReportsOutput struct {
 }
 
 func NewGenerateWeeklyReports(
-	reportRepo reportsDomain.ReportRepository,
-	workspaceReader WorkspaceReader,
-	weekReader WeekReader,
-	assignmentReader AssignmentReader,
-	taskReader TaskReader,
-	userReader UserReader,
-	pdfGenerator PDFGenerator,
-	aiReportGenerator AIReportGenerator,
-	reportFileStorage ReportFileStorage,
+	deps GenerateWeeklyReportsDependencies,
 	options *GenerateWeeklyReportsOptions,
 ) *GenerateWeeklyReports {
 	reportsStorageDir := ""
@@ -81,15 +85,15 @@ func NewGenerateWeeklyReports(
 	}
 
 	return &GenerateWeeklyReports{
-		reportRepo:        reportRepo,
-		workspaceReader:   workspaceReader,
-		weekReader:        weekReader,
-		assignmentReader:  assignmentReader,
-		taskReader:        taskReader,
-		userReader:        userReader,
-		pdfGenerator:      pdfGenerator,
-		aiReportGenerator: aiReportGenerator,
-		reportFileStorage: reportFileStorage,
+		reportRepo:        deps.ReportRepo,
+		workspaceReader:   deps.WorkspaceReader,
+		weekReader:        deps.WeekReader,
+		assignmentReader:  deps.AssignmentReader,
+		taskReader:        deps.TaskReader,
+		userReader:        deps.UserReader,
+		pdfGenerator:      deps.PDFGenerator,
+		aiReportGenerator: deps.AIReportGenerator,
+		reportFileStorage: deps.ReportFileStorage,
 		reportsStorageDir: reportsStorageDir,
 		reportsGCSPrefix:  reportsGCSPrefix,
 		now:               now,
