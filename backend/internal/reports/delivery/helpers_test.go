@@ -11,7 +11,10 @@ import (
 
 func TestMapBindingErrorsForGenerateWeeklyReportsRequest(t *testing.T) {
 	validate := validator.New()
-	err := validate.Struct(GenerateWeeklyReportsRequest{})
+	err := validate.Struct(struct {
+		WorkspaceID uint `validate:"required"`
+		WeekID      uint `validate:"required"`
+	}{})
 
 	mapped := mapBindingErrors(err)
 	if len(mapped) == 0 {

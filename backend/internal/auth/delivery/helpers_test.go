@@ -10,7 +10,10 @@ import (
 
 func TestAuthMapBindingErrors(t *testing.T) {
 	validate := validator.New()
-	err := validate.Struct(SignInRequest{})
+	err := validate.Struct(struct {
+		Email    string `validate:"required,email"`
+		Password string `validate:"required,min=8,max=72"`
+	}{})
 
 	mapped := mapBindingErrors(err)
 	if len(mapped) == 0 {

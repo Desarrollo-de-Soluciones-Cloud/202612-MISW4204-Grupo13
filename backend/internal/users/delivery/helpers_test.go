@@ -10,7 +10,12 @@ import (
 
 func TestUserMapBindingErrors(t *testing.T) {
 	validate := validator.New()
-	err := validate.Struct(CreateUserRequest{})
+	err := validate.Struct(struct {
+		Name       string `validate:"required,min=2,max=100"`
+		Email      string `validate:"required,email"`
+		Password   string `validate:"required,min=8,max=72"`
+		GlobalRole string `validate:"required"`
+	}{})
 
 	mapped := mapBindingErrors(err)
 	if len(mapped) == 0 {
