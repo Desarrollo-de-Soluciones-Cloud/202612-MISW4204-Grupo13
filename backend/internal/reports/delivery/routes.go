@@ -66,6 +66,41 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer, cfg *sharedConfig.Co
 		},
 	)
 
+	processWeeklyReportJob := reportsApplication.NewProcessWeeklyReportJob(
+		reportRepo,
+		workspaceRepo,
+		weekRepo,
+		assignmentReader,
+		taskReader,
+		userRepo,
+		pdfGenerator,
+		aiReportGenerator,
+		reportFileStorage,
+		&reportsApplication.GenerateWeeklyReportsOptions{
+			ReportsGCSPrefix: cfg.GCSReportsPrefix,
+		},
+	)
+
+	var queueWeeklyReports *reportsApplication.QueueWeeklyReports
+	if cfg.GCPProjectID != "" && cfg.ReportsPubSubTopic != "" {
+		publisher, err := reportsInfrastructure.NewPubSubReportJobPublisher(
+			context.Background(),
+			cfg.GCPProjectID,
+			cfg.ReportsPubSubTopic,
+		)
+		if err != nil {
+			panic(err)
+		}
+
+		queueWeeklyReports = reportsApplication.NewQueueWeeklyReports(
+			workspaceRepo,
+			weekRepo,
+			assignmentReader,
+			taskReader,
+			publisher,
+		)
+	}
+
 	listReports := reportsApplication.NewListReports(
 		reportRepo,
 		workspaceRepo,
@@ -77,21 +112,24 @@ func SetupRoutes(r gin.IRouter, authorizer RouteAuthorizer, cfg *sharedConfig.Co
 
 	handler := NewReportHandler(
 		generateWeeklyReports,
+		queueWeeklyReports,
+		processWeeklyReportJob,
 		listReports,
 		getReportByID,
 		workspaceRepo,
 		reportFileStorage,
+		cfg.PubSubPushAuthToken,
 	)
 
 	reports := r.Group("/reports")
-	{
-		reports.Use(authorizer.RequireAuthentication())
+	reports.POST("/weekly/process", handler.ProcessWeeklyReportJob)
 
-		reportOperators := reports.Group("")
-		reportOperators.Use(authorizer.RequireRoles(usersDomain.RoleAdmin, usersDomain.RoleProfessor))
+	reports.Use(authorizer.RequireAuthentication())
 
-		reportOperators.POST("/weekly", handler.GenerateWeeklyReports)
-		reportOperators.GET("", handler.ListReports)
-		reportOperators.GET("/:id/download", handler.DownloadReport)
-	}
+	reportOperators := reports.Group("")
+	reportOperators.Use(authorizer.RequireRoles(usersDomain.RoleAdmin, usersDomain.RoleProfessor))
+
+	reportOperators.POST("/weekly", handler.GenerateWeeklyReports)
+	reportOperators.GET("", handler.ListReports)
+	reportOperators.GET("/:id/download", handler.DownloadReport)
 }
