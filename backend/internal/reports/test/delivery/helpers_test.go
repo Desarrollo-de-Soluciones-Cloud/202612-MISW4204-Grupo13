@@ -14,7 +14,7 @@ import (
 
 func TestGenerateWeeklyReportsMissingFields(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := deliverypkg.NewReportHandler(nil, nil, nil, nil, nil, nil, nil, "")
+	handler := deliverypkg.NewReportHandler(deliverypkg.ReportHandlerDependencies{})
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/reports/weekly", bytes.NewBufferString(`{}`))
 	req.Header.Set("Content-Type", "application/json")

@@ -13,17 +13,23 @@ import (
 	"time"
 )
 
+const (
+	testWeekInitialDate = "2026-04-07"
+	testWeekFinalDate   = "2026-04-13"
+)
+
 func TestGenerateWeeklyReportsRejectsMissingWorkspaceID(t *testing.T) {
 	useCase := applicationpkg.NewGenerateWeeklyReports(
-		newMockReportRepository(),
-		&mockWorkspaceReader{},
-		&mockWeekReader{},
-		&mockAssignmentReader{},
-		&mockTaskReader{},
-		&mockUserReader{},
-		&mockPDFGenerator{},
-		&mockAIReportGenerator{},
-		nil,
+		applicationpkg.GenerateWeeklyReportsDependencies{
+			ReportRepo:        newMockReportRepository(),
+			WorkspaceReader:   &mockWorkspaceReader{},
+			WeekReader:        &mockWeekReader{},
+			AssignmentReader:  &mockAssignmentReader{},
+			TaskReader:        &mockTaskReader{},
+			UserReader:        &mockUserReader{},
+			PDFGenerator:      &mockPDFGenerator{},
+			AIReportGenerator: &mockAIReportGenerator{},
+		},
 		nil,
 	)
 
@@ -35,15 +41,18 @@ func TestGenerateWeeklyReportsRejectsMissingWorkspaceID(t *testing.T) {
 
 func TestGenerateWeeklyReportsRejectsWhenNoAssignmentsAreReportable(t *testing.T) {
 	useCase := applicationpkg.NewGenerateWeeklyReports(
-		newMockReportRepository(),
-		&mockWorkspaceReader{workspace: &workspacesDomain.Workspace{ID: 1, Name: "WS"}},
-		&mockWeekReader{week: &weeksDomain.Week{ID: 2, Number: 3, InitialDate: "2026-04-07", FinalDate: "2026-04-13"}},
-		&mockAssignmentReader{assignments: []assignmentsDomain.Assignment{{ID: 10, UserID: 2, WorkspaceID: 1, Role: assignmentsDomain.AssignmentRole("professor"), WeeklyHours: 4}}},
-		&mockTaskReader{},
-		&mockUserReader{},
-		&mockPDFGenerator{},
-		&mockAIReportGenerator{text: "summary"},
-		nil,
+		applicationpkg.GenerateWeeklyReportsDependencies{
+			ReportRepo:      newMockReportRepository(),
+			WorkspaceReader: &mockWorkspaceReader{workspace: &workspacesDomain.Workspace{ID: 1, Name: "WS"}},
+			WeekReader: &mockWeekReader{week: &weeksDomain.Week{
+				ID: 2, Number: 3, InitialDate: testWeekInitialDate, FinalDate: testWeekFinalDate,
+			}},
+			AssignmentReader:  &mockAssignmentReader{assignments: []assignmentsDomain.Assignment{{ID: 10, UserID: 2, WorkspaceID: 1, Role: assignmentsDomain.AssignmentRole("professor"), WeeklyHours: 4}}},
+			TaskReader:        &mockTaskReader{},
+			UserReader:        &mockUserReader{},
+			PDFGenerator:      &mockPDFGenerator{},
+			AIReportGenerator: &mockAIReportGenerator{text: "summary"},
+		},
 		nil,
 	)
 
@@ -55,15 +64,18 @@ func TestGenerateWeeklyReportsRejectsWhenNoAssignmentsAreReportable(t *testing.T
 
 func TestGenerateWeeklyReportsRejectsWhenAssignmentHasNoTasksForWeek(t *testing.T) {
 	useCase := applicationpkg.NewGenerateWeeklyReports(
-		newMockReportRepository(),
-		&mockWorkspaceReader{workspace: &workspacesDomain.Workspace{ID: 1, Name: "WS"}},
-		&mockWeekReader{week: &weeksDomain.Week{ID: 2, Number: 3, InitialDate: "2026-04-07", FinalDate: "2026-04-13"}},
-		&mockAssignmentReader{assignments: []assignmentsDomain.Assignment{{ID: 10, UserID: 2, WorkspaceID: 1, Role: assignmentsDomain.RoleAssistant, WeeklyHours: 4}}},
-		&mockTaskReader{tasks: []tasksDomain.Task{}},
-		&mockUserReader{user: &usersDomain.User{ID: 2, Name: "Ana"}},
-		&mockPDFGenerator{},
-		&mockAIReportGenerator{text: "summary"},
-		nil,
+		applicationpkg.GenerateWeeklyReportsDependencies{
+			ReportRepo:      newMockReportRepository(),
+			WorkspaceReader: &mockWorkspaceReader{workspace: &workspacesDomain.Workspace{ID: 1, Name: "WS"}},
+			WeekReader: &mockWeekReader{week: &weeksDomain.Week{
+				ID: 2, Number: 3, InitialDate: testWeekInitialDate, FinalDate: testWeekFinalDate,
+			}},
+			AssignmentReader:  &mockAssignmentReader{assignments: []assignmentsDomain.Assignment{{ID: 10, UserID: 2, WorkspaceID: 1, Role: assignmentsDomain.RoleAssistant, WeeklyHours: 4}}},
+			TaskReader:        &mockTaskReader{tasks: []tasksDomain.Task{}},
+			UserReader:        &mockUserReader{user: &usersDomain.User{ID: 2, Name: "Ana"}},
+			PDFGenerator:      &mockPDFGenerator{},
+			AIReportGenerator: &mockAIReportGenerator{text: "summary"},
+		},
 		nil,
 	)
 
@@ -77,18 +89,22 @@ func TestGenerateWeeklyReportsSuccess(t *testing.T) {
 	repo := newMockReportRepository()
 	fileStorage := &mockReportFileStorage{}
 	useCase := applicationpkg.NewGenerateWeeklyReports(
-		repo,
-		&mockWorkspaceReader{workspace: &workspacesDomain.Workspace{ID: 1, Name: "Algorithms"}},
-		&mockWeekReader{week: &weeksDomain.Week{ID: 2, Number: 3, InitialDate: "2026-04-07", FinalDate: "2026-04-13"}},
-		&mockAssignmentReader{assignments: []assignmentsDomain.Assignment{{ID: 10, UserID: 2, WorkspaceID: 1, Role: assignmentsDomain.RoleAssistant, WeeklyHours: 4}}},
-		&mockTaskReader{tasks: []tasksDomain.Task{
-			{ID: 5, AssignmentID: 10, Title: "Prepare lab", Description: "Slides", Status: tasksDomain.TaskStatusFinalizado, SpentHours: 2, WeekStartDate: time.Date(2026, 4, 7, 0, 0, 0, 0, time.UTC)},
-			{ID: 6, AssignmentID: 10, Title: "Support class", Description: "Questions", Status: tasksDomain.TaskStatusAbierto, SpentHours: 3, WeekStartDate: time.Date(2026, 4, 7, 0, 0, 0, 0, time.UTC)},
-		}},
-		&mockUserReader{user: &usersDomain.User{ID: 2, Name: "Ana Gomez"}},
-		&mockPDFGenerator{},
-		&mockAIReportGenerator{text: "Weekly summary"},
-		fileStorage,
+		applicationpkg.GenerateWeeklyReportsDependencies{
+			ReportRepo:      repo,
+			WorkspaceReader: &mockWorkspaceReader{workspace: &workspacesDomain.Workspace{ID: 1, Name: "Algorithms"}},
+			WeekReader: &mockWeekReader{week: &weeksDomain.Week{
+				ID: 2, Number: 3, InitialDate: testWeekInitialDate, FinalDate: testWeekFinalDate,
+			}},
+			AssignmentReader: &mockAssignmentReader{assignments: []assignmentsDomain.Assignment{{ID: 10, UserID: 2, WorkspaceID: 1, Role: assignmentsDomain.RoleAssistant, WeeklyHours: 4}}},
+			TaskReader: &mockTaskReader{tasks: []tasksDomain.Task{
+				{ID: 5, AssignmentID: 10, Title: "Prepare lab", Description: "Slides", Status: tasksDomain.TaskStatusFinalizado, SpentHours: 2, WeekStartDate: time.Date(2026, 4, 7, 0, 0, 0, 0, time.UTC)},
+				{ID: 6, AssignmentID: 10, Title: "Support class", Description: "Questions", Status: tasksDomain.TaskStatusAbierto, SpentHours: 3, WeekStartDate: time.Date(2026, 4, 7, 0, 0, 0, 0, time.UTC)},
+			}},
+			UserReader:        &mockUserReader{user: &usersDomain.User{ID: 2, Name: "Ana Gomez"}},
+			PDFGenerator:      &mockPDFGenerator{},
+			AIReportGenerator: &mockAIReportGenerator{text: "Weekly summary"},
+			ReportFileStorage: fileStorage,
+		},
 		&applicationpkg.GenerateWeeklyReportsOptions{ReportsStorageDir: t.TempDir(), ReportsGCSPrefix: "reports"},
 	)
 
@@ -112,17 +128,20 @@ func TestGenerateWeeklyReportsSuccess(t *testing.T) {
 
 func TestGenerateWeeklyReportsRejectsAIFailure(t *testing.T) {
 	useCase := applicationpkg.NewGenerateWeeklyReports(
-		newMockReportRepository(),
-		&mockWorkspaceReader{workspace: &workspacesDomain.Workspace{ID: 1, Name: "Algorithms"}},
-		&mockWeekReader{week: &weeksDomain.Week{ID: 2, Number: 3, InitialDate: "2026-04-07", FinalDate: "2026-04-13"}},
-		&mockAssignmentReader{assignments: []assignmentsDomain.Assignment{{ID: 10, UserID: 2, WorkspaceID: 1, Role: assignmentsDomain.RoleAssistant, WeeklyHours: 4}}},
-		&mockTaskReader{tasks: []tasksDomain.Task{
-			{ID: 5, AssignmentID: 10, Title: "Prepare lab", Description: "Slides", Status: tasksDomain.TaskStatusFinalizado, SpentHours: 2},
-		}},
-		&mockUserReader{user: &usersDomain.User{ID: 2, Name: "Ana Gomez"}},
-		&mockPDFGenerator{},
-		&mockAIReportGenerator{err: errors.New("ai failed")},
-		nil,
+		applicationpkg.GenerateWeeklyReportsDependencies{
+			ReportRepo:      newMockReportRepository(),
+			WorkspaceReader: &mockWorkspaceReader{workspace: &workspacesDomain.Workspace{ID: 1, Name: "Algorithms"}},
+			WeekReader: &mockWeekReader{week: &weeksDomain.Week{
+				ID: 2, Number: 3, InitialDate: testWeekInitialDate, FinalDate: testWeekFinalDate,
+			}},
+			AssignmentReader: &mockAssignmentReader{assignments: []assignmentsDomain.Assignment{{ID: 10, UserID: 2, WorkspaceID: 1, Role: assignmentsDomain.RoleAssistant, WeeklyHours: 4}}},
+			TaskReader: &mockTaskReader{tasks: []tasksDomain.Task{
+				{ID: 5, AssignmentID: 10, Title: "Prepare lab", Description: "Slides", Status: tasksDomain.TaskStatusFinalizado, SpentHours: 2},
+			}},
+			UserReader:        &mockUserReader{user: &usersDomain.User{ID: 2, Name: "Ana Gomez"}},
+			PDFGenerator:      &mockPDFGenerator{},
+			AIReportGenerator: &mockAIReportGenerator{err: errors.New("ai failed")},
+		},
 		&applicationpkg.GenerateWeeklyReportsOptions{ReportsStorageDir: t.TempDir()},
 	)
 
