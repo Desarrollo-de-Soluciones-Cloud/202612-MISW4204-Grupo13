@@ -180,9 +180,9 @@ func TestCreateAssignmentSuccessForProfessor(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newAssignmentHandlerForTest()
 	body, _ := json.Marshal(map[string]any{
-		"user_id":       2,
+		"user_id":       3,
 		"workspace_id":  7,
-		"role":          "monitor",
+		"role":          "assistant",
 		"weekly_hours":  6,
 	})
 	w := httptest.NewRecorder()

@@ -63,6 +63,11 @@ type mockReportFileStorage struct {
 	err         error
 }
 
+type mockReportJobPublisher struct {
+	jobs []applicationpkg.WeeklyReportJobMessage
+	err  error
+}
+
 func newMockReportRepository() *mockReportRepository {
 	return &mockReportRepository{
 		reports: make(map[uint]*reportsDomain.Report),
@@ -181,5 +186,13 @@ func (m *mockReportFileStorage) Upload(ctx context.Context, objectName string, r
 	m.objectName = objectName
 	m.contentType = contentType
 	m.uploaded = payload
+	return nil
+}
+
+func (m *mockReportJobPublisher) PublishWeeklyReportJob(ctx context.Context, job applicationpkg.WeeklyReportJobMessage) error {
+	if m.err != nil {
+		return m.err
+	}
+	m.jobs = append(m.jobs, job)
 	return nil
 }

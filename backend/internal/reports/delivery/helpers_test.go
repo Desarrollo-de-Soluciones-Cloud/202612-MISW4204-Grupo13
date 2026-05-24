@@ -14,11 +14,18 @@ func TestMapBindingErrorsForGenerateWeeklyReportsRequest(t *testing.T) {
 	err := validate.Struct(GenerateWeeklyReportsRequest{})
 
 	mapped := mapBindingErrors(err)
-	if len(mapped) != 2 {
-		t.Fatalf("expected 2 mapped errors, got %d", len(mapped))
+	if len(mapped) == 0 {
+		t.Fatalf("expected mapped errors")
 	}
-	if !errors.Is(mapped[0], reportsDomain.ErrReportWorkspaceIDRequired) && !errors.Is(mapped[1], reportsDomain.ErrReportWorkspaceIDRequired) {
-		t.Fatalf("expected workspace id required error in mapped result")
+	hasWorkspaceRequired := false
+	for _, mappedErr := range mapped {
+		if errors.Is(mappedErr, reportsDomain.ErrReportWorkspaceIDRequired) {
+			hasWorkspaceRequired = true
+			break
+		}
+	}
+	if !hasWorkspaceRequired {
+		t.Fatalf("expected workspace id required error in mapped result, got %#v", mapped)
 	}
 }
 

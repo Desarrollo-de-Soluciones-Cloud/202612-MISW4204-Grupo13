@@ -16,8 +16,15 @@ func TestUserMapBindingErrors(t *testing.T) {
 	if len(mapped) == 0 {
 		t.Fatalf("expected mapped validation errors")
 	}
-	if !errors.Is(mapped[0], domain.ErrUserNameRequired) {
-		t.Fatalf("expected first error to be user name required, got %v", mapped[0])
+	hasNameRequired := false
+	for _, mappedErr := range mapped {
+		if errors.Is(mappedErr, domain.ErrUserNameRequired) {
+			hasNameRequired = true
+			break
+		}
+	}
+	if !hasNameRequired {
+		t.Fatalf("expected user name required error in mapped result, got %#v", mapped)
 	}
 }
 

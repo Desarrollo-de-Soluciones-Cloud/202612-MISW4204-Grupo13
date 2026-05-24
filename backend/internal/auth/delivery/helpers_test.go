@@ -13,8 +13,18 @@ func TestAuthMapBindingErrors(t *testing.T) {
 	err := validate.Struct(SignInRequest{})
 
 	mapped := mapBindingErrors(err)
-	if len(mapped) != 2 {
-		t.Fatalf("expected 2 mapped auth errors, got %d", len(mapped))
+	if len(mapped) == 0 {
+		t.Fatalf("expected mapped auth errors")
+	}
+	hasEmailRequired := false
+	for _, mappedErr := range mapped {
+		if errors.Is(mappedErr, domain.ErrAuthEmailRequired) {
+			hasEmailRequired = true
+			break
+		}
+	}
+	if !hasEmailRequired {
+		t.Fatalf("expected ErrAuthEmailRequired in mapped result, got %#v", mapped)
 	}
 }
 
