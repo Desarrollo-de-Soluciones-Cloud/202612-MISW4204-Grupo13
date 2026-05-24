@@ -9,10 +9,12 @@ import (
 )
 
 func TestUserRepositorySQLiteCRUD(t *testing.T) {
+	const testUserEmail = "ana@example.com"
+
 	sharedDB.SetupSQLiteDB(t, &backendusers.User{})
 	repo := usersinfra.NewUserRepository()
 
-	user, err := backendusers.NewUser("Ana Gomez", "ana@example.com", "Password123", backendusers.RoleProfessor)
+	user, err := backendusers.NewUser("Ana Gomez", testUserEmail, "Password123", backendusers.RoleProfessor)
 	if err != nil {
 		t.Fatalf("expected valid user, got %v", err)
 	}
@@ -21,11 +23,11 @@ func TestUserRepositorySQLiteCRUD(t *testing.T) {
 	}
 
 	byID, err := repo.FindByID(user.ID)
-	if err != nil || byID.Email != "ana@example.com" {
+	if err != nil || byID.Email != testUserEmail {
 		t.Fatalf("expected find by id, got %v %#v", err, byID)
 	}
 
-	byEmail, err := repo.FindByEmail("ana@example.com")
+	byEmail, err := repo.FindByEmail(testUserEmail)
 	if err != nil || byEmail.ID != user.ID {
 		t.Fatalf("expected find by email, got %v %#v", err, byEmail)
 	}

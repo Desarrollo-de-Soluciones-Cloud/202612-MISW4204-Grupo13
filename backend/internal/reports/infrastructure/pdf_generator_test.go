@@ -8,6 +8,13 @@ import (
 	"github.com/jung-kurt/gofpdf"
 )
 
+const (
+	testPDFWorkspaceLine    = "Workspace: Algorithms"
+	testPDFTaskHeader       = "- Preparar lab | estado=finalizado | horas=2"
+	testPDFTaskDescription  = "descripcion: Slides"
+	testPDFTaskObservation  = "observaciones: Todo bien"
+)
+
 func TestGenerateRejectsMissingFilePath(t *testing.T) {
 	generator := NewPDFGenerator()
 
@@ -20,7 +27,7 @@ func TestGenerateCreatesPDFFile(t *testing.T) {
 	generator := NewPDFGenerator()
 	filePath := filepath.Join(t.TempDir(), "reports", "weekly.pdf")
 	lines := []string{
-		"Workspace: Algorithms",
+		testPDFWorkspaceLine,
 		"Monitor/Asistente: Ana Gomez",
 		"Rol: assistant",
 		"Semana: 3",
@@ -28,9 +35,9 @@ func TestGenerateCreatesPDFFile(t *testing.T) {
 		pdfAISectionTitle,
 		"Resumen generado",
 		pdfTasksSectionTitle,
-		"- Preparar lab | estado=finalizado | horas=2",
-		"descripcion: Slides",
-		"observaciones: Todo bien",
+		testPDFTaskHeader,
+		testPDFTaskDescription,
+		testPDFTaskObservation,
 	}
 
 	if err := generator.Generate(filePath, "Weekly report", lines); err != nil {
@@ -48,7 +55,7 @@ func TestGenerateCreatesPDFFile(t *testing.T) {
 
 func TestParsePDFSections(t *testing.T) {
 	sections := parsePDFSections([]string{
-		"Workspace: Algorithms",
+		testPDFWorkspaceLine,
 		"Monitor/Asistente: Ana Gomez",
 		"Rol: assistant",
 		"Semana: 3",
@@ -57,9 +64,9 @@ func TestParsePDFSections(t *testing.T) {
 		"Linea uno",
 		"Linea dos",
 		pdfTasksSectionTitle,
-		"- Preparar lab | estado=finalizado | horas=2",
-		"descripcion: Slides",
-		"observaciones: Todo bien",
+		testPDFTaskHeader,
+		testPDFTaskDescription,
+		testPDFTaskObservation,
 	})
 
 	if sections.info["Workspace"] != "Algorithms" {
@@ -77,12 +84,12 @@ func TestParsePDFSections(t *testing.T) {
 }
 
 func TestParseTaskHelpers(t *testing.T) {
-	key, value, ok := parsePDFInfoLine("Workspace: Algorithms")
+	key, value, ok := parsePDFInfoLine(testPDFWorkspaceLine)
 	if !ok || key != "Workspace" || value != "Algorithms" {
 		t.Fatalf("unexpected parsed info line: %q %q %v", key, value, ok)
 	}
 
-	row := parseTaskHeader("- Preparar lab | estado=finalizado | horas=2")
+	row := parseTaskHeader(testPDFTaskHeader)
 	if row.Title != "Preparar lab" || row.Status != "finalizado" || row.Hours != "2" {
 		t.Fatalf("unexpected parsed header: %#v", row)
 	}
@@ -97,9 +104,9 @@ func TestParseTaskHelpers(t *testing.T) {
 
 func TestTaskSectionAndLayoutHelpers(t *testing.T) {
 	tasks := make([]taskPDFRow, 0)
-	current := parseTaskSectionLine("- Preparar lab | estado=finalizado | horas=2", nil, &tasks)
-	current = parseTaskSectionLine("descripcion: Slides", current, &tasks)
-	current = parseTaskSectionLine("observaciones: Todo bien", current, &tasks)
+	current := parseTaskSectionLine(testPDFTaskHeader, nil, &tasks)
+	current = parseTaskSectionLine(testPDFTaskDescription, current, &tasks)
+	current = parseTaskSectionLine(testPDFTaskObservation, current, &tasks)
 	if current == nil || current.Description != "Slides" || current.Observation != "Todo bien" {
 		t.Fatalf("unexpected current task %#v", current)
 	}

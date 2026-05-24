@@ -1,16 +1,18 @@
 package seed_test
 
 import (
-	usersDomain "backend/internal/users/domain"
 	sharedDB "backend/internal/shared/database/testsupport"
+	usersDomain "backend/internal/users/domain"
 	usersSeed "backend/internal/users/seed"
 	"testing"
 )
 
+const testDefaultAdminEmail = "admin@example.com"
+
 func TestSeedDefaultAdminCreatesAdminUser(t *testing.T) {
 	db := sharedDB.SetupSQLiteDB(t, &usersDomain.User{})
 	t.Setenv("DEFAULT_ADMIN_NAME", "Admin User")
-	t.Setenv("DEFAULT_ADMIN_EMAIL", "admin@example.com")
+	t.Setenv("DEFAULT_ADMIN_EMAIL", testDefaultAdminEmail)
 	t.Setenv("DEFAULT_ADMIN_PASSWORD", "supersecret123")
 
 	if err := usersSeed.SeedDefaultAdmin(); err != nil {
@@ -18,7 +20,7 @@ func TestSeedDefaultAdminCreatesAdminUser(t *testing.T) {
 	}
 
 	var count int64
-	if err := db.Model(&usersDomain.User{}).Where("email = ?", "admin@example.com").Count(&count).Error; err != nil {
+	if err := db.Model(&usersDomain.User{}).Where("email = ?", testDefaultAdminEmail).Count(&count).Error; err != nil {
 		t.Fatalf("expected count query, got %v", err)
 	}
 	if count != 1 {
@@ -29,7 +31,7 @@ func TestSeedDefaultAdminCreatesAdminUser(t *testing.T) {
 func TestSeedDefaultAdminIsIdempotent(t *testing.T) {
 	db := sharedDB.SetupSQLiteDB(t, &usersDomain.User{})
 	t.Setenv("DEFAULT_ADMIN_NAME", "Admin User")
-	t.Setenv("DEFAULT_ADMIN_EMAIL", "admin@example.com")
+	t.Setenv("DEFAULT_ADMIN_EMAIL", testDefaultAdminEmail)
 	t.Setenv("DEFAULT_ADMIN_PASSWORD", "supersecret123")
 
 	if err := usersSeed.SeedDefaultAdmin(); err != nil {
@@ -40,7 +42,7 @@ func TestSeedDefaultAdminIsIdempotent(t *testing.T) {
 	}
 
 	var count int64
-	if err := db.Model(&usersDomain.User{}).Where("email = ?", "admin@example.com").Count(&count).Error; err != nil {
+	if err := db.Model(&usersDomain.User{}).Where("email = ?", testDefaultAdminEmail).Count(&count).Error; err != nil {
 		t.Fatalf("expected count query, got %v", err)
 	}
 	if count != 1 {

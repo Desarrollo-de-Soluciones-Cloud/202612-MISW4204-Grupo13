@@ -8,12 +8,14 @@ import (
 	"testing"
 )
 
+const testPeriodName202710 = "2027-10"
+
 func TestPeriodRepositorySQLiteCRUD(t *testing.T) {
 	sharedDB.SetupSQLiteDB(t, &periodsDomain.Period{})
 	repo := periodsinfra.NewPeriodRepository()
 
 	period := &periodsDomain.Period{
-		Name: "2027-10", PeriodState: periodsDomain.ActivePeriod, InitialDate: "2027-01-05",
+		Name: testPeriodName202710, PeriodState: periodsDomain.ActivePeriod, InitialDate: "2027-01-05",
 		FinalDate: "2027-05-02", WeeksCount: 16, InscriptionFinalDate: "2027-01-04",
 	}
 	if err := repo.Create(period); err != nil {
@@ -21,11 +23,11 @@ func TestPeriodRepositorySQLiteCRUD(t *testing.T) {
 	}
 
 	byID, err := repo.FindByID(period.ID)
-	if err != nil || byID.Name != "2027-10" {
+	if err != nil || byID.Name != testPeriodName202710 {
 		t.Fatalf("expected find by id, got %v %#v", err, byID)
 	}
 
-	byName, err := repo.FindByName("2027-10")
+	byName, err := repo.FindByName(testPeriodName202710)
 	if err != nil || byName.ID != period.ID {
 		t.Fatalf("expected find by name, got %v %#v", err, byName)
 	}

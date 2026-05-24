@@ -2,10 +2,10 @@ package delivery_test
 
 import (
 	assignmentsDomain "backend/internal/assignments/domain"
-	reportsApplication "backend/internal/reports/application"
-	reportsDomain "backend/internal/reports/domain"
 	authDomain "backend/internal/auth/domain"
+	reportsApplication "backend/internal/reports/application"
 	deliverypkg "backend/internal/reports/delivery"
+	reportsDomain "backend/internal/reports/domain"
 	tasksDomain "backend/internal/tasks/domain"
 	usersDomain "backend/internal/users/domain"
 	weeksDomain "backend/internal/weeks/domain"
@@ -21,7 +21,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const expectedBadRequestFormat = "expected 400, got %d"
+const (
+	expectedBadRequestFormat = "expected 400, got %d"
+	testReportsWeeklyPath    = "/reports/weekly"
+	testReportsDownloadPath  = "/reports/55/download"
+	testHeaderContentType    = "Content-Type"
+	testApplicationJSON      = "application/json"
+	testReportFilePath       = "reports/test.pdf"
+)
 
 func newReportHandlerForTest() *deliverypkg.ReportHandler {
 	return deliverypkg.NewReportHandler(deliverypkg.ReportHandlerDependencies{})
@@ -109,6 +116,7 @@ func (p *reportPDFGeneratorStub) Generate(filePath string, title string, lines [
 func (a *reportAIStub) GenerateWeeklyReport(input reportsApplication.AIWeeklyReportInput) (string, error) {
 	return "summary", nil
 }
+
 func (j *jobPublisherStub) PublishWeeklyReportJob(ctx context.Context, job reportsApplication.WeeklyReportJobMessage) error {
 	return nil
 }
@@ -118,7 +126,7 @@ func TestGenerateWeeklyReportsUnauthorized(t *testing.T) {
 	handler := newReportHandlerForTest()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodPost, "/reports/weekly", nil)
+	c.Request = httptest.NewRequest(http.MethodPost, testReportsWeeklyPath, nil)
 
 	handler.GenerateWeeklyReports(c)
 
@@ -131,8 +139,8 @@ func TestGenerateWeeklyReportsBadRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newReportHandlerForTest()
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/reports/weekly", bytes.NewBufferString(`{"workspace_id":"bad"}`))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, testReportsWeeklyPath, bytes.NewBufferString(`{"workspace_id":"bad"}`))
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Set("current_user", authDomain.AuthenticatedUser{
@@ -203,14 +211,14 @@ func TestProcessWeeklyReportJobBadPayload(t *testing.T) {
 	handler := deliverypkg.NewReportHandler(deliverypkg.ReportHandlerDependencies{
 		ProcessWeeklyReport: reportsApplication.NewProcessWeeklyReportJob(
 			reportsApplication.ProcessWeeklyReportJobDependencies{
-				ReportRepo:      &reportRepositoryStub{reports: map[uint]*reportsDomain.Report{}},
-				WorkspaceReader: &reportWorkspaceReaderStub{workspace: &workspacesDomain.Workspace{ID: 1, Name: "WS"}},
-				WeekReader:      &weekReaderStub{},
-				AssignmentReader: &reportAssignmentReaderStub{},
-				TaskReader:        &reportTaskReaderStub{},
-				UserReader:        &userReaderStub{},
-				PDFGenerator:      &reportPDFGeneratorStub{},
-				AIReportGenerator: &reportAIStub{},
+				ReportRepo:         &reportRepositoryStub{reports: map[uint]*reportsDomain.Report{}},
+				WorkspaceReader:    &reportWorkspaceReaderStub{workspace: &workspacesDomain.Workspace{ID: 1, Name: "WS"}},
+				WeekReader:         &weekReaderStub{},
+				AssignmentReader:   &reportAssignmentReaderStub{},
+				TaskReader:         &reportTaskReaderStub{},
+				UserReader:         &userReaderStub{},
+				PDFGenerator:       &reportPDFGeneratorStub{},
+				AIReportGenerator:  &reportAIStub{},
 			},
 			nil,
 		),
@@ -218,7 +226,7 @@ func TestProcessWeeklyReportJobBadPayload(t *testing.T) {
 	})
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/reports/weekly/process?token=secret", bytes.NewBufferString(`{"message":{"data":"%%%bad%%%"}}`))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 
@@ -257,7 +265,7 @@ func TestDownloadReportSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	workspaceReader := &reportWorkspaceReaderStub{workspace: &workspacesDomain.Workspace{ID: 1, UserID: 10, Name: "WS"}}
 	reportRepo := &reportRepositoryStub{reports: map[uint]*reportsDomain.Report{
-		55: {ID: 55, WorkspaceID: 1, WeekID: 2, AssignmentID: 10, UserID: 3, FilePath: "reports/test.pdf"},
+		55: {ID: 55, WorkspaceID: 1, WeekID: 2, AssignmentID: 10, UserID: 3, FilePath: testReportFilePath},
 	}}
 	handler := deliverypkg.NewReportHandler(deliverypkg.ReportHandlerDependencies{
 		GetReportByID:     reportsApplication.NewGetReportByID(reportRepo),
@@ -267,7 +275,7 @@ func TestDownloadReportSuccess(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/reports/55/download", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, testReportsDownloadPath, nil)
 	c.Params = gin.Params{{Key: "id", Value: "55"}}
 	c.Set("current_user", authDomain.AuthenticatedUser{ID: 10, GlobalRole: usersDomain.RoleProfessor})
 
@@ -284,8 +292,8 @@ func TestGenerateWeeklyReportsWorkspaceNotFound(t *testing.T) {
 		WorkspaceReader: &reportWorkspaceReaderStub{},
 	})
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/reports/weekly", bytes.NewBufferString(`{"workspace_id":1,"week_id":2}`))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, testReportsWeeklyPath, bytes.NewBufferString(`{"workspace_id":1,"week_id":2}`))
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin})
@@ -303,8 +311,8 @@ func TestGenerateWeeklyReportsForbiddenWorkspace(t *testing.T) {
 		WorkspaceReader: &reportWorkspaceReaderStub{workspace: &workspacesDomain.Workspace{ID: 1, UserID: 99}},
 	})
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/reports/weekly", bytes.NewBufferString(`{"workspace_id":1,"week_id":2}`))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, testReportsWeeklyPath, bytes.NewBufferString(`{"workspace_id":1,"week_id":2}`))
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Set("current_user", authDomain.AuthenticatedUser{ID: 10, GlobalRole: usersDomain.RoleProfessor})
@@ -329,8 +337,8 @@ func TestGenerateWeeklyReportsQueued(t *testing.T) {
 		WorkspaceReader: &reportWorkspaceReaderStub{workspace: &workspacesDomain.Workspace{ID: 1, UserID: 10, Name: "WS"}},
 	})
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/reports/weekly", bytes.NewBufferString(`{"workspace_id":1,"week_id":2}`))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, testReportsWeeklyPath, bytes.NewBufferString(`{"workspace_id":1,"week_id":2}`))
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Set("current_user", authDomain.AuthenticatedUser{ID: 10, GlobalRole: usersDomain.RoleProfessor})
@@ -349,7 +357,7 @@ func TestProcessWeeklyReportJobNotImplemented(t *testing.T) {
 	})
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/reports/weekly/process?token=secret", bytes.NewBufferString(`{"message":{"data":"e30="}}`))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(testHeaderContentType, testApplicationJSON)
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 
@@ -364,7 +372,7 @@ func TestDownloadReportForbiddenForProfessor(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	workspaceReader := &reportWorkspaceReaderStub{workspace: &workspacesDomain.Workspace{ID: 1, UserID: 99, Name: "WS"}}
 	reportRepo := &reportRepositoryStub{reports: map[uint]*reportsDomain.Report{
-		55: {ID: 55, WorkspaceID: 1, WeekID: 2, AssignmentID: 10, UserID: 3, FilePath: "reports/test.pdf"},
+		55: {ID: 55, WorkspaceID: 1, WeekID: 2, AssignmentID: 10, UserID: 3, FilePath: testReportFilePath},
 	}}
 	handler := deliverypkg.NewReportHandler(deliverypkg.ReportHandlerDependencies{
 		GetReportByID:   reportsApplication.NewGetReportByID(reportRepo),
@@ -373,7 +381,7 @@ func TestDownloadReportForbiddenForProfessor(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/reports/55/download", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, testReportsDownloadPath, nil)
 	c.Params = gin.Params{{Key: "id", Value: "55"}}
 	c.Set("current_user", authDomain.AuthenticatedUser{ID: 10, GlobalRole: usersDomain.RoleProfessor})
 
@@ -388,7 +396,7 @@ func TestDownloadReportWithoutStorage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	workspaceReader := &reportWorkspaceReaderStub{workspace: &workspacesDomain.Workspace{ID: 1, UserID: 10, Name: "WS"}}
 	reportRepo := &reportRepositoryStub{reports: map[uint]*reportsDomain.Report{
-		55: {ID: 55, WorkspaceID: 1, WeekID: 2, AssignmentID: 10, UserID: 3, FilePath: "reports/test.pdf"},
+		55: {ID: 55, WorkspaceID: 1, WeekID: 2, AssignmentID: 10, UserID: 3, FilePath: testReportFilePath},
 	}}
 	handler := deliverypkg.NewReportHandler(deliverypkg.ReportHandlerDependencies{
 		GetReportByID:   reportsApplication.NewGetReportByID(reportRepo),
@@ -397,7 +405,7 @@ func TestDownloadReportWithoutStorage(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/reports/55/download", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, testReportsDownloadPath, nil)
 	c.Params = gin.Params{{Key: "id", Value: "55"}}
 	c.Set("current_user", authDomain.AuthenticatedUser{ID: 10, GlobalRole: usersDomain.RoleProfessor})
 
