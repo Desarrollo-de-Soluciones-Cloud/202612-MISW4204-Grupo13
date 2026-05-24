@@ -89,6 +89,19 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
   const getWeekLabel = (week: Week): string =>
     `Semana ${week.number}: ${week.initial_date} a ${week.final_date} (ID ${week.id})`;
 
+  const getReportGenerationContext = (selectedWorkspaceId: number, selectedWeekId: number) => {
+    const workspace = workspaces.find((item) => item.id === selectedWorkspaceId);
+    const week =
+      Object.values(weeksByPeriod)
+        .flat()
+        .find((item) => item.id === selectedWeekId) ?? null;
+
+    return {
+      workspaceLabel: workspace?.name ?? `workspace ${selectedWorkspaceId}`,
+      weekLabel: week ? `semana ${week.number} (${week.initial_date} a ${week.final_date})` : `semana ${selectedWeekId}`,
+    };
+  };
+
   const loadReportsForFilters = async (selectedWorkspaceId: number, selectedWeekId?: number) => {
     const response = await listReports({
       workspace_id: selectedWorkspaceId,
@@ -106,6 +119,10 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
   ) => {
     const expectedTotal = baselineCount + queuedCount;
     let latestCount = baselineCount;
+    const { workspaceLabel, weekLabel } = getReportGenerationContext(
+      selectedWorkspaceId,
+      selectedWeekId,
+    );
 
     for (let attempt = 0; attempt < reportPollingAttempts; attempt += 1) {
       if (attempt > 0) {
@@ -117,19 +134,25 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
       const generatedCount = Math.max(latestCount - baselineCount, 0);
 
       if (latestCount >= expectedTotal) {
-        showToast(`La generacion finalizo y los ${generatedCount} reportes ya estan listos para descarga.`, "success");
+        showToast(
+          `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} finalizo con exito. Los ${generatedCount} reporte(s) ya estan listos para descarga.`,
+          "success",
+        );
         return;
       }
     }
 
     const generatedCount = Math.max(latestCount - baselineCount, 0);
     if (generatedCount === 0) {
-      showToast("No hubo reportes para generar en la semana seleccionada.", "info");
+      showToast(
+        `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} se esta demorando mas de lo esperado. Revisa mas tarde la lista de reportes.`,
+        "info",
+      );
       return;
     }
 
     showToast(
-      `La generacion asincrona esta tardando mas de lo esperado. Van ${generatedCount} de ${queuedCount} reporte(s) visibles.`,
+      `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} se esta demorando mas de lo esperado. Ya hay ${generatedCount} de ${queuedCount} reporte(s) visibles.`,
       "info",
     );
   };
@@ -301,6 +324,10 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
       const selectedWorkspaceId = Number(workspaceId);
       const selectedWeekId = Number(weekId);
       const baselineCount = reports.filter((item) => item.week_id === selectedWeekId).length;
+      const { workspaceLabel, weekLabel } = getReportGenerationContext(
+        selectedWorkspaceId,
+        selectedWeekId,
+      );
 
       const response = await generateWeeklyReport({
         workspace_id: selectedWorkspaceId,
@@ -310,7 +337,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         setFilterWorkspaceId(String(selectedWorkspaceId));
         setFilterWeekId(String(selectedWeekId));
         showToast(
-          `Se inicio la generacion asincrona de ${response.generated_count} reporte(s). Te avisaremos cuando empiecen a quedar disponibles.`,
+          `Se inicio la generacion asincrona de ${response.generated_count} reporte(s) para ${workspaceLabel} en la ${weekLabel}. Te avisaremos cuando empiecen a quedar disponibles.`,
           "info",
         );
         setWeekId("");
@@ -323,7 +350,10 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         return;
       }
 
-      showToast(`Se generaron ${response.generated_count} reportes semanales.`, "success");
+      showToast(
+        `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} finalizo con exito. Se generaron ${response.generated_count} reporte(s).`,
+        "success",
+      );
       setWeekId("");
 
       const reportsWorkspaceId = getReportsWorkspaceId(selectedWorkspaceId);
