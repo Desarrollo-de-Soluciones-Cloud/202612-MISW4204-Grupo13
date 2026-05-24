@@ -96,14 +96,14 @@ func (m *MockPeriodRepository) AutoMigrate() error {
 
 func setupTestHandler(repo domain.PeriodRepository) *delivery.PeriodHandler {
 	createWeeks := &MockCreateWeeksForPeriod{}
-	return delivery.NewPeriodHandler(delivery.PeriodHandlerUseCases{
-		CreatePeriod:       application.NewCreatePeriod(repo, createWeeks),
-		ListPeriods:        application.NewListPeriods(repo),
-		ListPeriodsByState: application.NewListPeriodsByState(repo),
-		GetPeriodByID:      application.NewGetPeriodByID(repo),
-		UpdatePeriod:       application.NewUpdatePeriod(repo),
-		ClosePeriod:        application.NewClosePeriod(repo),
-	})
+	return delivery.NewPeriodHandler(
+		application.NewCreatePeriod(repo, createWeeks),
+		application.NewListPeriods(repo),
+		application.NewListPeriodsByState(repo),
+		application.NewGetPeriodByID(repo),
+		application.NewUpdatePeriod(repo),
+		application.NewClosePeriod(repo),
+	)
 }
 
 func collectPeriods(
