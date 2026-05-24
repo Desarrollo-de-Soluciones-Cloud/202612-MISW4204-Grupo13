@@ -1,6 +1,7 @@
-package delivery
+package delivery_test
 
 import (
+	authDelivery "backend/internal/auth/delivery"
 	"backend/internal/shared/config"
 	"net/http"
 	"testing"
@@ -12,7 +13,7 @@ func TestSetupRoutesRegistersAuthEndpoints(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	handler := SetupRoutes(router, &config.Config{
+	handler := authDelivery.SetupRoutes(router, &config.Config{
 		JWTSecret:            "secret",
 		JWTExpirationMinutes: 60,
 	})

@@ -11,6 +11,7 @@ require (
 	golang.org/x/crypto v0.49.0
 	google.golang.org/genai v1.54.0
 	gorm.io/driver/postgres v1.6.0
+	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1
 )
 
