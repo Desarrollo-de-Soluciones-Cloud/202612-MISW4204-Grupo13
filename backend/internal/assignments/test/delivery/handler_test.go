@@ -229,6 +229,58 @@ func TestListAssignmentsForAdmin(t *testing.T) {
 	}
 }
 
+func TestCreateAssignmentProfessorForbiddenForForeignWorkspace(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newAssignmentHandlerForTest()
+	body, _ := json.Marshal(map[string]any{
+		"user_id":      3,
+		"workspace_id": 7,
+		"role":         "assistant",
+		"weekly_hours": 6,
+	})
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/assignments", bytes.NewBuffer(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("current_user", authenticatedUser(99, usersDomain.RoleProfessor))
+
+	handler.CreateAssignment(c)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestListAssignmentsForProfessor(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newAssignmentHandlerForTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/assignments", nil)
+	c.Set("current_user", authenticatedUser(10, usersDomain.RoleProfessor))
+
+	handler.ListAssignments(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestListAssignmentsForMonitor(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newAssignmentHandlerForTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/assignments", nil)
+	c.Set("current_user", authenticatedUser(2, usersDomain.RoleMonitor))
+
+	handler.ListAssignments(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
 func TestUpdateAssignmentRejectsProfessorWeeklyHourChange(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newAssignmentHandlerForTest()
