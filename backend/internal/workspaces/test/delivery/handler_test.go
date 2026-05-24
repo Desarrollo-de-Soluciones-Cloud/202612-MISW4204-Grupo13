@@ -203,3 +203,52 @@ func TestDeleteWorkspaceForbiddenForProfessorFromAnotherOwner(t *testing.T) {
 		t.Fatalf("expected 403, got %d", w.Code)
 	}
 }
+
+func TestCreateWorkspaceBadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newWorkspaceHandlerForTest()
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, testWorkspacesPath, bytes.NewBufferString(`{"period_id":"bad"}`))
+	req.Header.Set("Content-Type", "application/json")
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Set("current_user", authenticatedUser(1, usersDomain.RoleAdmin))
+
+	handler.CreateWorkspace(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestGetWorkspaceByIDForbiddenForProfessor(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newWorkspaceHandlerForTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/workspaces/2", nil)
+	c.Params = gin.Params{{Key: "id", Value: "2"}}
+	c.Set("current_user", authenticatedUser(10, usersDomain.RoleProfessor))
+
+	handler.GetWorkspaceByID(c)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestDeleteWorkspaceNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newWorkspaceHandlerForTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodDelete, "/workspaces/999", nil)
+	c.Params = gin.Params{{Key: "id", Value: "999"}}
+	c.Set("current_user", authenticatedUser(1, usersDomain.RoleAdmin))
+
+	handler.DeleteWorkspace(c)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}
