@@ -135,7 +135,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
 
       if (latestCount >= expectedTotal) {
         showToast(
-          `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} finalizo con exito. Los ${generatedCount} reporte(s) ya estan listos para descarga.`,
+          `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} finalizo con exito. Los resultados ya estan disponibles en la lista para descarga.`,
           "success",
         );
         return;
@@ -152,7 +152,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
     }
 
     showToast(
-      `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} se esta demorando mas de lo esperado. Ya hay ${generatedCount} de ${queuedCount} reporte(s) visibles.`,
+      `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} se esta demorando mas de lo esperado. Ya hay resultados parciales visibles en la lista.`,
       "info",
     );
   };
@@ -337,7 +337,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
         setFilterWorkspaceId(String(selectedWorkspaceId));
         setFilterWeekId(String(selectedWeekId));
         showToast(
-          `Se inicio la generacion asincrona de ${response.generated_count} reporte(s) para ${workspaceLabel} en la ${weekLabel}. Te avisaremos cuando empiecen a quedar disponibles.`,
+          `Se inicio la generacion asincrona de reportes para ${workspaceLabel} en la ${weekLabel}. Te avisaremos cuando los resultados empiecen a quedar disponibles.`,
           "info",
         );
         setWeekId("");
@@ -351,7 +351,7 @@ export default function ProfessorDashboard({ user, onLogout }: ProfessorDashboar
       }
 
       showToast(
-        `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} finalizo con exito. Se generaron ${response.generated_count} reporte(s).`,
+        `La generacion de reportes para ${workspaceLabel} en la ${weekLabel} finalizo con exito. Los resultados ya estan disponibles para descarga.`,
         "success",
       );
       setWeekId("");
