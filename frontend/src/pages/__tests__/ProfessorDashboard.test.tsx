@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "../../api/types";
 import ProfessorDashboard from "../ProfessorDashboard";
@@ -101,11 +102,11 @@ describe("ProfessorDashboard", () => {
   it("renderiza panel de profesor y secciones clave", async () => {
     render(<ProfessorDashboard user={buildUser("professor")} onLogout={vi.fn()} />);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Panel del profesor" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /Panel del profesor/i })).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { level: 2, name: "Mis cursos y proyectos" })).toBeInTheDocument();
-      expect(screen.getByRole("heading", { level: 2, name: "Reportes generados" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { level: 2, name: /Mis cursos y proyectos/i })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { level: 2, name: /Reportes generados/i })).toBeInTheDocument();
     });
 
     expect(listWorkspacesMock).toHaveBeenCalled();
@@ -116,7 +117,87 @@ describe("ProfessorDashboard", () => {
     render(<ProfessorDashboard user={buildUser("professor")} onLogout={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getAllByText("No hay registros disponibles todavía.").length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/No hay registros disponibles/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  it("genera reporte semanal usando el workspace y la semana seleccionados", async () => {
+    const user = userEvent.setup();
+    listWeeksByPeriodMock.mockResolvedValue({
+      weeks: [
+        {
+          id: 7,
+          period_id: 10,
+          number: 1,
+          initial_date: "2026-01-20",
+          final_date: "2026-01-26",
+          week_state: "active",
+        },
+      ],
+    });
+    generateWeeklyReportMock.mockResolvedValue({ reports: [], generated_count: 1 });
+    listReportsMock
+      .mockResolvedValueOnce({ reports: [] })
+      .mockResolvedValueOnce({ reports: [] })
+      .mockResolvedValueOnce({
+        reports: [
+          {
+            id: 99,
+            workspace_id: 21,
+            week_id: 7,
+            assignment_id: 8,
+            user_id: 2,
+            file_path: "reports/99.pdf",
+          },
+        ],
+      });
+
+    render(<ProfessorDashboard user={buildUser("professor")} onLogout={vi.fn()} />);
+
+    const section = await screen.findByRole("heading", { level: 2, name: /Generar reporte semanal/i });
+    const form = section.closest("section");
+    if (!form) throw new Error("Expected generate report section");
+
+    const selects = within(form).getAllByRole("combobox");
+    await user.selectOptions(selects[0], "21");
+    await waitFor(() => {
+      expect(listWeeksByPeriodMock).toHaveBeenCalledWith(10);
+    });
+
+    await user.selectOptions(selects[1], "7");
+    await user.click(within(form).getByRole("button", { name: /Generar reporte PDF/i }));
+
+    await waitFor(() => {
+      expect(generateWeeklyReportMock).toHaveBeenCalledWith({
+        workspace_id: 21,
+        week_id: 7,
+      });
+    });
+  });
+
+  it("crea una vinculacion con los datos diligenciados", async () => {
+    const user = userEvent.setup();
+    createAssignmentMock.mockResolvedValue({});
+
+    render(<ProfessorDashboard user={buildUser("professor")} onLogout={vi.fn()} />);
+
+    const section = await screen.findByRole("heading", { level: 2, name: /Crear vinculacion/i });
+    const form = section.closest("section");
+    if (!form) throw new Error("Expected assignment section");
+
+    const selects = within(form).getAllByRole("combobox");
+    await user.selectOptions(selects[2], "2");
+    await user.clear(within(form).getByLabelText(/Horas semanales/i));
+    await user.type(within(form).getByLabelText(/Horas semanales/i), "8");
+    await user.click(within(form).getByRole("button", { name: /Crear vinculacion/i }));
+
+    await waitFor(() => {
+      expect(createAssignmentMock).toHaveBeenCalledWith({
+        user_id: 2,
+        workspace_id: 21,
+        role: "monitor",
+        weekly_hours: 8,
+      });
     });
   });
 });
