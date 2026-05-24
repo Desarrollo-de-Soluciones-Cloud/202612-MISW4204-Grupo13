@@ -8,6 +8,7 @@ import (
 	usersDomain "backend/internal/users/domain"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -159,5 +160,159 @@ func TestRequireRolesForbidden(t *testing.T) {
 
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestSignInInvalidCredentials(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	hash, _ := sharedHelpers.HashPassword("password123")
+	userReader := &mockAuthUserReader{
+		user: &authDomain.AuthenticatedUserCredentials{
+			AuthenticatedUser: authDomain.AuthenticatedUser{
+				ID:         1,
+				Name:       "John",
+				Email:      "john@example.com",
+				GlobalRole: usersDomain.RoleAdmin,
+			},
+			Password: hash,
+		},
+	}
+	handler := deliverypkg.NewAuthHandler(
+		applicationpkg.NewSignIn(userReader, &mockAuthTokenManager{}),
+		applicationpkg.NewValidateToken(&mockAuthTokenManager{}),
+	)
+
+	w := httptest.NewRecorder()
+	body, _ := json.Marshal(deliverypkg.SignInRequest{
+		Email:    "john@example.com",
+		Password: "wrong-password",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/auth/sign-in", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	handler.SignIn(c)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestSignInInternalError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := deliverypkg.NewAuthHandler(
+		applicationpkg.NewSignIn(&mockAuthUserReader{err: errors.New("boom")}, &mockAuthTokenManager{}),
+		applicationpkg.NewValidateToken(&mockAuthTokenManager{}),
+	)
+
+	w := httptest.NewRecorder()
+	body, _ := json.Marshal(deliverypkg.SignInRequest{
+		Email:    "john@example.com",
+		Password: "password123",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/auth/sign-in", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	handler.SignIn(c)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", w.Code)
+	}
+}
+
+func TestGetCurrentUserSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newAuthHandlerForTest(t)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("current_user", authDomain.AuthenticatedUser{
+		ID:         1,
+		Name:       "John",
+		Email:      "john@example.com",
+		GlobalRole: usersDomain.RoleAdmin,
+	})
+
+	handler.GetCurrentUser(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestRequireAuthenticationInvalidToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := deliverypkg.NewAuthHandler(
+		applicationpkg.NewSignIn(&mockAuthUserReader{}, &mockAuthTokenManager{}),
+		applicationpkg.NewValidateToken(&mockAuthTokenManager{err: authDomain.ErrAuthTokenInvalid}),
+	)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/secure", nil)
+	c.Request.Header.Set("Authorization", "Bearer bad-token")
+
+	handler.RequireAuthentication()(c)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestRequireAuthenticationSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	user := &authDomain.AuthenticatedUser{
+		ID:         1,
+		Name:       "John",
+		Email:      "john@example.com",
+		GlobalRole: usersDomain.RoleAdmin,
+	}
+	handler := deliverypkg.NewAuthHandler(
+		applicationpkg.NewSignIn(&mockAuthUserReader{}, &mockAuthTokenManager{}),
+		applicationpkg.NewValidateToken(&mockAuthTokenManager{user: user}),
+	)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/secure", nil)
+	c.Request.Header.Set("Authorization", "Bearer ok-token")
+
+	handler.RequireAuthentication()(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	if _, ok := deliverypkg.GetCurrentUser(c); !ok {
+		t.Fatal("expected current user in context")
+	}
+}
+
+func TestRequireRolesUnauthorizedWithoutUser(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newAuthHandlerForTest(t)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	handler.RequireRoles(usersDomain.RoleAdmin)(c)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestRequireRolesSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newAuthHandlerForTest(t)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("current_user", authDomain.AuthenticatedUser{
+		ID:         1,
+		GlobalRole: usersDomain.RoleAdmin,
+	})
+
+	handler.RequireRoles(usersDomain.RoleAdmin)(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
 	}
 }

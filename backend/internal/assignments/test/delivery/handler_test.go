@@ -301,3 +301,95 @@ func TestUpdateAssignmentRejectsProfessorWeeklyHourChange(t *testing.T) {
 		t.Fatalf("expected 400, got %d", w.Code)
 	}
 }
+
+func TestCreateAssignmentBadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newAssignmentHandlerForTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/assignments", bytes.NewBufferString(`{"user_id":"bad"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("current_user", authenticatedUser(1, usersDomain.RoleAdmin))
+
+	handler.CreateAssignment(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestCreateAssignmentTargetUserNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newAssignmentHandlerForTest()
+	body, _ := json.Marshal(map[string]any{
+		"user_id":      999,
+		"workspace_id": 7,
+		"role":         "assistant",
+		"weekly_hours": 6,
+	})
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/assignments", bytes.NewBuffer(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("current_user", authenticatedUser(1, usersDomain.RoleAdmin))
+
+	handler.CreateAssignment(c)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestCreateAssignmentRoleNotAllowedForMonitor(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newAssignmentHandlerForTest()
+	body, _ := json.Marshal(map[string]any{
+		"user_id":      2,
+		"workspace_id": 7,
+		"role":         "assistant",
+		"weekly_hours": 6,
+	})
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/assignments", bytes.NewBuffer(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("current_user", authenticatedUser(1, usersDomain.RoleAdmin))
+
+	handler.CreateAssignment(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestGetAssignmentByIDBadID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newAssignmentHandlerForTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/assignments/bad", nil)
+	c.Params = gin.Params{{Key: "id", Value: "bad"}}
+	c.Set("current_user", authenticatedUser(1, usersDomain.RoleAdmin))
+
+	handler.GetAssignmentByID(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestGetAssignmentByIDNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newAssignmentHandlerForTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/assignments/99", nil)
+	c.Params = gin.Params{{Key: "id", Value: "99"}}
+	c.Set("current_user", authenticatedUser(1, usersDomain.RoleAdmin))
+
+	handler.GetAssignmentByID(c)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}

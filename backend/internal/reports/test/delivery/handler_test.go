@@ -44,9 +44,12 @@ type reportRepositoryStub struct {
 type weekReaderStub struct{}
 type userReaderStub struct{}
 type reportAssignmentReaderStub struct{}
-type reportTaskReaderStub struct{}
+type reportTaskReaderStub struct {
+	tasks []tasksDomain.Task
+}
 type reportPDFGeneratorStub struct{}
 type reportAIStub struct{}
+type jobPublisherStub struct{}
 
 func (r *reportWorkspaceReaderStub) FindByID(id uint) (*workspacesDomain.Workspace, error) {
 	if r.err != nil {
@@ -96,7 +99,7 @@ func (a *reportAssignmentReaderStub) FindAllByWorkspaceID(workspaceID uint) ([]a
 }
 
 func (t *reportTaskReaderStub) FindAllByWorkspaceAndWeek(workspaceID uint, weekID uint, weekInitialDate string) ([]tasksDomain.Task, error) {
-	return nil, nil
+	return t.tasks, nil
 }
 
 func (p *reportPDFGeneratorStub) Generate(filePath string, title string, lines []string) error {
@@ -105,6 +108,9 @@ func (p *reportPDFGeneratorStub) Generate(filePath string, title string, lines [
 
 func (a *reportAIStub) GenerateWeeklyReport(input reportsApplication.AIWeeklyReportInput) (string, error) {
 	return "summary", nil
+}
+func (j *jobPublisherStub) PublishWeeklyReportJob(ctx context.Context, job reportsApplication.WeeklyReportJobMessage) error {
+	return nil
 }
 
 func TestGenerateWeeklyReportsUnauthorized(t *testing.T) {
@@ -269,5 +275,135 @@ func TestDownloadReportSuccess(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestGenerateWeeklyReportsWorkspaceNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := deliverypkg.NewReportHandler(deliverypkg.ReportHandlerDependencies{
+		WorkspaceReader: &reportWorkspaceReaderStub{},
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/reports/weekly", bytes.NewBufferString(`{"workspace_id":1,"week_id":2}`))
+	req.Header.Set("Content-Type", "application/json")
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin})
+
+	handler.GenerateWeeklyReports(c)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestGenerateWeeklyReportsForbiddenWorkspace(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := deliverypkg.NewReportHandler(deliverypkg.ReportHandlerDependencies{
+		WorkspaceReader: &reportWorkspaceReaderStub{workspace: &workspacesDomain.Workspace{ID: 1, UserID: 99}},
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/reports/weekly", bytes.NewBufferString(`{"workspace_id":1,"week_id":2}`))
+	req.Header.Set("Content-Type", "application/json")
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Set("current_user", authDomain.AuthenticatedUser{ID: 10, GlobalRole: usersDomain.RoleProfessor})
+
+	handler.GenerateWeeklyReports(c)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestGenerateWeeklyReportsQueued(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := deliverypkg.NewReportHandler(deliverypkg.ReportHandlerDependencies{
+		QueueWeeklyReports: reportsApplication.NewQueueWeeklyReports(
+			&reportWorkspaceReaderStub{workspace: &workspacesDomain.Workspace{ID: 1, UserID: 10, Name: "WS"}},
+			&weekReaderStub{},
+			&reportAssignmentReaderStub{},
+			&reportTaskReaderStub{tasks: []tasksDomain.Task{{ID: 1, AssignmentID: 10}}},
+			&jobPublisherStub{},
+		),
+		WorkspaceReader: &reportWorkspaceReaderStub{workspace: &workspacesDomain.Workspace{ID: 1, UserID: 10, Name: "WS"}},
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/reports/weekly", bytes.NewBufferString(`{"workspace_id":1,"week_id":2}`))
+	req.Header.Set("Content-Type", "application/json")
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Set("current_user", authDomain.AuthenticatedUser{ID: 10, GlobalRole: usersDomain.RoleProfessor})
+
+	handler.GenerateWeeklyReports(c)
+
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("expected 202, got %d", w.Code)
+	}
+}
+
+func TestProcessWeeklyReportJobNotImplemented(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := deliverypkg.NewReportHandler(deliverypkg.ReportHandlerDependencies{
+		PubSubPushAuthToken: "secret",
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/reports/weekly/process?token=secret", bytes.NewBufferString(`{"message":{"data":"e30="}}`))
+	req.Header.Set("Content-Type", "application/json")
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	handler.ProcessWeeklyReportJob(c)
+
+	if w.Code != http.StatusNotImplemented {
+		t.Fatalf("expected 501, got %d", w.Code)
+	}
+}
+
+func TestDownloadReportForbiddenForProfessor(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	workspaceReader := &reportWorkspaceReaderStub{workspace: &workspacesDomain.Workspace{ID: 1, UserID: 99, Name: "WS"}}
+	reportRepo := &reportRepositoryStub{reports: map[uint]*reportsDomain.Report{
+		55: {ID: 55, WorkspaceID: 1, WeekID: 2, AssignmentID: 10, UserID: 3, FilePath: "reports/test.pdf"},
+	}}
+	handler := deliverypkg.NewReportHandler(deliverypkg.ReportHandlerDependencies{
+		GetReportByID:   reportsApplication.NewGetReportByID(reportRepo),
+		WorkspaceReader: workspaceReader,
+	})
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/reports/55/download", nil)
+	c.Params = gin.Params{{Key: "id", Value: "55"}}
+	c.Set("current_user", authDomain.AuthenticatedUser{ID: 10, GlobalRole: usersDomain.RoleProfessor})
+
+	handler.DownloadReport(c)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestDownloadReportWithoutStorage(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	workspaceReader := &reportWorkspaceReaderStub{workspace: &workspacesDomain.Workspace{ID: 1, UserID: 10, Name: "WS"}}
+	reportRepo := &reportRepositoryStub{reports: map[uint]*reportsDomain.Report{
+		55: {ID: 55, WorkspaceID: 1, WeekID: 2, AssignmentID: 10, UserID: 3, FilePath: "reports/test.pdf"},
+	}}
+	handler := deliverypkg.NewReportHandler(deliverypkg.ReportHandlerDependencies{
+		GetReportByID:   reportsApplication.NewGetReportByID(reportRepo),
+		WorkspaceReader: workspaceReader,
+	})
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/reports/55/download", nil)
+	c.Params = gin.Params{{Key: "id", Value: "55"}}
+	c.Set("current_user", authDomain.AuthenticatedUser{ID: 10, GlobalRole: usersDomain.RoleProfessor})
+
+	handler.DownloadReport(c)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", w.Code)
 	}
 }
