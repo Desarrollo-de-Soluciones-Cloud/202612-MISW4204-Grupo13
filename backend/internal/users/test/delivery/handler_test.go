@@ -2,6 +2,7 @@ package delivery_test
 
 import (
 	authDomain "backend/internal/auth/domain"
+	"backend/internal/shared/database"
 	applicationpkg "backend/internal/users/application"
 	deliverypkg "backend/internal/users/delivery"
 	usersDomain "backend/internal/users/domain"
@@ -11,6 +12,8 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 const testUsersPath = "/users"
@@ -19,6 +22,16 @@ type mockUserRepository struct {
 	users map[string]*usersDomain.User
 	byID  map[uint]*usersDomain.User
 	next  uint
+}
+
+type userRouteAuthorizerStub struct{}
+
+func (userRouteAuthorizerStub) RequireAuthentication() gin.HandlerFunc {
+	return func(c *gin.Context) { c.Next() }
+}
+
+func (userRouteAuthorizerStub) RequireRoles(...usersDomain.UserRole) gin.HandlerFunc {
+	return func(c *gin.Context) { c.Next() }
 }
 
 func newMockUserRepository() *mockUserRepository {
@@ -150,4 +163,167 @@ func TestGetUserByIDBadID(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", w.Code)
 	}
+}
+
+func setupUsersRouteDryRunDB(t *testing.T) {
+	t.Helper()
+
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DSN:                  "host=localhost user=test password=test dbname=test port=5432 sslmode=disable",
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{DryRun: true})
+	if err != nil {
+		t.Fatalf("expected dry run db, got %v", err)
+	}
+
+	database.DB = db
+}
+
+func TestCreateUserConflict(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newUserHandlerForTest()
+
+	firstBody := bytes.NewBufferString(`{"name":"Ana Gomez","email":"ana@example.com","password":"Password123","global_role":"professor"}`)
+	firstReq := httptest.NewRequest(http.MethodPost, testUsersPath, firstBody)
+	firstReq.Header.Set("Content-Type", "application/json")
+	firstW := httptest.NewRecorder()
+	firstC, _ := gin.CreateTestContext(firstW)
+	firstC.Request = firstReq
+	handler.CreateUser(firstC)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, testUsersPath, bytes.NewBufferString(`{"name":"Ana Gomez","email":"ana@example.com","password":"Password123","global_role":"professor"}`))
+	req.Header.Set("Content-Type", "application/json")
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	handler.CreateUser(c)
+
+	if w.Code != http.StatusConflict {
+		t.Fatalf("expected 409, got %d", w.Code)
+	}
+}
+
+func TestListUsersAdminSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newUserHandlerForTest()
+	repo := newMockUserRepository()
+	_ = repo.Create(&usersDomain.User{ID: 1, Name: "Ana", Email: "ana@example.com", GlobalRole: usersDomain.RoleProfessor})
+	_ = repo.Create(&usersDomain.User{ID: 2, Name: "Luis", Email: "luis@example.com", GlobalRole: usersDomain.RoleMonitor})
+	handler = deliverypkg.NewUserHandler(
+		applicationpkg.NewCreateUser(repo),
+		applicationpkg.NewListUsers(repo),
+		applicationpkg.NewListUsersByRole(repo),
+		applicationpkg.NewGetUserByID(repo),
+		applicationpkg.NewUpdateUser(repo),
+		applicationpkg.NewChangeUserRole(repo),
+	)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, testUsersPath, nil)
+	c.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleAdmin})
+
+	handler.ListUsers(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestListUsersProfessorRoleFilterAllowed(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newUserHandlerForTest()
+	repo := newMockUserRepository()
+	_ = repo.Create(&usersDomain.User{Name: "Luis", Email: "luis@example.com", GlobalRole: usersDomain.RoleMonitor})
+	handler = deliverypkg.NewUserHandler(
+		applicationpkg.NewCreateUser(repo),
+		applicationpkg.NewListUsers(repo),
+		applicationpkg.NewListUsersByRole(repo),
+		applicationpkg.NewGetUserByID(repo),
+		applicationpkg.NewUpdateUser(repo),
+		applicationpkg.NewChangeUserRole(repo),
+	)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, testUsersPath+"?role=monitor", nil)
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Set("current_user", authDomain.AuthenticatedUser{ID: 1, GlobalRole: usersDomain.RoleProfessor})
+
+	handler.ListUsers(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestGetUserByIDNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newUserHandlerForTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/users/99", nil)
+	c.Params = gin.Params{{Key: "id", Value: "99"}}
+
+	handler.GetUserByID(c)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestChangeUserRoleSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := newMockUserRepository()
+	user, _ := usersDomain.NewUser(usersDomain.UserInput{Name: "Ana Gomez", Email: "ana@example.com", Password: "Password123", GlobalRole: usersDomain.RoleProfessor})
+	_ = repo.Create(user)
+	handler := deliverypkg.NewUserHandler(
+		applicationpkg.NewCreateUser(repo),
+		applicationpkg.NewListUsers(repo),
+		applicationpkg.NewListUsersByRole(repo),
+		applicationpkg.NewGetUserByID(repo),
+		applicationpkg.NewUpdateUser(repo),
+		applicationpkg.NewChangeUserRole(repo),
+	)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPatch, "/users/1/role", bytes.NewBufferString(`{"global_role":"assistant"}`))
+	req.Header.Set("Content-Type", "application/json")
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+	c.Params = gin.Params{{Key: "id", Value: "1"}}
+
+	handler.ChangeUserRole(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestSetupRoutesRegistersUserEndpoints(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	setupUsersRouteDryRunDB(t)
+
+	router := gin.New()
+	deliverypkg.SetupRoutes(router, userRouteAuthorizerStub{})
+
+	routes := router.Routes()
+	assertUserRouteExists(t, routes, http.MethodPost, "/users")
+	assertUserRouteExists(t, routes, http.MethodPut, "/users/:id")
+	assertUserRouteExists(t, routes, http.MethodPatch, "/users/:id/role")
+	assertUserRouteExists(t, routes, http.MethodGet, "/users")
+	assertUserRouteExists(t, routes, http.MethodGet, "/users/:id")
+}
+
+func assertUserRouteExists(t *testing.T, routes gin.RoutesInfo, method string, path string) {
+	t.Helper()
+
+	for _, route := range routes {
+		if route.Method == method && route.Path == path {
+			return
+		}
+	}
+
+	t.Fatalf("expected route %s %s to exist", method, path)
 }

@@ -1,6 +1,8 @@
 package delivery_test
 
 import (
+	"backend/internal/shared/database"
+	usersDomain "backend/internal/users/domain"
 	weeksApplication "backend/internal/weeks/application"
 	weeksDelivery "backend/internal/weeks/delivery"
 	weeksDomain "backend/internal/weeks/domain"
@@ -10,10 +12,22 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 type weekRepoStub struct {
 	weeks []weeksDomain.Week
+}
+
+type weekRouteAuthorizerStub struct{}
+
+func (weekRouteAuthorizerStub) RequireAuthentication() gin.HandlerFunc {
+	return func(c *gin.Context) { c.Next() }
+}
+
+func (weekRouteAuthorizerStub) RequireRoles(...usersDomain.UserRole) gin.HandlerFunc {
+	return func(c *gin.Context) { c.Next() }
 }
 
 func (r *weekRepoStub) CreateMany(weeks []weeksDomain.Week) error { return nil }
@@ -43,6 +57,20 @@ func (r *weekRepoStub) FindByPeriodIDAndStartDate(periodID uint, startDate strin
 }
 
 func (r *weekRepoStub) ExistsByPeriodID(periodID uint) (bool, error) { return false, nil }
+
+func setupWeeksRouteDryRunDB(t *testing.T) {
+	t.Helper()
+
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DSN:                  "host=localhost user=test password=test dbname=test port=5432 sslmode=disable",
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{DryRun: true})
+	if err != nil {
+		t.Fatalf("expected dry run db, got %v", err)
+	}
+
+	database.DB = db
+}
 
 func newWeekHandlerForTest() *weeksDelivery.WeekHandler {
 	repo := &weekRepoStub{
@@ -126,4 +154,28 @@ func TestGetWeekByPeriodAndNumberNotFound(t *testing.T) {
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", w.Code)
 	}
+}
+
+func TestSetupRoutesRegistersWeekEndpoints(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	setupWeeksRouteDryRunDB(t)
+
+	router := gin.New()
+	weeksDelivery.SetupRoutes(router, weekRouteAuthorizerStub{})
+
+	routes := router.Routes()
+	assertWeekRouteExists(t, routes, http.MethodGet, "/weeks/periods/:periodId")
+	assertWeekRouteExists(t, routes, http.MethodGet, "/weeks/:number/periods/:periodId")
+}
+
+func assertWeekRouteExists(t *testing.T, routes gin.RoutesInfo, method string, path string) {
+	t.Helper()
+
+	for _, route := range routes {
+		if route.Method == method && route.Path == path {
+			return
+		}
+	}
+
+	t.Fatalf("expected route %s %s to exist", method, path)
 }
