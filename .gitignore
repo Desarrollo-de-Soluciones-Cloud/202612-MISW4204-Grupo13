@@ -29,9 +29,13 @@ tmp/
 logs/
 
 backend/storage/
-backend/reports/
 backend/uploads/
 backend/tmp/
+
+# Allow backend source code
+!backend/internal/
+!backend/internal/reports/
+!backend/internal/reports/**
 
 # Allow backend Cloud Storage integration code
 !backend/internal/shared/storage/
