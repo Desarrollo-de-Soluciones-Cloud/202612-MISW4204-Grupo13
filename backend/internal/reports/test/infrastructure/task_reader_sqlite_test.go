@@ -24,7 +24,7 @@ func TestTaskReaderFindAllByWorkspaceAndWeekSQLite(t *testing.T) {
 
 	tasks := []tasksDomain.Task{
 		{AssignmentID: assignments[0].ID, Title: "A", Description: "A", Status: tasksDomain.TaskStatusEnDesarrollo, SpentHours: 2, WeekID: uintPtr(7), WeekStartDate: mustTaskDate(t, "2026-10-05")},
-		{AssignmentID: assignments[0].ID, Title: "B", Description: "B", Status: tasksDomain.TaskStatusFinalizado, SpentHours: 3, WeekStartDate: mustTaskDate(t, "2026-10-05")},
+		{AssignmentID: assignments[0].ID, Title: "B", Description: "B", Status: tasksDomain.TaskStatusFinalizado, SpentHours: 3, WeekID: uintPtr(7), WeekStartDate: mustTaskDate(t, "2026-10-05")},
 		{AssignmentID: assignments[1].ID, Title: "C", Description: "C", Status: tasksDomain.TaskStatusEnDesarrollo, SpentHours: 1, WeekID: uintPtr(7), WeekStartDate: mustTaskDate(t, "2026-10-05")},
 	}
 	for i := range tasks {

@@ -6,7 +6,6 @@ import (
 	sharedDB "backend/internal/shared/database/testsupport"
 	tasksDelivery "backend/internal/tasks/delivery"
 	tasksDomain "backend/internal/tasks/domain"
-	usersDomain "backend/internal/users/domain"
 	weeksDomain "backend/internal/weeks/domain"
 	workspacesDomain "backend/internal/workspaces/domain"
 	"net/http"
