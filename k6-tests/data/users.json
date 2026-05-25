@@ -5,30 +5,30 @@
       "password": "seneprojects123"
     },
     {
-      "email": "valeria.mendoza@uniandes.edu.co",
-      "password": "Seneprojects2026!"
+      "email": "laura.mendez@uniandes.edu.co",
+      "password": "Profes2026!"
     },
     {
-      "email": "camila.torres.s@uniandes.edu.co",
-      "password": "Seneprojects2026!"
+      "email": "carlos.patino@uniandes.edu.co",
+      "password": "Profes2026!"
     },
     {
-      "email": "nicolas.herrera@uniandes.edu.co",
-      "password": "Seneprojects2026!"
+      "email": "andres.rojas1@uniandes.edu.co",
+      "password": "Monitor2026!"
     },
     {
-      "email": "mariana.leon@uniandes.edu.co",
-      "password": "Seneprojects2026!"
+      "email": "santiago.herrera@uniandes.edu.co",
+      "password": "Asisten2026!"
     },
     {
-      "email": "santiago.alvarez.g@uniandes.edu.co",
-      "password": "Seneprojects2026!"
+      "email": "mateo.rojas.monitor2026@example.com",
+      "password": "Monitor2026!"
     }
   ],
   "professor_view": {
-    "email": "valeria.mendoza@uniandes.edu.co",
-    "password": "Seneprojects2026!",
+    "email": "laura.mendez@uniandes.edu.co",
+    "password": "Profes2026!",
     "period_id": 1,
-    "assignment_user_ids": [3, 4, 5, 6]
+    "assignment_user_ids": [4, 5, 6]
   }
 }

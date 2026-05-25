@@ -1,0 +1,160 @@
+{
+    "metrics": {
+        "iterations": {
+            "count": 375,
+            "rate": 4.1277743183971385
+        },
+        "http_req_tls_handshaking": {
+            "avg": 1.1856986666666667,
+            "min": 0,
+            "med": 0,
+            "max": 92.582,
+            "p(95)": 0,
+            "p(99)": 85.87758
+        },
+        "http_req_waiting": {
+            "p(99)": 246.20092,
+            "avg": 204.54667733333335,
+            "min": 183.184,
+            "med": 202.358,
+            "max": 257.602,
+            "p(95)": 226.04549999999998
+        },
+        "http_req_receiving": {
+            "avg": 0.2287279999999999,
+            "min": 0.053,
+            "med": 0.187,
+            "max": 5.732,
+            "p(95)": 0.36739999999999984,
+            "p(99)": 0.8733199999999981
+        },
+        "vus": {
+            "value": 5,
+            "min": 5,
+            "max": 5
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 375,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "checks": {
+            "passes": 750,
+            "fails": 0,
+            "value": 1
+        },
+        "data_sent": {
+            "count": 75650,
+            "rate": 832.7096724979826
+        },
+        "iteration_duration": {
+            "min": 1184.473625,
+            "med": 1204.606375,
+            "max": 1383.545875,
+            "p(95)": 1232.4040412,
+            "p(99)": 1375.6643021599998,
+            "avg": 1209.0141983653343
+        },
+        "http_req_connecting": {
+            "p(99)": 8.58342,
+            "avg": 0.11583200000000002,
+            "min": 0,
+            "med": 0,
+            "max": 8.742,
+            "p(95)": 0
+        },
+        "http_req_sending": {
+            "avg": 0.4048026666666668,
+            "min": 0.049,
+            "med": 0.409,
+            "max": 2.021,
+            "p(95)": 0.5982999999999999,
+            "p(99)": 0.8737799999999994
+        },
+        "vus_max": {
+            "value": 5,
+            "min": 5,
+            "max": 5
+        },
+        "http_req_duration{phase:stable}": {
+            "p(99)": 247.05261,
+            "avg": 205.20665405405398,
+            "min": 183.608,
+            "med": 202.963,
+            "max": 258.292,
+            "p(95)": 226.97834999999998,
+            "thresholds": {
+                "p(95)<2000": false,
+                "p(99)<4000": false
+            }
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 205.180208,
+            "min": 183.608,
+            "med": 202.99,
+            "max": 258.292,
+            "p(95)": 226.9741,
+            "p(99)": 246.75606
+        },
+        "data_received": {
+            "count": 254847,
+            "rate": 2805.202404588148
+        },
+        "http_reqs": {
+            "count": 375,
+            "rate": 4.1277743183971385
+        },
+        "http_req_duration{phase:first_request}": {
+            "max": 208.961,
+            "p(95)": 208.1972,
+            "p(99)": 208.80824,
+            "avg": 203.2232,
+            "min": 194.219,
+            "med": 204.465,
+            "thresholds": {
+                "p(95)<5000": false
+            }
+        },
+        "http_req_duration": {
+            "med": 202.99,
+            "max": 258.292,
+            "p(95)": 226.9741,
+            "p(99)": 246.75606,
+            "avg": 205.180208,
+            "min": 183.608
+        },
+        "http_req_blocked": {
+            "min": 0,
+            "med": 0.002,
+            "max": 176.437,
+            "p(95)": 0.003,
+            "p(99)": 170.30728,
+            "avg": 2.3078933333333085
+        }
+    },
+    "root_group": {
+        "groups": {},
+        "checks": {
+                "cold start sign-in status is 200": {
+                    "id": "6ec22eac6741a70da9310c10a1e40f72",
+                    "passes": 375,
+                    "fails": 0,
+                    "name": "cold start sign-in status is 200",
+                    "path": "::cold start sign-in status is 200"
+                },
+                "cold start sign-in returns access token": {
+                    "name": "cold start sign-in returns access token",
+                    "path": "::cold start sign-in returns access token",
+                    "id": "9d120036e6b3791c9f8a066478e11258",
+                    "passes": 375,
+                    "fails": 0
+                }
+            },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e"
+    }
+}

@@ -29,7 +29,7 @@ export function setup() {
 
     return {
       ...creator,
-      token: signInResponse.json("access_token"),
+      token: signInResponse.status === 200 ? signInResponse.json("access_token") : null,
     };
   });
 }
@@ -42,8 +42,8 @@ export default function (sessionData) {
     `${BASE_URL}/api/tasks`,
     JSON.stringify({
       assignment_id: creator.assignment_id,
-      title: `Carga ${uniqueSuffix}`,
-      description: `Prueba de carga ${uniqueSuffix}`,
+      title: `${creator.title || "Carga"} ${uniqueSuffix}`,
+      description: `${creator.description || "Prueba de carga"} ${uniqueSuffix}`,
       status: creator.status || "abierto",
       spent_hours: creator.spent_hours || 1,
       observations: creator.observations || "Generado por k6",

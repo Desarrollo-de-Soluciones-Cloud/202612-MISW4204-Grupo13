@@ -26,10 +26,8 @@ export default function () {
 
   check(response, {
     "sign-in status is 200": (r) => r.status === 200,
-    "sign-in returns access token": (r) => {
-      const body = r.json();
-      return body && typeof body.access_token === "string" && body.access_token.length > 0;
-    },
+    "sign-in returns access token": (r) =>
+      r.status === 200 && typeof r.json("access_token") === "string" && r.json("access_token").length > 0,
   });
 
   sleep(Number(__ENV.SLEEP_SECONDS || 1));

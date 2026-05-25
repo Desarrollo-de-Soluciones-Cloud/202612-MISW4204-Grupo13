@@ -1,0 +1,153 @@
+{
+    "metrics": {
+        "http_req_tls_handshaking": {
+            "avg": 1.852600858369099,
+            "min": 0,
+            "med": 0,
+            "max": 91.053,
+            "p(95)": 0,
+            "p(99)": 86.1306
+        },
+        "http_req_receiving": {
+            "avg": 0.2102961373390558,
+            "min": 0.051,
+            "med": 0.151,
+            "max": 6.802,
+            "p(95)": 0.3545999999999999,
+            "p(99)": 0.9136399999999997
+        },
+        "http_req_sending": {
+            "avg": 0.38593133047210265,
+            "min": 0.062,
+            "med": 0.403,
+            "max": 1.571,
+            "p(95)": 0.6018,
+            "p(99)": 1.0952399999999998
+        },
+        "http_req_connecting": {
+            "max": 43.905,
+            "p(95)": 0,
+            "p(99)": 43.78568,
+            "avg": 0.9400000000000001,
+            "min": 0,
+            "med": 0
+        },
+        "http_req_duration": {
+            "avg": 291.9198154506437,
+            "min": 194.456,
+            "med": 276.734,
+            "max": 570.577,
+            "p(95)": 398.2828,
+            "p(99)": 556.5036799999999,
+            "thresholds": {
+                "p(95)<2000": false,
+                "p(99)<4000": false
+            }
+        },
+        "iterations": {
+            "count": 233,
+            "rate": 3.8149554078376444
+        },
+        "vus": {
+            "value": 2,
+            "min": 2,
+            "max": 5
+        },
+        "http_req_duration{name:auth_sign_in}": {
+            "p(99)": 556.5036799999999,
+            "avg": 291.9198154506437,
+            "min": 194.456,
+            "med": 276.734,
+            "max": 570.577,
+            "p(95)": 398.2828,
+            "thresholds": {
+                "p(95)<2000": false,
+                "p(99)<4000": false
+            }
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(95)": 398.2828,
+            "p(99)": 556.5036799999999,
+            "avg": 291.9198154506437,
+            "min": 194.456,
+            "med": 276.734,
+            "max": 570.577
+        },
+        "data_received": {
+            "count": 173662,
+            "rate": 2843.402515175541
+        },
+        "http_req_waiting": {
+            "med": 276.032,
+            "max": 569.997,
+            "p(95)": 397.6534,
+            "p(99)": 555.90356,
+            "avg": 291.32358798283246,
+            "min": 194.089
+        },
+        "vus_max": {
+            "value": 5,
+            "min": 5,
+            "max": 5
+        },
+        "http_reqs": {
+            "count": 233,
+            "rate": 3.8149554078376444
+        },
+        "checks": {
+            "passes": 466,
+            "fails": 0,
+            "value": 1
+        },
+        "iteration_duration": {
+            "max": 1783.478458,
+            "p(95)": 1412.0727748,
+            "p(99)": 1572.357038,
+            "avg": 1298.778851725321,
+            "min": 1195.916375,
+            "med": 1279.377041
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 233,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "data_sent": {
+            "count": 50424,
+            "rate": 825.602195213757
+        },
+        "http_req_blocked": {
+            "p(95)": 0.003,
+            "p(99)": 254.48219999999998,
+            "avg": 5.46769957081541,
+            "min": 0,
+            "med": 0.002,
+            "max": 259.47
+        }
+    },
+    "root_group": {
+        "groups": {},
+        "checks": {
+                "sign-in status is 200": {
+                    "name": "sign-in status is 200",
+                    "path": "::sign-in status is 200",
+                    "id": "5980d110533708d0e96c4372d760b393",
+                    "passes": 233,
+                    "fails": 0
+                },
+                "sign-in returns access token": {
+                    "fails": 0,
+                    "name": "sign-in returns access token",
+                    "path": "::sign-in returns access token",
+                    "id": "52b5736453f29b54fd5ee796b1e41223",
+                    "passes": 233
+                }
+            },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e"
+    }
+}

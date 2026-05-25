@@ -1,0 +1,200 @@
+{
+    "metrics": {
+        "http_req_tls_handshaking": {
+            "avg": 1.22706600249066,
+            "min": 0,
+            "med": 0,
+            "max": 101.019,
+            "p(95)": 0,
+            "p(99)": 82.87819999999996
+        },
+        "data_received": {
+            "rate": 6003.088780014461,
+            "count": 549657
+        },
+        "http_req_connecting": {
+            "max": 12.457,
+            "p(95)": 0,
+            "p(99)": 8.953679999999993,
+            "avg": 0.1446687422166874,
+            "min": 0,
+            "med": 0
+        },
+        "data_sent": {
+            "count": 391778,
+            "rate": 4278.810450983987
+        },
+        "http_req_receiving": {
+            "avg": 0.2078779576587793,
+            "min": 0.037,
+            "med": 0.117,
+            "max": 8.154,
+            "p(95)": 0.5037999999999999,
+            "p(99)": 1.8309
+        },
+        "http_req_blocked": {
+            "max": 155.152,
+            "p(95)": 0.003,
+            "p(99)": 96.36721999999997,
+            "avg": 1.4669464508094396,
+            "min": 0,
+            "med": 0.001
+        },
+        "iterations": {
+            "count": 800,
+            "rate": 8.737214342783897
+        },
+        "http_req_duration{name:task_create}": {
+            "p(99)": 304.93644,
+            "avg": 132.0662087499998,
+            "min": 117.109,
+            "med": 126.09049999999999,
+            "max": 343.36,
+            "p(95)": 157.97129999999996,
+            "thresholds": {
+                "p(95)<2500": false,
+                "p(99)<5000": false
+            }
+        },
+        "http_reqs": {
+            "count": 803,
+            "rate": 8.769978896569336
+        },
+        "checks": {
+            "fails": 0,
+            "passes": 803,
+            "value": 1
+        },
+        "http_req_waiting": {
+            "avg": 131.8317471980074,
+            "min": 116.828,
+            "med": 125.631,
+            "max": 342.743,
+            "p(95)": 162.01519999999994,
+            "p(99)": 303.7685399999998
+        },
+        "iteration_duration": {
+            "avg": 1134.5327834387506,
+            "min": 1117.525417,
+            "med": 1127.4268120000002,
+            "max": 1345.696625,
+            "p(95)": 1168.0657035,
+            "p(99)": 1306.57151792
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(95)": 162.31969999999995,
+            "p(99)": 304.34953999999976,
+            "avg": 132.3621992528018,
+            "min": 117.109,
+            "med": 126.128,
+            "max": 343.36
+        },
+        "http_req_failed": {
+            "fails": 803,
+            "passes": 0,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "vus": {
+            "value": 10,
+            "min": 10,
+            "max": 10
+        },
+        "vus_max": {
+            "value": 10,
+            "min": 10,
+            "max": 10
+        },
+        "http_req_duration": {
+            "avg": 132.3621992528018,
+            "min": 117.109,
+            "med": 126.128,
+            "max": 343.36,
+            "p(95)": 162.31969999999995,
+            "p(99)": 304.34953999999976,
+            "thresholds": {
+                "p(95)<2000": false,
+                "p(99)<4000": false
+            }
+        },
+        "http_req_sending": {
+            "p(99)": 1.2548399999999997,
+            "avg": 0.32257409713574037,
+            "min": 0.044,
+            "med": 0.228,
+            "max": 5.673,
+            "p(95)": 0.766
+        }
+    },
+    "setup_data": [
+        {
+            "assignment_id": 1,
+            "description": "Revisar el alcance del proyecto y consolidar requerimientos funcionales",
+            "observations": "Se identificaron los requerimientos iniciales y se definio el plan de trabajo de la primera iteracion",
+            "spent_hours": 3,
+            "week_start_date": "2026-05-25",
+            "email": "andres.rojas1@uniandes.edu.co",
+            "password": "Monitor2026!",
+            "status": "abierto",
+            "title": "Levantamiento de requerimientos",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjQsIm5hbWUiOiJBbmRyw6lzIFJvamFzIiwiZW1haWwiOiJhbmRyZXMucm9qYXMxQHVuaWFuZGVzLmVkdS5jbyIsImdsb2JhbF9yb2xlIjoibW9uaXRvciIsImlhdCI6MTc3OTY4MTU1MCwiZXhwIjoxNzc5Njg1MTUwfQ.KTjYjcZIxbSlORLrd9uqFWWQBeEytv9V1LewP6oOOck"
+        },
+        {
+            "assignment_id": 2,
+            "description": "Organizar guias y material de referencia para el curso",
+            "email": "santiago.herrera@uniandes.edu.co",
+            "observations": "Se reunio el material base para apoyar el desarrollo del curso",
+            "title": "Preparacion de material de apoyo",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjUsIm5hbWUiOiJTYW50aWFnbyBIZXJyZXJhIiwiZW1haWwiOiJzYW50aWFnby5oZXJyZXJhQHVuaWFuZGVzLmVkdS5jbyIsImdsb2JhbF9yb2xlIjoiYXNzaXN0YW50IiwiaWF0IjoxNzc5NjgxNTUwLCJleHAiOjE3Nzk2ODUxNTB9.Syai0r_vC8_Ch2MIA3WK71HmSvm3vo7ZgSGhmX6cDqo",
+            "password": "Asisten2026!",
+            "spent_hours": 5,
+            "status": "abierto",
+            "week_start_date": "2026-05-25"
+        },
+        {
+            "assignment_id": 3,
+            "description": "Revisar el alcance del proyecto y consolidar requerimientos iniciales",
+            "password": "Monitor2026!",
+            "status": "en desarrollo",
+            "email": "mateo.rojas.monitor2026@example.com",
+            "observations": "Se revisaron avances del equipo y se documentaron observaciones tecnicas",
+            "spent_hours": 3,
+            "title": "Levantamiento inicial del proyecto",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjYsIm5hbWUiOiJNYXRlbyBSb2phcyIsImVtYWlsIjoibWF0ZW8ucm9qYXMubW9uaXRvcjIwMjZAZXhhbXBsZS5jb20iLCJnbG9iYWxfcm9sZSI6Im1vbml0b3IiLCJpYXQiOjE3Nzk2ODE1NTEsImV4cCI6MTc3OTY4NTE1MX0.J-TvBTuNJz3EFdO2rdpwl_lJRTyO3qYnhYzIrD_QiYM",
+            "week_start_date": "2026-06-01"
+        }
+    ],
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "setup": {
+                "id": "5c0f8025f7e0b6654089e5b00e950f1a",
+                "groups": {},
+                "checks": {
+                        "task creator sign-in status is 200": {
+                            "name": "task creator sign-in status is 200",
+                            "path": "::setup::task creator sign-in status is 200",
+                            "id": "d07ebf250b6538278d99a85f80120ead",
+                            "passes": 3,
+                            "fails": 0
+                        }
+                    },
+                "name": "setup",
+                "path": "::setup"
+            }
+        },
+        "checks": {
+            "task create status is 201": {
+                "name": "task create status is 201",
+                "path": "::task create status is 201",
+                "id": "5bc8d27fe806be23db4d66c22b76ac9c",
+                "passes": 800,
+                "fails": 0
+            }
+        }
+    }
+}

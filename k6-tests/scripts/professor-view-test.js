@@ -30,7 +30,7 @@ export function setup() {
   });
 
   return {
-    token: signInResponse.json("access_token"),
+    token: signInResponse.status === 200 ? signInResponse.json("access_token") : null,
     periodId: professorView.period_id,
     assignmentUserIds: professorView.assignment_user_ids || [],
   };

@@ -1,0 +1,212 @@
+{
+    "metrics": {
+        "http_req_duration": {
+            "avg": 122.16052709359606,
+            "min": 100.87,
+            "med": 121.48349999999999,
+            "max": 221.395,
+            "p(95)": 136.5555,
+            "p(99)": 188.99939999999992,
+            "thresholds": {
+                "p(99)<4000": false,
+                "p(95)<2000": false
+            }
+        },
+        "http_req_tls_handshaking": {
+            "p(95)": 0,
+            "p(99)": 78.85074999999998,
+            "avg": 1.2277216748768474,
+            "min": 0,
+            "med": 0,
+            "max": 88.729
+        },
+        "vus": {
+            "value": 1,
+            "min": 1,
+            "max": 5
+        },
+        "http_req_connecting": {
+            "p(99)": 9.57025,
+            "avg": 0.21255911330049262,
+            "min": 0,
+            "med": 0,
+            "max": 37.123,
+            "p(95)": 0
+        },
+        "http_req_sending": {
+            "med": 0.3615,
+            "max": 1.896,
+            "p(95)": 0.5525,
+            "p(99)": 0.9698499999999994,
+            "avg": 0.3730320197044336,
+            "min": 0.081
+        },
+        "http_req_waiting": {
+            "p(99)": 188.49979999999994,
+            "avg": 121.52604187192122,
+            "min": 100.195,
+            "med": 120.894,
+            "max": 219.479,
+            "p(95)": 135.47674999999998
+        },
+        "http_reqs": {
+            "rate": 4.4113180295728895,
+            "count": 406
+        },
+        "http_req_blocked": {
+            "p(95)": 0.003,
+            "p(99)": 89.33009999999997,
+            "avg": 1.4586847290640161,
+            "min": 0,
+            "med": 0.002,
+            "max": 129.879
+        },
+        "data_received": {
+            "count": 251892,
+            "rate": 2736.886012574321
+        },
+        "vus_max": {
+            "value": 5,
+            "min": 5,
+            "max": 5
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 124.09801230769229,
+            "min": 110.185,
+            "med": 122.226,
+            "max": 221.395,
+            "p(95)": 136.2868,
+            "p(99)": 185.28451999999996
+        },
+        "iteration_duration": {
+            "p(95)": 1138.33832325,
+            "p(99)": 1218.34793892,
+            "avg": 1123.9193715721394,
+            "min": 1102.736625,
+            "med": 1122.8493955,
+            "max": 1230.294917
+        },
+        "iterations": {
+            "count": 402,
+            "rate": 4.367856768197787
+        },
+        "checks": {
+            "passes": 325,
+            "fails": 81,
+            "value": 0.8004926108374384
+        },
+        "http_req_failed": {
+            "passes": 81,
+            "fails": 325,
+            "thresholds": {
+                "rate<0.01": true
+            },
+            "value": 0.19950738916256158
+        },
+        "http_req_receiving": {
+            "avg": 0.26145320197044314,
+            "min": 0.061,
+            "med": 0.164,
+            "max": 6.644,
+            "p(95)": 0.2824999999999998,
+            "p(99)": 3.309749999999999
+        },
+        "http_req_duration{name:task_create}": {
+            "p(95)": 132.969,
+            "p(99)": 151.16946,
+            "avg": 121.39335820895523,
+            "min": 100.87,
+            "med": 121.4505,
+            "max": 216.558,
+            "thresholds": {
+                "p(95)<2500": false,
+                "p(99)<5000": false
+            }
+        },
+        "data_sent": {
+            "count": 198670,
+            "rate": 2158.6121993478964
+        }
+    },
+    "setup_data": [
+        {
+            "email": "andres.rojas1@uniandes.edu.co",
+            "password": "Monitor2026!",
+            "title": "Levantamiento de requerimientos",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjQsIm5hbWUiOiJBbmRyw6lzIFJvamFzIiwiZW1haWwiOiJhbmRyZXMucm9qYXMxQHVuaWFuZGVzLmVkdS5jbyIsImdsb2JhbF9yb2xlIjoibW9uaXRvciIsImlhdCI6MTc3OTY4MDg0MCwiZXhwIjoxNzc5Njg0NDQwfQ.cyfu8TdYt8ttO99zKgP_JdQvvUZGvqyEOUTAvk41SWY",
+            "week_start_date": "2026-05-25",
+            "assignment_id": 1,
+            "description": "Revisar el alcance del proyecto y consolidar requerimientos funcionales",
+            "observations": "Se identificaron los requerimientos iniciales y se definio el plan de trabajo de la primera iteracion",
+            "spent_hours": 3,
+            "status": "abierto"
+        },
+        {
+            "description": "Organizar guias y material de referencia para el curso",
+            "spent_hours": 5,
+            "email": "santiago.herrera@uniandes.edu.co",
+            "observations": "Se reunio el material base para apoyar el desarrollo del curso",
+            "password": "Asisten2026!",
+            "status": "abierto",
+            "title": "Preparacion de material de apoyo",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjUsIm5hbWUiOiJTYW50aWFnbyBIZXJyZXJhIiwiZW1haWwiOiJzYW50aWFnby5oZXJyZXJhQHVuaWFuZGVzLmVkdS5jbyIsImdsb2JhbF9yb2xlIjoiYXNzaXN0YW50IiwiaWF0IjoxNzc5NjgwODQxLCJleHAiOjE3Nzk2ODQ0NDF9.MXsS0CEwbWrywPiA9mjNm9klJfffJqlD4akSqE_aU-s",
+            "week_start_date": "2026-05-25",
+            "assignment_id": 2
+        },
+        {
+            "spent_hours": 3,
+            "status": "en desarrollo",
+            "description": "Revisar el alcance del proyecto y consolidar requerimientos iniciales",
+            "observations": "Se revisaron avances del equipo y se documentaron observaciones tecnicas",
+            "password": "Monitor2026!",
+            "title": "Levantamiento inicial del proyecto",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjYsIm5hbWUiOiJNYXRlbyBSb2phcyIsImVtYWlsIjoibWF0ZW8ucm9qYXMubW9uaXRvcjIwMjZAZXhhbXBsZS5jb20iLCJnbG9iYWxfcm9sZSI6Im1vbml0b3IiLCJpYXQiOjE3Nzk2ODA4NDEsImV4cCI6MTc3OTY4NDQ0MX0.0AWFv3Rh2FEnipC25cTWxQGz61rGHa6rxgl4pcp5hmA",
+            "week_start_date": "2026-06-01",
+            "assignment_id": 3,
+            "email": "mateo.rojas.monitor2026@example.com"
+        },
+        {
+            "password": "Monitor2026!",
+            "spent_hours": 1,
+            "status": "abierto",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjQsIm5hbWUiOiJBbmRyw6lzIFJvamFzIiwiZW1haWwiOiJhbmRyZXMucm9qYXMxQHVuaWFuZGVzLmVkdS5jbyIsImdsb2JhbF9yb2xlIjoibW9uaXRvciIsImlhdCI6MTc3OTY4MDg0MSwiZXhwIjoxNzc5Njg0NDQxfQ.ykQ-_3xgC0shkBw58mgWkqYm-wq_Pblj0CfPygaimDc",
+            "title": "Preparacion de documentacion tecnica",
+            "week_start_date": "2026-06-01",
+            "assignment_id": 4,
+            "description": "Organizar evidencias y documentar resultados parciales del proyecto",
+            "email": "andres.rojas1@uniandes.edu.co",
+            "observations": "Se inicio la organizacion de soportes tecnicos y evidencias del proyecto"
+        }
+    ],
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "setup": {
+                "name": "setup",
+                "path": "::setup",
+                "id": "5c0f8025f7e0b6654089e5b00e950f1a",
+                "groups": {},
+                "checks": {
+                        "task creator sign-in status is 200": {
+                            "name": "task creator sign-in status is 200",
+                            "path": "::setup::task creator sign-in status is 200",
+                            "id": "d07ebf250b6538278d99a85f80120ead",
+                            "passes": 4,
+                            "fails": 0
+                        }
+                    }
+            }
+        },
+        "checks": {
+            "task create status is 201": {
+                "fails": 81,
+                "name": "task create status is 201",
+                "path": "::task create status is 201",
+                "id": "5bc8d27fe806be23db4d66c22b76ac9c",
+                "passes": 321
+            }
+        }
+    }
+}

@@ -1,40 +1,37 @@
 {
   "task_creators": [
     {
-      "email": "camila.torres.s@uniandes.edu.co",
-      "password": "Seneprojects2026!",
+      "email": "andres.rojas1@uniandes.edu.co",
+      "password": "Monitor2026!",
       "assignment_id": 1,
-      "week_start_date": "2026-05-04",
+      "title": "Levantamiento de requerimientos",
+      "description": "Revisar el alcance del proyecto y consolidar requerimientos funcionales",
+      "week_start_date": "2026-05-25",
       "status": "abierto",
-      "spent_hours": 1,
-      "observations": "Carga monitor 1"
+      "spent_hours": 3,
+      "observations": "Se identificaron los requerimientos iniciales y se definio el plan de trabajo de la primera iteracion"
     },
     {
-      "email": "nicolas.herrera@uniandes.edu.co",
-      "password": "Seneprojects2026!",
+      "email": "santiago.herrera@uniandes.edu.co",
+      "password": "Asisten2026!",
       "assignment_id": 2,
-      "week_start_date": "2026-05-04",
-      "status": "en desarrollo",
-      "spent_hours": 2,
-      "observations": "Carga monitor 2"
-    },
-    {
-      "email": "mariana.leon@uniandes.edu.co",
-      "password": "Seneprojects2026!",
-      "assignment_id": 3,
-      "week_start_date": "2026-05-04",
+      "title": "Preparacion de material de apoyo",
+      "description": "Organizar guias y material de referencia para el curso",
+      "week_start_date": "2026-05-25",
       "status": "abierto",
-      "spent_hours": 2,
-      "observations": "Carga assistant 1"
+      "spent_hours": 5,
+      "observations": "Se reunio el material base para apoyar el desarrollo del curso"
     },
     {
-      "email": "santiago.alvarez.g@uniandes.edu.co",
-      "password": "Seneprojects2026!",
-      "assignment_id": 4,
-      "week_start_date": "2026-05-04",
-      "status": "finalizado",
-      "spent_hours": 1,
-      "observations": "Carga assistant 2"
+      "email": "mateo.rojas.monitor2026@example.com",
+      "password": "Monitor2026!",
+      "assignment_id": 3,
+      "title": "Levantamiento inicial del proyecto",
+      "description": "Revisar el alcance del proyecto y consolidar requerimientos iniciales",
+      "week_start_date": "2026-06-01",
+      "status": "en desarrollo",
+      "spent_hours": 3,
+      "observations": "Se revisaron avances del equipo y se documentaron observaciones tecnicas"
     }
   ]
 }
